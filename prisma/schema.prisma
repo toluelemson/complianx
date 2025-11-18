@@ -1,0 +1,322 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  role         Role     @default(USER)
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id])
+  projects     Project[]
+  editedSections Section[] @relation("SectionLastEditor")
+  sectionComments SectionComment[]
+  sectionTemplates SectionTemplate[]
+  reminders        Reminder[]
+  projectStatusEvents ProjectStatusEvent[]
+  sectionStatusEvents SectionStatusEvent[]
+  suggestionFeedback SuggestionFeedback[]
+  invitationsSent Invitation[] @relation("UserInvitations")
+  uploadedArtifacts SectionArtifact[] @relation("ArtifactUploader")
+  reviewedArtifacts SectionArtifact[] @relation("ArtifactReviewer")
+  reviewerForProjects Project[] @relation("ProjectReviewer")
+  approverForProjects Project[] @relation("ProjectApprover")
+  notifications Notification[]
+}
+
+model Project {
+  id         String    @id @default(uuid())
+  name       String
+  industry   String?
+  riskLevel  String?
+  status     ProjectStatus @default(DRAFT)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  ownerId    String
+  owner      User      @relation(fields: [ownerId], references: [id])
+  companyId  String?
+  company    Company?  @relation(fields: [companyId], references: [id])
+  reviewerId String?
+  reviewer   User?     @relation("ProjectReviewer", fields: [reviewerId], references: [id])
+  approverId String?
+  approver   User?     @relation("ProjectApprover", fields: [approverId], references: [id])
+  sections   Section[]
+  documents  Document[]
+  artifacts  SectionArtifact[]
+  reminders  Reminder[]
+  statusEvents ProjectStatusEvent[]
+  suggestionFeedback SuggestionFeedback[]
+  metrics    TrustMetric[]
+}
+
+model Section {
+  id        String   @id @default(uuid())
+  name      String
+  content   Json
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  lastEditorId String?
+  lastEditor   User?    @relation("SectionLastEditor", fields: [lastEditorId], references: [id])
+  comments     SectionComment[]
+  status       SectionStatus @default(DRAFT)
+  statusEvents SectionStatusEvent[]
+  autosave    SectionAutosave?
+  suggestionFeedback SuggestionFeedback[]
+  artifacts   SectionArtifact[]
+  trustMetrics TrustMetric[]
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  type      String
+  url       String
+  createdAt DateTime @default(now())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+}
+
+model SectionComment {
+  id        String   @id @default(uuid())
+  body      String
+  createdAt DateTime @default(now())
+  sectionId String
+  section   Section  @relation(fields: [sectionId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model SectionTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  sectionName String
+  content     Json
+  category    String?
+  shared      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+}
+
+model Reminder {
+  id         String   @id @default(uuid())
+  message    String
+  dueAt      DateTime
+  completed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id])
+  ownerId    String
+  owner      User     @relation(fields: [ownerId], references: [id])
+}
+
+model SectionAutosave {
+  id        String   @id @default(uuid())
+  content   Json
+  updatedAt DateTime @default(now()) @updatedAt
+  sectionId String   @unique
+  section   Section  @relation(fields: [sectionId], references: [id])
+}
+
+model SuggestionFeedback {
+  id         String   @id @default(uuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id])
+  sectionId  String
+  section    Section  @relation(fields: [sectionId], references: [id])
+  fieldName  String
+  suggestion String
+  liked      Boolean
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  users     User[]
+  projects  Project[]
+  invitations Invitation[]
+  // Monetization fields
+  plan       Plan      @default(FREE)
+  billingEmail String?
+  stripeCustomerId String?
+  stripeSubscriptionId String?
+  trialEndsAt DateTime?
+  usage     CompanyUsage[]
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model CompanyUsage {
+  id            String   @id @default(uuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id])
+  month         String   // format: YYYY-MM
+  docsGenerated Int      @default(0)
+  trustAnalyses Int      @default(0)
+
+  @@unique([companyId, month])
+}
+
+model Invitation {
+  id         String   @id @default(uuid())
+  email      String
+  token      String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime @default(now())
+  acceptedAt DateTime?
+  invitedById String
+  invitedBy   User     @relation("UserInvitations", fields: [invitedById], references: [id])
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id])
+}
+
+model ProjectStatusEvent {
+  id        String        @id @default(uuid())
+  status    ProjectStatus
+  note      String?
+  signature String?
+  createdAt DateTime      @default(now())
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id])
+  actorId   String
+  actor     User          @relation(fields: [actorId], references: [id])
+}
+
+model SectionStatusEvent {
+  id        String        @id @default(uuid())
+  status    SectionStatus
+  note      String?
+  signature String?
+  createdAt DateTime      @default(now())
+  sectionId String
+  section   Section       @relation(fields: [sectionId], references: [id])
+  actorId   String
+  actor     User          @relation(fields: [actorId], references: [id])
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+}
+
+enum SectionStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+}
+
+enum Role {
+  USER
+  REVIEWER
+  ADMIN
+}
+
+model SectionArtifact {
+  id            String   @id @default(uuid())
+  originalName  String
+  storedName    String
+  mimeType      String
+  size          Int
+  description   String?
+  createdAt     DateTime @default(now())
+  sectionId     String
+  section       Section  @relation(fields: [sectionId], references: [id])
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  uploadedById  String
+  uploadedBy    User     @relation("ArtifactUploader", fields: [uploadedById], references: [id])
+  purpose       ArtifactPurpose @default(GENERIC)
+  version       Int      @default(1)
+  checksum      String
+  citationKey   String
+  status        ArtifactStatus @default(PENDING)
+  reviewComment String?
+  reviewedAt    DateTime?
+  reviewedById  String?
+  reviewedBy    User?    @relation("ArtifactReviewer", fields: [reviewedById], references: [id])
+  previousArtifactId String?
+  previousArtifact SectionArtifact? @relation("ArtifactHistory", fields: [previousArtifactId], references: [id])
+  nextVersions   SectionArtifact[] @relation("ArtifactHistory")
+  samples        TrustSample[]
+
+  @@unique([sectionId, version])
+  @@unique([citationKey])
+}
+
+enum ArtifactStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ArtifactPurpose {
+  GENERIC
+  DATASET
+  MODEL
+}
+
+model TrustMetric {
+  id           String      @id @default(uuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id])
+  name         String
+  pillar       String
+  datasetName  String?
+  modelName    String?
+  targetMin    Float?
+  targetMax    Float?
+  unit         String
+  sectionId    String?
+  section      Section?    @relation(fields: [sectionId], references: [id])
+  createdAt    DateTime    @default(now())
+  samples      TrustSample[]
+}
+
+model TrustSample {
+  id         String      @id @default(uuid())
+  metricId   String
+  metric     TrustMetric @relation(fields: [metricId], references: [id])
+  value      Float
+  status     String
+  note       String?
+  timestamp  DateTime    @default(now())
+  artifactId String?
+  artifact   SectionArtifact? @relation(fields: [artifactId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   @default("info")
+  title     String
+  body      String
+  meta      Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+}

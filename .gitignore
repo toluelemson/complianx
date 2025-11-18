@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.*
+storage/
+storage/documents
+*.log
+logs/
+coverage
+tmp

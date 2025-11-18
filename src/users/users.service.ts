@@ -1,0 +1,66 @@
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Role, User } from '@prisma/client';
+
+@Injectable()
+export class UsersService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  create(
+    email: string,
+    passwordHash: string,
+    companyId?: string,
+    role?: Role,
+  ): Promise<User> {
+    return this.prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        companyId,
+        role: role ?? undefined,
+      },
+    });
+  }
+
+  findByEmail(email: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  findById(id: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  listByCompany(companyId: string): Promise<User[]> {
+    return this.prisma.user.findMany({
+      where: { companyId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  listAdminsByCompany(companyId: string): Promise<User[]> {
+    return this.prisma.user.findMany({
+      where: { companyId, role: 'ADMIN' },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async updateRole(params: {
+    targetUserId: string;
+    role: Role;
+    companyId: string;
+  }): Promise<User> {
+    const target = await this.prisma.user.findUnique({
+      where: { id: params.targetUserId },
+    });
+    if (!target) {
+      throw new NotFoundException('User not found');
+    }
+    if (target.companyId !== params.companyId) {
+      throw new ForbiddenException('User belongs to another company');
+    }
+    return this.prisma.user.update({
+      where: { id: params.targetUserId },
+      data: { role: params.role },
+    });
+  }
+}
