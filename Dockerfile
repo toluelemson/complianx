@@ -2,6 +2,8 @@ FROM node:20-alpine AS builder
 WORKDIR /workspace
 
 ENV NODE_ENV=production
+ARG DATABASE_URL=postgresql://aicd:aicd@localhost:5432/aicd
+ENV DATABASE_URL=${DATABASE_URL}
 
 RUN apk add --no-cache git
 
