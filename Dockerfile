@@ -28,9 +28,7 @@ ENV NODE_ENV=production
 RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-COPY --from=builder /workspace/backend/node_modules ./node_modules
-COPY --from=builder /workspace/backend/dist ./dist
-COPY --from=builder /workspace/backend/prisma ./prisma
+COPY --from=builder /workspace/backend ./
 
 EXPOSE 8080
 
