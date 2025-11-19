@@ -36,7 +36,11 @@ VITE_API_URL=https://<backend-app>.ondigitalocean.app
 ### 3. Backend App Configuration
 
 1. **Build command**:  
-   `npm install && npm run build`
+   ```
+   cd backend
+   npm install
+   npm run build
+   ```
 2. **Run command**:  
    `npm run start:prod` (ensure `NODE_ENV=production` is set in DO App)
 3. **Environment**: Set `PORT` (App Platform provides one), `DATABASE_URL`, and other keys above.
