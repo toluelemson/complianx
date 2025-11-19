@@ -8,3 +8,11 @@ storage/documents
 logs/
 coverage
 tmp
+.DS_Store
+.idea/
+.vscode/
+frontend/node_modules/
+frontend/dist/
+backend/node_modules/
+.cache/
+SPIN/
