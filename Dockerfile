@@ -2,6 +2,7 @@ FROM node:20-alpine AS builder
 WORKDIR /workspace
 
 ENV NODE_ENV=production
+ENV NPM_CONFIG_PRODUCTION=false
 ARG DATABASE_URL=postgresql://aicd:aicd@localhost:5432/aicd
 ENV DATABASE_URL=${DATABASE_URL}
 
