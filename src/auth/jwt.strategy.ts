@@ -22,12 +22,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     email: string;
     role?: string;
     companyId?: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    jobTitle?: string | null;
+    phone?: string | null;
+    timezone?: string | null;
   }) {
     return {
       userId: payload.sub,
       email: payload.email,
       role: payload.role,
       companyId: payload.companyId,
+      firstName: payload.firstName ?? null,
+      lastName: payload.lastName ?? null,
+      jobTitle: payload.jobTitle ?? null,
+      phone: payload.phone ?? null,
+      timezone: payload.timezone ?? null,
     };
   }
 }

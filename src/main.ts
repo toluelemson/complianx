@@ -2,9 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, {
+    rawBody: true, // <- VERY important
+  });
+
+  app.use('/billing/webhook', bodyParser.raw({ type: '*/*' }));
   const allowedOrigins =
     process.env.FRONTEND_URL?.split(',').map((origin) => origin.trim()) ?? [];
   app.enableCors({

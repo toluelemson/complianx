@@ -12,6 +12,7 @@ import {
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../notifications/email.service';
 
@@ -34,6 +35,16 @@ export class UsersController {
   async list(@Request() req) {
     this.ensureAdmin(req);
     return this.usersService.listByCompany(req.user.companyId);
+  }
+
+  @Get('me')
+  async me(@Request() req) {
+    return this.usersService.getProfile(req.user.userId);
+  }
+
+  @Patch('me')
+  async updateMe(@Request() req, @Body() dto: UpdateProfileDto) {
+    return this.usersService.updateProfile(req.user.userId, dto);
   }
 
   @Patch(':id/role')

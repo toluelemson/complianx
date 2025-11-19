@@ -33,6 +33,11 @@ export class AuthService {
       email: user.email,
       role: user.role,
       companyId: user.companyId,
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      jobTitle: user.jobTitle ?? null,
+      phone: user.phone ?? null,
+      timezone: user.timezone ?? null,
     });
   }
 

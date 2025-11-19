@@ -18,7 +18,9 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { ArtifactsModule } from './artifacts/artifacts.module';
 import { TrustModule } from './trust/trust.module';
 import { BillingController } from './billing/billing.controller';
+import { BillingWebhookController } from './billing/billing.webhook.controller';
 import { MonetizationService } from './monetization/monetization.service';
+import { BillingService } from './billing/billing.service';
 import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
@@ -43,7 +45,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     TrustModule,
     NotificationsModule,
   ],
-  controllers: [BillingController],
-  providers: [MonetizationService],
+  controllers: [BillingController, BillingWebhookController],
+  providers: [MonetizationService, BillingService],
 })
 export class AppModule {}

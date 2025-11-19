@@ -1,7 +1,16 @@
-import { Controller, Get, Post, Body, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Request,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonetizationService } from '../monetization/monetization.service';
+import { BillingService } from './billing.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('billing')
@@ -9,6 +18,7 @@ export class BillingController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly monetization: MonetizationService,
+    private readonly billing: BillingService,
   ) {}
 
   @Get('plan')
@@ -32,22 +42,25 @@ export class BillingController {
 
   @Post('checkout')
   async checkout(@Body() body: { plan: 'PRO' | 'ENTERPRISE' }, @Request() req) {
-    // Placeholder: if Stripe is configured, create checkout; otherwise return hint
-    const hasStripe = Boolean(process.env.STRIPE_SECRET_KEY);
-    if (!hasStripe) {
-      return { url: null, message: 'Stripe not configured. Contact support to upgrade.' };
+    if (!body?.plan) {
+      throw new BadRequestException('Select a plan to upgrade');
     }
-    // You can wire Stripe session creation here later
-    return { url: null, message: 'Checkout integration pending.' };
+    if (!this.billing.isEnabled()) {
+      return {
+        url: null,
+        message: 'Stripe not configured. Contact support to upgrade.',
+      };
+    }
+    const url = await this.billing.createCheckoutSession(req.user.userId, body.plan);
+    return { url };
   }
 
-  @Get('portal')
-  async portal() {
-    const hasStripe = Boolean(process.env.STRIPE_SECRET_KEY);
-    if (!hasStripe) {
+  @Post('portal')
+  async portal(@Request() req) {
+    if (!this.billing.isEnabled()) {
       return { url: null, message: 'Stripe not configured.' };
     }
-    return { url: null };
+    const url = await this.billing.createPortalSession(req.user.userId);
+    return { url };
   }
 }
-
