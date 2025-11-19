@@ -73,10 +73,41 @@ Or include `prisma migrate deploy` in a release command so the production databa
 2. Subscribe to events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`.
 3. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
 
-### 7. Optional
+### 7. App Platform spec (complianx)
 
-- Add a health check endpoint (e.g., `GET /health`) and configure App Platform’s liveness probe.
-- Use App Platform’s Managed Databases for Postgres and enable daily backups.
-- Add monitoring/alerting for billing failures (webhooks, Stripe errors).
+If you prefer to manage the whole stack with a single spec file (used by `doctl apps create --spec` or the App Platform UI), here is a working configuration that builds and runs the backend from the correct directory and includes the alert/ingress settings you asked for:
 
-With these pieces in place you can deploy backend and frontend as separate services on DigitalOcean App Platform while keeping the Stripe webhook, database migrations, and config secure.
+```yaml
+name: complianx
+region: fra
+build:
+  buildpacks:
+    - buildpack: dockerfile
+      stack: ubuntu-22
+alerts:
+  rules:
+    - rule: DEPLOYMENT_FAILED
+    - rule: DOMAIN_FAILED
+ingress:
+  rules:
+    - component:
+        name: complianx
+      match:
+        authority:
+          exact: ""
+        path:
+          prefix: /
+services:
+  - name: complianx
+    github:
+      repo: toluelemson/complianx
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: /Dockerfile
+    source_dir: /
+    http_port: 8080
+    instance_count: 2
+    instance_size_slug: apps-s-1vcpu-1gb
+```
+
+Make sure the environment variables listed earlier are set in the App Platform dashboard, and point your Stripe webhook at `https://<backend-app>.ondigitalocean.app/billing/webhook`. With this spec you can deploy via `doctl apps create --spec` or paste the YAML into the App Platform UI. This Dockerfile builds the backend from `backend/` and exposes port 8080, so the App Platform service can directly use the image without extra build/run scripts.
