@@ -1,0 +1,9 @@
+Example model metadata (optional for fairness analysis)
+
+Name: Core LLM v0
+Type: Classification head on transformer encoder
+Input: text
+Output: binary label {0,1}
+Training window: 2024-01 to 2024-06
+Notes: This file is not parsed by the fairness analyzer; upload as a MODEL artifact if you want provenance stored alongside the dataset.
+

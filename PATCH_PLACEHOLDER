@@ -1,0 +1,84 @@
+*** Update File: frontend/src/pages/ProjectTrustPage.tsx
+@@
+ export default function ProjectTrustPage() {
+@@
+     </AppShell>
+   );
+ }
+
+type MetricCardProps = {
+  metric: any;
+  onDeleteMetric: () => void;
+  onDeleteSample: (sampleId: string) => void;
+  disableMetricActions: boolean;
+  disableSampleActions: boolean;
+};
+
+function MetricCard({
+  metric,
+  onDeleteMetric,
+  onDeleteSample,
+  disableMetricActions,
+  disableSampleActions,
+}: MetricCardProps) {
+  const latestSample = metric.samples?.[0];
+  const sampleStatus = latestSample?.status ?? 'N/A';
+  const statusStyle =
+    METRIC_STATUS_STYLES[sampleStatus] ?? METRIC_STATUS_STYLES['N/A'];
+  const animatedSampleValue = useAnimatedNumber(latestSample?.value ?? 0, {
+    duration: 700,
+    precision: 2,
+  });
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-semibold text-slate-900">{metric.name}</p>
+          <p className="text-xs text-slate-500">
+            {metric.pillar} · {metric.unit} ·{' '}
+            {metric.datasetName ?? 'Unnamed dataset'}
+          </p>
+        </div>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusStyle}`}
+        >
+          {sampleStatus}
+        </span>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        {latestSample
+          ? `Latest ${animatedSampleValue.toFixed(2)} (${latestSample.note ?? 'no note'})`
+          : 'No samples yet. Add one below.'}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
+        <button
+          type="button"
+          onClick={() => {
+            if (latestSample && window.confirm('Delete the latest sample?')) {
+              onDeleteSample(latestSample.id);
+            }
+          }}
+          disabled={!latestSample || disableSampleActions}
+          className="rounded border border-slate-200 px-2 py-0.5 hover:bg-slate-100 disabled:opacity-50"
+        >
+          Delete latest sample
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (
+              window.confirm('Delete this metric and all associated samples?')
+            ) {
+              onDeleteMetric();
+            }
+          }}
+          disabled={disableMetricActions}
+          className="rounded border border-rose-200 px-2 py-0.5 text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+        >
+          Delete metric
+        </button>
+      </div>
+    </div>
+  );
+}
