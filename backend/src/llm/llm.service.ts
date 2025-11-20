@@ -11,30 +11,38 @@ type GenerationMode =
 
 @Injectable()
 export class LlmService {
-  private readonly client: AxiosInstance;
+  private readonly client: AxiosInstance | null;
   private readonly model: string;
+  private readonly enabled: boolean;
   private readonly logger = new Logger(LlmService.name);
 
   constructor(configService: ConfigService) {
     const baseURL = configService.get<string>('LLM_BASE_URL');
     const apiKey = configService.get<string>('LLM_API_KEY');
-    if (!baseURL || !apiKey) {
-      throw new Error('LLM configuration is missing');
+    this.enabled = Boolean(baseURL && apiKey);
+    if (!this.enabled) {
+      this.logger.warn('LLM configuration missing; suggestions will be skipped.');
     }
     this.model = configService.get<string>('LLM_MODEL') ?? 'gpt-4o-mini';
-    this.client = axios.create({
-      baseURL,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    this.client = this.enabled
+      ? axios.create({
+          baseURL,
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        })
+      : null;
   }
 
   async generate(
     mode: GenerationMode,
     mergedContent: Record<string, any>,
   ): Promise<string> {
+    if (!this.enabled || !this.client) {
+      this.logger.warn(`LLM disabled; returning fallback text for ${mode}`);
+      return 'LLM suggestions are disabled in this environment.';
+    }
     const prompt = this.buildPrompt(mode, mergedContent);
     try {
       const response = await this.client.post('/v1/chat/completions', {
