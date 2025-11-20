@@ -30,30 +30,33 @@ const mockNotifications = [
 ];
 
 function setupApiMocks() {
-  api.get = async (url: string) => {
+  const originalGet = api.get.bind(api);
+  const originalPost = api.post.bind(api);
+
+  api.get = (async (url: string, config?: any) => {
     if (url === '/notifications/count') {
       return { data: { count: mockNotifications.filter((n) => !n.readAt).length } };
     }
     if (url.startsWith('/notifications?')) {
       return { data: mockNotifications };
     }
-    return { data: {} };
-  };
-  api.post = async (url: string) => {
+    return (await originalGet(url, config)) as any;
+  }) as typeof api.get;
+  api.post = (async (url: string, data?: any, config?: any) => {
     if (url.endsWith('/read-all')) {
-      mockNotifications.forEach((n) => (n.readAt = new Date().toISOString()));
+      mockNotifications.forEach((n) => (n.readAt = new Date().toISOString() as any));
       return { data: { ok: true } };
     }
     if (url.includes('/read')) {
       const id = url.split('/')[2];
       const notification = mockNotifications.find((n) => n.id === id);
       if (notification) {
-        notification.readAt = new Date().toISOString();
+        notification.readAt = new Date().toISOString() as any;
       }
       return { data: { ok: true } };
     }
-    return { data: { ok: true } };
-  };
+    return (await originalPost(url, data, config)) as any;
+  }) as typeof api.post;
 }
 
 export const DefaultShell: Story = {
