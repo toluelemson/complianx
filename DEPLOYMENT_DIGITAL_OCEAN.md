@@ -2,80 +2,46 @@
 
 This project runs as two apps (backend Nest.js API and frontend Vite/React SPA). The App Platform can host them side-by-side:
 
-### 1. Infrastructure Overview
+### Quick Deploy Checklist (DigitalOcean App Platform)
 
-- **Backend**: Node/Nest application running on `backend`.
-- **Frontend**: Static Vite build served by App Platform as a static site.
-- **Database**: PostgreSQL (managed database recommended).
-- **Stripe webhook**: `/billing/webhook` must be reachable from Stripe (HTTPS). App Platform automatically provides TLS.
+1. **Prep repo**
+   - Keep current root `Dockerfile` (builds backend from `/backend`, outputs `dist/src/main`).
+   - Frontend stays under `/frontend` (deploy separately if needed).
 
-### 2. Environment Variables
+2. **Create App**
+   - In DigitalOcean, “Create App” → pick your GitHub repo → region `fra`.
+   - Choose the Dockerfile service (source dir `/`, Dockerfile `/Dockerfile`).
 
-Set the following secrets for the backend service:
-
-```
-DATABASE_URL=postgresql://<user>:<pass>@<host>:5432/<database>
-JWT_SECRET=...
-LLM_BASE_URL=...
-LLM_API_KEY=...
-LLM_MODEL=...
-FRONTEND_URL=https://<frontend-app>.ondigitalocean.app
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_PRO=price_...
-STRIPE_PRICE_ENTERPRISE=price_...
-```
-
-For the frontend app:
-
-```
-VITE_API_URL=https://<backend-app>.ondigitalocean.app
-```
-
-### 3. Backend App Configuration
-
-1. **Build command**:  
+3. **Add environment variables (backend service)**
    ```
-   cd backend
-   npm install
-   npm run build
+   DATABASE_URL=postgresql://user:pass@host:5432/db
+   JWT_SECRET=...
+   LLM_BASE_URL=...
+   LLM_API_KEY=...
+   LLM_MODEL=...
+   FRONTEND_URL=https://<frontend-app>.ondigitalocean.app
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_PUBLISHABLE_KEY=pk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   STRIPE_PRICE_PRO=price_...
+   STRIPE_PRICE_ENTERPRISE=price_...
    ```
-2. **Run command**:  
-   `npm run start:prod` (ensure `NODE_ENV=production` is set in DO App)
-3. **Environment**: Set `PORT` (App Platform provides one), `DATABASE_URL`, and other keys above.
-4. **HTTP path**: expose `/` for API requests.
-5. **Persistent storage**: not required unless you need file uploads; use object storage or S3-compatible bucket instead.
+   - For the frontend (static site) set `VITE_API_URL=https://<backend-app>.ondigitalocean.app`.
 
-### 4. Frontend App Configuration
+4. **Deploy**
+   - App Platform runs the Docker build (installs deps, `prisma generate`, `npm run build`, `node dist/src/main`).
+   - Health check auto-routes traffic once ready.
 
-1. **Root directory**: `frontend`
-2. **Build command**:  
-   `npm install && npm run build`
-3. **Publish directory**: `frontend/dist`
-4. **Environment**: add `VITE_API_URL` pointing at the backend app URL.
-5. **Redirects**: If you want SPA routing to work, add a rewrite rule that sends `/*` to `/index.html`.
+5. **Stripe webhook**
+   - At https://dashboard.stripe.com → Developers → Webhooks → add endpoint `https://<backend-app>.ondigitalocean.app/billing/webhook`.
+   - Subscribe to `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`.
+   - Paste the signing secret into `STRIPE_WEBHOOK_SECRET`.
 
-### 5. Database Migration
+6. **Database migrations**
+   - Locally: `cd backend && DATABASE_URL=... npm run prisma:migrate`.
+   - In staging/prod, run `prisma migrate deploy` against your managed Postgres.
 
-Run migrations during deployment or bootstrap:
-
-```
-cd backend
-DATABASE_URL=... npm run prisma:migrate
-```
-
-Or include `prisma migrate deploy` in a release command so the production database stays in sync.
-
-### 6. Stripe Webhook Setup
-
-1. In the Stripe Dashboard, create a webhook endpoint pointing to `https://<backend-app>.ondigitalocean.app/billing/webhook`.
-2. Subscribe to events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`.
-3. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
-
-### 7. App Platform spec (complianx)
-
-If you prefer to manage the whole stack with a single spec file (used by `doctl apps create --spec` or the App Platform UI), here is a working configuration that builds and runs the backend from the correct directory and includes the alert/ingress settings you asked for:
+7. **Spec (copy/paste into App Platform or use `doctl apps create --spec`)**
 
 ```yaml
 name: complianx
@@ -110,4 +76,4 @@ services:
     instance_size_slug: apps-s-1vcpu-1gb
 ```
 
-Make sure the environment variables listed earlier are set in the App Platform dashboard, and point your Stripe webhook at `https://<backend-app>.ondigitalocean.app/billing/webhook`. With this spec you can deploy via `doctl apps create --spec` or paste the YAML into the App Platform UI. This Dockerfile builds the backend from `backend/` and exposes port 8080, so the App Platform service can directly use the image without extra build/run scripts.
+That’s it—deploy, point Stripe to the new webhook URL, and your DigitalOcean app is live.***

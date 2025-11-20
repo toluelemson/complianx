@@ -1,3 +1,5 @@
+import { describe, expect, it, beforeEach, vi, type Mock } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import BillingModal from './BillingModal';
@@ -27,7 +29,7 @@ function renderModal() {
 describe('BillingModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (api.get as unknown as vi.Mock).mockImplementation((path: string) => {
+    (api.get as unknown as Mock).mockImplementation((path: string) => {
       if (path === '/billing/plan') {
         return Promise.resolve({
           data: { plan: 'FREE', limits: { docs: 10, trust: 5 } },
@@ -40,7 +42,7 @@ describe('BillingModal', () => {
       }
       return Promise.reject(new Error('unknown path'));
     });
-    (api.post as unknown as vi.Mock).mockResolvedValue({ data: { url: null } });
+    (api.post as unknown as Mock).mockResolvedValue({ data: { url: null } });
   });
 
   it('shows plan, usage and allows upgrading', async () => {
@@ -66,7 +68,7 @@ describe('BillingModal', () => {
   });
 
   it('renders portal button for paid plans', async () => {
-    (api.get as unknown as vi.Mock).mockImplementation((path: string) => {
+    (api.get as unknown as Mock).mockImplementation((path: string) => {
       if (path === '/billing/plan') {
         return Promise.resolve({
           data: { plan: 'PRO', limits: { docs: 999, trust: 999 } },

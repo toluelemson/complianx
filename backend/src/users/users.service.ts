@@ -65,11 +65,11 @@ export class UsersService {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        firstName: dto.firstName ?? null,
-        lastName: dto.lastName ?? null,
-        jobTitle: dto.jobTitle ?? null,
-        phone: dto.phone ?? null,
-        timezone: dto.timezone ?? null,
+        firstName: dto.firstName ?? undefined,
+        lastName: dto.lastName ?? undefined,
+        jobTitle: dto.jobTitle ?? undefined,
+        phone: dto.phone ?? undefined,
+        timezone: dto.timezone ?? undefined,
       },
     });
     return this.sanitize(user);

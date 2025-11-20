@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { render, screen } from '@testing-library/react';
 import { WizardSidebar } from '../WizardSidebar';
 import { STEP_CONFIG } from '../../../constants/steps';
