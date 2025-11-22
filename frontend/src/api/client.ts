@@ -1,18 +1,18 @@
 import axios from 'axios';
 
-const nodeEnv =
-  typeof globalThis !== 'undefined' && (globalThis as any)?.process?.env
-    ? (globalThis as any).process.env
-    : undefined;
+const DEFAULT_API_BASE_URL = 'http://localhost:30000';
+const envBaseURL = import.meta.env.VITE_API_URL;
+const baseURL = envBaseURL ?? DEFAULT_API_BASE_URL;
 
-const baseURL =
-  (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) ||
-  nodeEnv?.VITE_API_URL ||
-  'http://localhost:3000';
+console.log(
+  `[api/client] Using API base URL (${envBaseURL ? 'VITE_API_URL' : 'fallback'}):`,
+  baseURL,
+);
 
 const api = axios.create({
   baseURL,
 });
+
 
 export function setAuthToken(token?: string) {
   if (token) {
