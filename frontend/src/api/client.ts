@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const DEFAULT_API_BASE_URL = 'http://localhost:30000';
+const DEFAULT_API_BASE_URL = 'http://localhost:3000';
 const envBaseURL = import.meta.env.VITE_API_URL;
 const baseURL = envBaseURL ?? DEFAULT_API_BASE_URL;
 

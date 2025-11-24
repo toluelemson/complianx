@@ -17,7 +17,11 @@ jest.mock('stripe', () => {
     webhooks: { constructEvent },
   };
 
-  const StripeConstructor = jest.fn(() => mockClient);
+  const StripeConstructor = jest
+    .fn(() => mockClient)
+    .mockName('StripeConstructor') as jest.Mock & {
+    __mockClient: typeof mockClient;
+  };
   StripeConstructor.__mockClient = mockClient;
 
   return {
@@ -26,13 +30,22 @@ jest.mock('stripe', () => {
   };
 });
 
-type DeepMock<T> = {
-  [K in keyof T]: jest.Mock | DeepMock<T[K]>;
+type MockedPrisma = {
+  user: {
+    findUnique: jest.Mock;
+    update: jest.Mock;
+  };
+  company: {
+    create: jest.Mock;
+    update: jest.Mock;
+    findUnique: jest.Mock;
+    findFirst: jest.Mock;
+  };
 };
 
 describe('BillingService', () => {
   let service: BillingService;
-  let prisma: DeepMock<PrismaService>;
+  let prisma: MockedPrisma;
   let config: ConfigService;
   let stripeClient: any;
 
@@ -57,14 +70,15 @@ describe('BillingService', () => {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
       },
-    } as unknown as DeepMock<PrismaService>;
+    };
 
     config = {
       get: jest.fn((key: string) => configValues[key]),
     } as unknown as ConfigService;
 
     service = new BillingService(config, prisma as unknown as PrismaService);
-    stripeClient = (Stripe as unknown as jest.Mock).mock.results[0].value;
+    const stripeCtor = Stripe as unknown as jest.Mock & { __mockClient?: any };
+    stripeClient = stripeCtor.mock?.results?.[0]?.value ?? stripeCtor.__mockClient;
   });
 
   describe('createCheckoutSession', () => {
@@ -104,7 +118,7 @@ describe('BillingService', () => {
         metadata: { companyId: 'company-1', plan: 'PRO' },
         subscription: 'sub_123',
         customer: 'cus_111',
-      } as Stripe.Checkout.Session;
+      } as unknown as Stripe.Checkout.Session;
 
       stripeClient.webhooks.constructEvent.mockReturnValue({
         type: 'checkout.session.completed',

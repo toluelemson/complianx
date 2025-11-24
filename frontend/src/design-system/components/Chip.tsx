@@ -1,4 +1,3 @@
-import { ReactNode } from 'react';
 import { palette, spacing, radii } from '../tokens';
 
 interface ChipProps {
@@ -6,7 +5,7 @@ interface ChipProps {
   tone?: 'default' | 'success' | 'warning' | 'alert';
 }
 
-const toneStyles: Record<ChipProps['tone'], { background: string; color: string }> = {
+const toneStyles: Record<NonNullable<ChipProps['tone']>, { background: string; color: string }> = {
   default: { background: palette.muted, color: palette.text },
   success: { background: '#dcfce7', color: '#15803d' },
   warning: { background: '#fefac3', color: '#92400e' },

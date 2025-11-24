@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { palette, radii, spacing } from '../tokens';
 
 interface CardProps {

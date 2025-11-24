@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode, CSSProperties } from 'react';
 import { palette } from '../tokens';
 
 interface TypographyProps {
@@ -6,7 +6,7 @@ interface TypographyProps {
   variant?: 'h1' | 'h2' | 'body' | 'label';
 }
 
-const variantStyles: Record<TypographyProps['variant'], React.CSSProperties> = {
+const variantStyles: Record<NonNullable<TypographyProps['variant']>, CSSProperties> = {
   h1: {
     fontFamily: 'Inter, system-ui, sans-serif',
     fontSize: '2rem',

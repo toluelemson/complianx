@@ -1,4 +1,4 @@
-import { ReactNode, ButtonHTMLAttributes } from 'react';
+import type { ReactNode, ButtonHTMLAttributes } from 'react';
 import { palette, spacing, radii } from '../tokens';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
