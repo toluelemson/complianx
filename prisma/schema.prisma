@@ -17,6 +17,11 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String
+  emailVerified Boolean  @default(false)
+  emailVerificationToken String? @unique
+  emailVerificationTokenExpiresAt DateTime?
+  passwordResetToken String? @unique
+  passwordResetTokenExpiresAt DateTime?
   firstName    String?
   lastName     String?
   jobTitle     String?

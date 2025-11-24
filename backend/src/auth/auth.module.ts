@@ -7,6 +7,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
 import { InvitationsModule } from '../invitations/invitations.module';
+import { EmailService } from '../notifications/email.service';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { InvitationsModule } from '../invitations/invitations.module';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, EmailService],
   controllers: [AuthController],
   exports: [AuthService],
 })

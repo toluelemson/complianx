@@ -14,6 +14,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   role: 'USER' | 'REVIEWER' | 'ADMIN' | 'COMPANY_ADMIN';
+  emailVerified?: boolean;
   companyId?: string | null;
   firstName?: string | null;
   lastName?: string | null;

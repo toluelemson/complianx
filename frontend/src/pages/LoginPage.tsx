@@ -14,19 +14,55 @@ export default function LoginPage() {
   const { token, login } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | undefined>();
-  const { register, handleSubmit } = useForm<LoginFormValues>({
+  const [authError, setAuthError] = useState<string | undefined>();
+  const [resendStatus, setResendStatus] = useState<'idle' | 'pending' | 'sent'>(
+    'idle',
+  );
+  const [resendMessage, setResendMessage] = useState<string | undefined>();
+  const { register, handleSubmit, watch } = useForm<LoginFormValues>({
     defaultValues: { email: '', password: '' },
   });
+  const emailValue = (watch('email') ?? '').trim();
+
+  const canResend = emailValue.trim().length > 0;
+  const handleResend = async () => {
+    if (!canResend) {
+      setResendMessage('Enter your email to resend the verification link.');
+      return;
+    }
+    setResendStatus('pending');
+    setResendMessage(undefined);
+    try {
+      await api.post('/auth/resend-verification', { email: emailValue });
+      setResendStatus('sent');
+      setResendMessage('Check your inbox for a fresh verification link.');
+    } catch (err) {
+      setResendStatus('idle');
+      setResendMessage(
+        err?.response?.data?.message ??
+          'Unable to resend verification email right now.',
+      );
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: (values: LoginFormValues) =>
       api.post('/auth/login', values).then((res) => res.data),
     onSuccess: (data) => {
       login(data.user, data.token);
+      setError(undefined);
+      setAuthError(undefined);
+      setResendStatus('idle');
+      setResendMessage(undefined);
       navigate('/dashboard');
     },
     onError: (err: any) => {
-      setError(err?.response?.data?.message ?? 'Unable to log in. Try again.');
+      const message =
+        err?.response?.data?.message ?? 'Unable to log in. Try again.';
+      setError(message);
+      setAuthError(message);
+      setResendStatus('idle');
+      setResendMessage(undefined);
     },
   });
 
@@ -62,6 +98,24 @@ export default function LoginPage() {
             />
           </label>
           {error && <p className="text-sm text-rose-600">{error}</p>}
+          {authError === 'Email not verified' && (
+            <div className="space-y-2 text-sm text-slate-500">
+              <p>We sent a verification link to your inbox. You need to confirm before signing in.</p>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resendStatus === 'pending' || !canResend}
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 disabled:opacity-60"
+              >
+                {resendStatus === 'pending'
+                  ? 'Resending...'
+                  : 'Resend verification email'}
+              </button>
+              {resendMessage && (
+                <p className="text-xs text-slate-500">{resendMessage}</p>
+              )}
+            </div>
+          )}
           <button
             type="submit"
             disabled={mutation.isPending}
@@ -77,6 +131,20 @@ export default function LoginPage() {
             className="font-medium text-sky-600 hover:text-sky-500"
           >
             Sign up
+          </Link>
+        </p>
+        <p className="mt-1 text-center text-sm text-slate-500">
+          <Link to="/" className="font-medium text-sky-600 hover:text-sky-500">
+            Back to home
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-sm text-slate-500">
+          Forgot your password?{' '}
+          <Link
+            to="/forgot-password"
+            className="font-medium text-sky-600 hover:text-sky-500"
+          >
+            Reset it here
           </Link>
         </p>
       </div>

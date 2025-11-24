@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -12,6 +13,11 @@ import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InvitationsService } from '../invitations/invitations.service';
+import { EmailService } from '../notifications/email.service';
+import { randomBytes } from 'crypto';
+
+const EMAIL_VERIFICATION_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+const PASSWORD_RESET_TTL_MS = 1000 * 60 * 60; // 1 hour
 
 @Injectable()
 export class AuthService {
@@ -20,10 +26,18 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly invitationsService: InvitationsService,
+    private readonly emailService: EmailService,
   ) {}
 
   private sanitize(user: User) {
-    const { passwordHash, ...rest } = user;
+    const {
+      passwordHash,
+      emailVerificationToken,
+      emailVerificationTokenExpiresAt,
+      passwordResetToken,
+      passwordResetTokenExpiresAt,
+      ...rest
+    } = user;
     return rest;
   }
 
@@ -55,6 +69,7 @@ export class AuthService {
       companyId,
       isNewCompany ? 'ADMIN' : undefined,
     );
+    await this.enqueueEmailVerification(user);
     if (invitationToken) {
       await this.invitationsService.markAccepted(invitationToken);
     }
@@ -99,6 +114,9 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    if (!user.emailVerified) {
+      throw new UnauthorizedException('Email not verified');
+    }
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -110,5 +128,100 @@ export class AuthService {
     const user = await this.validateUser(dto.email, dto.password);
     const token = await this.signToken(user);
     return { user: this.sanitize(user), token };
+  }
+
+  async verifyEmail(token: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { emailVerificationToken: token },
+    });
+    if (!user) {
+      throw new NotFoundException('Verification token is invalid');
+    }
+    if (
+      !user.emailVerificationTokenExpiresAt ||
+      user.emailVerificationTokenExpiresAt < new Date()
+    ) {
+      throw new BadRequestException('Verification token expired');
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiresAt: null,
+      },
+    });
+    return { ok: true };
+  }
+
+  async resendVerification(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || user.emailVerified) {
+      return { ok: true };
+    }
+    await this.enqueueEmailVerification(user);
+    return { ok: true };
+  }
+
+  async requestPasswordReset(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      return { ok: true };
+    }
+    const token = this.generateToken();
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: token,
+        passwordResetTokenExpiresAt: expiresAt,
+      },
+    });
+    await this.emailService.sendPasswordReset(user.email, token);
+    return { ok: true };
+  }
+
+  async resetPassword(token: string, password: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { passwordResetToken: token },
+    });
+    if (!user) {
+      throw new NotFoundException('Reset token is invalid');
+    }
+    if (
+      !user.passwordResetTokenExpiresAt ||
+      user.passwordResetTokenExpiresAt < new Date()
+    ) {
+      throw new BadRequestException('Reset token expired');
+    }
+    const passwordHash = await bcrypt.hash(password, 12);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetTokenExpiresAt: null,
+        emailVerified: true,
+      },
+    });
+    return { ok: true };
+  }
+
+  private generateToken() {
+    return randomBytes(32).toString('hex');
+  }
+
+  private async enqueueEmailVerification(user: User) {
+    const token = this.generateToken();
+    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationToken: token,
+        emailVerificationTokenExpiresAt: expiresAt,
+        emailVerified: false,
+      },
+    });
+    await this.emailService.sendVerificationEmail(user.email, token);
   }
 }

@@ -41,6 +41,24 @@ export class EmailService {
     await this.sendEmail(email, subject, body);
   }
 
+  async sendVerificationEmail(email: string, token: string) {
+    const verificationLink = `${
+      process.env.FRONTEND_URL ?? 'http://localhost:5173'
+    }/verify-email?token=${token}`;
+    const subject = 'Verify your AI Compliance DocGen email';
+    const body = `Please confirm your email address for AI Compliance DocGen by clicking the link below:\n\n${verificationLink}\n\nIf you did not create an account, you can ignore this email.`;
+    await this.sendEmail(email, subject, body);
+  }
+
+  async sendPasswordReset(email: string, token: string) {
+    const resetLink = `${
+      process.env.FRONTEND_URL ?? 'http://localhost:5173'
+    }/reset-password?token=${token}`;
+    const subject = 'Reset your AI Compliance DocGen password';
+    const body = `Click the link below to reset your password:\n\n${resetLink}\n\nIf you did not request a reset, you can ignore this email.`;
+    await this.sendEmail(email, subject, body);
+  }
+
   async sendReminder(email: string, subject: string, body: string) {
     await this.sendEmail(email, subject, body);
   }

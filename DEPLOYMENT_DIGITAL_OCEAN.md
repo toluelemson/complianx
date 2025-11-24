@@ -26,7 +26,7 @@ This project runs as two apps (backend Nest.js API and frontend Vite/React SPA).
    STRIPE_PRICE_PRO=price_...
    STRIPE_PRICE_ENTERPRISE=price_...
    ```
-   - For the frontend (static site) set `VITE_API_URL=https://<backend-app>.ondigitalocean.app`.
+   - For the frontend (static site) set `VITE_API_URL=https://<backend-app>.ondigitalocean.app/api`.
 
 4. **Deploy**
    - App Platform runs the Docker build (installs deps, `prisma generate`, `npm run build`, `node dist/src/main`).

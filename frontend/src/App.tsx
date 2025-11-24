@@ -1,7 +1,10 @@
-import { Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import DashboardPage from './pages/DashboardPage';
 import ProjectPage from './pages/ProjectPage';
 import ProjectTrustPage from './pages/ProjectTrustPage';
@@ -14,83 +17,96 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/projects/:projectId"
-        element={
-          <ProtectedRoute>
-            <ProjectPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/projects/:projectId/trust"
-        element={
-          <ProtectedRoute>
-            <ProjectTrustPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/roles"
-        element={
-          <ProtectedRoute>
-            <RoleManagerPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/company"
-        element={
-          <ProtectedRoute>
-            <CompanyPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings/profile"
-        element={
-          <ProtectedRoute>
-            <ProfilePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/billing/success"
-        element={
-          <ProtectedRoute>
-            <BillingStatusPage variant="success" />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/billing/cancel"
-        element={
-          <ProtectedRoute>
-            <BillingStatusPage variant="cancel" />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/billing"
-        element={
-          <ProtectedRoute>
-            <BillingLandingPage />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <>
+      <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-end px-4 sm:px-6">
+        <Link
+          to="/"
+          className="pointer-events-auto rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
+        >
+          Home
+        </Link>
+      </div>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId"
+          element={
+            <ProtectedRoute>
+              <ProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/trust"
+          element={
+            <ProtectedRoute>
+              <ProjectTrustPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/roles"
+          element={
+            <ProtectedRoute>
+              <RoleManagerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/company"
+          element={
+            <ProtectedRoute>
+              <CompanyPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/success"
+          element={
+            <ProtectedRoute>
+              <BillingStatusPage variant="success" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/cancel"
+          element={
+            <ProtectedRoute>
+              <BillingStatusPage variant="cancel" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute>
+              <BillingLandingPage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 

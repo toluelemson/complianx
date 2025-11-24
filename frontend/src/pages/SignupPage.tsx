@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -14,9 +14,9 @@ interface SignupFormValues {
 }
 
 export default function SignupPage() {
-  const { token, login } = useAuth();
-  const navigate = useNavigate();
+  const { token } = useAuth();
   const [error, setError] = useState<string | undefined>();
+  const [successMessage, setSuccessMessage] = useState<string | undefined>();
   const { register, handleSubmit, watch, setValue } =
     useForm<SignupFormValues>({
       defaultValues: {
@@ -56,13 +56,16 @@ export default function SignupPage() {
     mutationFn: (values: SignupFormValues) =>
       api.post('/auth/signup', values).then((res) => res.data),
     onSuccess: (data) => {
-      login(data.user, data.token);
-      navigate('/dashboard');
+      setSuccessMessage(
+        'Check your inbox for a verification link before you can log in.',
+      );
+      setError(undefined);
     },
     onError: (err: any) => {
       setError(
         err?.response?.data?.message ?? 'Unable to create your account.',
       );
+      setSuccessMessage(undefined);
     },
   });
 
@@ -107,6 +110,9 @@ export default function SignupPage() {
             />
           </label>
           {error && <p className="text-sm text-rose-600">{error}</p>}
+          {successMessage && (
+            <p className="text-sm text-emerald-600">{successMessage}</p>
+          )}
           {!inviteInfo && (
             <>
               <label className="block text-sm font-medium text-slate-700">
