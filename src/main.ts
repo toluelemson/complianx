@@ -13,7 +13,7 @@ async function bootstrap() {
   const allowedOrigins =
     process.env.FRONTEND_URL?.split(',').map((origin) => origin.trim()) ?? [];
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (origin: string, callback: (arg0: Error | null, arg1: boolean) => any) => {
       if (!origin) {
         return callback(null, true);
       }

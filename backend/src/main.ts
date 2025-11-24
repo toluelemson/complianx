@@ -13,7 +13,7 @@ async function bootstrap() {
   const allowedOrigins =
     process.env.FRONTEND_URL?.split(',').map((origin) => origin.trim()) ?? [];
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (origin: string, callback: (arg0: Error | null, arg1: boolean) => any) => {
       if (!origin) {
         return callback(null, true);
       }
@@ -27,8 +27,8 @@ async function bootstrap() {
       return callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization',
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   const prismaService = app.get(PrismaService);
