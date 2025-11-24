@@ -198,7 +198,7 @@ export function AppShell({ title, children }: AppShellProps) {
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
             <Link to="/dashboard" className="text-lg font-semibold text-slate-900">
-              AI Compliance DocGen
+              NeuralDocx
             </Link>
             <div className="flex items-center gap-3 lg:hidden">
               <button

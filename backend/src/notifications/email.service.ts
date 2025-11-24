@@ -36,8 +36,8 @@ export class EmailService {
     const inviteLink = `${
       process.env.FRONTEND_URL ?? 'http://localhost:5173'
     }/signup?invitation=${token}`;
-    const subject = 'You have been invited to AI Compliance DocGen';
-    const body = `You've been invited to join AI Compliance DocGen. Click the link to get started:\n\n${inviteLink}\n\nIf you were not expecting this invitation, you can ignore this email.`;
+    const subject = 'You have been invited to NeuralDocx';
+    const body = `You've been invited to join NeuralDocx. Click the link to get started:\n\n${inviteLink}\n\nIf you were not expecting this invitation, you can ignore this email.`;
     await this.sendEmail(email, subject, body);
   }
 
@@ -45,8 +45,8 @@ export class EmailService {
     const verificationLink = `${
       process.env.FRONTEND_URL ?? 'http://localhost:5173'
     }/verify-email?token=${token}`;
-    const subject = 'Verify your AI Compliance DocGen email';
-    const body = `Please confirm your email address for AI Compliance DocGen by clicking the link below:\n\n${verificationLink}\n\nIf you did not create an account, you can ignore this email.`;
+    const subject = 'Verify your NeuralDocx email';
+    const body = `Please confirm your email address for NeuralDocx by clicking the link below:\n\n${verificationLink}\n\nIf you did not create an account, you can ignore this email.`;
     await this.sendEmail(email, subject, body);
   }
 
@@ -54,7 +54,7 @@ export class EmailService {
     const resetLink = `${
       process.env.FRONTEND_URL ?? 'http://localhost:5173'
     }/reset-password?token=${token}`;
-    const subject = 'Reset your AI Compliance DocGen password';
+    const subject = 'Reset your NeuralDocx password';
     const body = `Click the link below to reset your password:\n\n${resetLink}\n\nIf you did not request a reset, you can ignore this email.`;
     await this.sendEmail(email, subject, body);
   }

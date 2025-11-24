@@ -11,7 +11,7 @@ export function TrustWorkspaceBanner({ projectId }: TrustWorkspaceBannerProps) {
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Trust monitoring</h3>
           <p className="mt-1 text-sm text-slate-600">
-            Evidence upload and trust analytics now live on a dedicated workspace to keep DocGen focused on writing.
+            Evidence upload and trust analytics now live on a dedicated workspace to keep NeuralDocx focused on writing.
           </p>
         </div>
         {projectId ? (

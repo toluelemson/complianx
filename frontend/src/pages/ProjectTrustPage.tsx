@@ -521,12 +521,12 @@ export default function ProjectTrustPage() {
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to={`/projects/${projectId}`}
-            className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            ← Back to DocGen
-          </Link>
+            <Link
+              to={`/projects/${projectId}`}
+              className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              ← Back to NeuralDocx
+            </Link>
           <button
             onClick={() => trustMetricsQuery.refetch()}
             className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -1169,8 +1169,8 @@ export default function ProjectTrustPage() {
               )}
             </select>
             {!sectionsQuery.data?.length && (
-              <p className="text-xs text-rose-500">
-                Save at least one section from the DocGen workspace to store
+                <p className="text-xs text-rose-500">
+                Save at least one section from the NeuralDocx workspace to store
                 trust evidence.
               </p>
             )}
@@ -1189,9 +1189,9 @@ export default function ProjectTrustPage() {
             <p className="text-sm font-semibold text-slate-900">
               Need approvals?
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-500">
               Reviewers ({canApprove ? 'you have' : 'requires reviewer role'})
-              can sign off on section status changes in the DocGen workspace.
+              can sign off on section status changes in the NeuralDocx workspace.
             </p>
             <Link
               to={`/projects/${projectId}`}

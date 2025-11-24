@@ -36,8 +36,8 @@ export class EmailService {
     const inviteLink = `${
       process.env.FRONTEND_URL ?? 'http://localhost:5173'
     }/signup?invitation=${token}`;
-    const subject = 'You have been invited to AI Compliance DocGen';
-    const body = `You've been invited to join AI Compliance DocGen. Click the link to get started:\n\n${inviteLink}\n\nIf you were not expecting this invitation, you can ignore this email.`;
+    const subject = 'You have been invited to NeuralDocx';
+    const body = `You've been invited to join NeuralDocx. Click the link to get started:\n\n${inviteLink}\n\nIf you were not expecting this invitation, you can ignore this email.`;
     await this.sendEmail(email, subject, body);
   }
 

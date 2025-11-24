@@ -1,4 +1,4 @@
-## AI Compliance DocGen
+## NeuralDocx
 
 Monorepo that hosts a NestJS backend (`/backend`) and a Vite/React frontend (`/frontend`). The backend exposes billing, Stripe, Prisma, and APIs for projects/review workflows; the frontend provides an AppShell, dashboard, billing modal, and profile/settings pages.
 
