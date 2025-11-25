@@ -96,7 +96,9 @@ export default function LandingPage() {
                 <li>• SSO/SAML, audit logs</li>
                 <li>• Custom templates & SLAs</li>
               </ul>
-              <a href="mailto:sales@example.com" className="mt-4 inline-block rounded-md border border-white/30 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10">Contact sales</a>
+            <Link to="/contact" className="mt-4 inline-block rounded-md border border-white/30 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10">
+              Contact sales
+            </Link>
             </div>
           </div>
           <p className="mt-4 text-xs text-slate-300">You can change plans anytime. Taxes may apply.</p>

@@ -63,6 +63,10 @@ export class EmailService {
     await this.sendEmail(email, subject, body);
   }
 
+  async sendCustomEmail(to: string, subject: string, text: string) {
+    await this.sendEmail(to, subject, text);
+  }
+
   private async sendEmail(to: string, subject: string, text: string) {
     if (!this.transporter || !this.fromAddress) {
       this.logger.log(`[Mock Email] To: ${to} | Subject: ${subject}\n${text}`);
