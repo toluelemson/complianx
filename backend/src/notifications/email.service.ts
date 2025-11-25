@@ -14,7 +14,7 @@ export class EmailService {
       : undefined;
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
-    this.fromAddress = process.env.SMTP_FROM;
+    this.fromAddress = process.env.SMTP_FROM ?? process.env.EMAIL_FROM;
 
     if (host && port && this.fromAddress) {
       this.transporter = nodemailer.createTransport({
