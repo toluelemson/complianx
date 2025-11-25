@@ -1,4 +1,4 @@
-import { Link, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -17,16 +17,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
-    <>
-      <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-end px-4 sm:px-6">
-        <Link
-          to="/"
-          className="pointer-events-auto rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
-        >
-          Home
-        </Link>
-      </div>
-      <Routes>
+    <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
@@ -97,16 +88,15 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/billing"
-          element={
-            <ProtectedRoute>
-              <BillingLandingPage />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </>
+      <Route
+        path="/billing"
+        element={
+          <ProtectedRoute>
+            <BillingLandingPage />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
 
