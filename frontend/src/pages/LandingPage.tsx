@@ -38,7 +38,7 @@ export default function LandingPage() {
               Log In
             </Link>
             <a
-              href="https://calendly.com/neuraldocx/demo"
+              href="https://calendly.com/neuraldocx"
               target="_blank"
               rel="noreferrer"
               className="rounded-md border border-white/30 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/10 hover:backdrop-blur-sm"
