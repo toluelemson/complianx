@@ -37,6 +37,14 @@ export default function LandingPage() {
             >
               Log In
             </Link>
+            <a
+              href="https://calendly.com/neuraldocx/demo"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-white/30 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/10 hover:backdrop-blur-sm"
+            >
+              Book a demo
+            </a>
           </div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-white/20 hover:shadow-xl hover:shadow-sky-500/10">
