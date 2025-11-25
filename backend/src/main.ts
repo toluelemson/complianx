@@ -10,33 +10,40 @@ async function bootstrap() {
   });
 
   app.use('/billing/webhook', bodyParser.raw({ type: '*/*' }));
+  const normalizeOrigin = (o: string) => o.replace(/\/$/, '').toLowerCase();
+
   const allowedOrigins =
-    process.env.FRONTEND_URL?.split(',').map((origin) => origin.trim()) ?? [];
+    process.env.FRONTEND_URL?.split(',')
+      .map((o) => normalizeOrigin(o.trim()))
+      .filter(Boolean) ?? [];
+
+  console.log('allowedOrigins:', allowedOrigins);
+
+
   app.enableCors({
-    origin: (origin: string, callback: (err: Error | null, allow: boolean) => void) => {
-      if (!origin) {
-        return callback(null, true);
-      }
+    origin: (origin: string, cb: (arg0: Error | null, arg1: boolean) => any) => {
+      if (!origin) return cb(null, true);
+      const normalized = normalizeOrigin(origin);
+      console.log('incoming origin:', origin);
+
       if (
         allowedOrigins.length === 0 ||
-        allowedOrigins.includes(origin) ||
-        allowedOrigins.includes('*')
+        allowedOrigins.includes(normalized)
       ) {
-        return callback(null, true);
+        return cb(null, true);
       }
-      return callback(new Error('Not allowed by CORS'), false);
+
+      return cb(new Error(`Not allowed by CORS: ${origin}`), false);
     },
     credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
     allowedHeaders: [
-      'Content-Type',
       'content-type',
-      'Authorization',
       'authorization',
-      'X-Requested-With',
       'x-requested-with',
     ],
   });
+
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   const prismaService = app.get(PrismaService);
   await prismaService.enableShutdownHooks(app);
