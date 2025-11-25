@@ -99,26 +99,76 @@ export default function CompanyPage() {
           </div>
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
             <p className="text-sm font-semibold text-slate-900">Members</p>
-            <table className="mt-4 w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Email</th>
-                  <th className="px-4 py-2 font-medium">Role</th>
-                  <th className="px-4 py-2 font-medium">Joined</th>
-                  <th className="px-4 py-2 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <div className="mt-4">
+              <div className="hidden lg:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                      <tr>
+                        <th className="px-4 py-2 font-medium">Email</th>
+                        <th className="px-4 py-2 font-medium">Role</th>
+                        <th className="px-4 py-2 font-medium">Joined</th>
+                        <th className="px-4 py-2 font-medium text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {members.map((member: any) => (
+                        <tr key={member.id} className="border-b border-slate-100">
+                          <td className="px-4 py-2">{member.email}</td>
+                          <td className="px-4 py-2 uppercase text-slate-500">
+                            {member.role}
+                          </td>
+                          <td className="px-4 py-2 text-slate-500">
+                            {new Date(member.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            {isCompanyAdmin && member.id !== user?.id ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      `Remove ${member.email} from the company?`,
+                                    )
+                                  ) {
+                                    removeMemberMutation.mutate(member.id);
+                                  }
+                                }}
+                                disabled={removeMemberMutation.isPending}
+                                className="rounded-md border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                              >
+                                Remove
+                              </button>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="space-y-4 lg:hidden">
                 {members.map((member: any) => (
-                  <tr key={member.id} className="border-b border-slate-100">
-                    <td className="px-4 py-2">{member.email}</td>
-                    <td className="px-4 py-2 uppercase text-slate-500">
-                      {member.role}
-                    </td>
-                    <td className="px-4 py-2 text-slate-500">
-                      {new Date(member.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 text-right">
+                  <div
+                    key={member.id}
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {member.email}
+                        </p>
+                        <p className="text-xs uppercase text-slate-500">
+                          {member.role}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {new Date(member.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="mt-3 flex items-center justify-end">
                       {isCompanyAdmin && member.id !== user?.id ? (
                         <button
                           type="button"
@@ -139,11 +189,11 @@ export default function CompanyPage() {
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
                       )}
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
           {isCompanyAdmin && (
             <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
