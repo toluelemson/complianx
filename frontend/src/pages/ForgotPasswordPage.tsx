@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useState } from 'react';
+import { SiteHeader } from '../components/SiteHeader';
 
 interface ForgotPasswordForm {
   email: string;
@@ -30,7 +31,9 @@ export default function ForgotPasswordPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <>
+      <SiteHeader />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-900">
           Forgot your password?
@@ -70,5 +73,6 @@ export default function ForgotPasswordPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

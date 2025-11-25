@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
+import { SiteHeader } from '../components/SiteHeader';
 
 interface LoginFormValues {
   email: string;
@@ -71,7 +72,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <>
+      <SiteHeader />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-900">Log in</h1>
         <p className="mt-2 text-sm text-slate-500">
@@ -149,5 +152,6 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

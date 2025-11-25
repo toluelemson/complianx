@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
+import { SiteHeader } from '../components/SiteHeader';
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
@@ -33,7 +34,9 @@ export default function VerifyEmailPage() {
   }, [token]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <>
+      <SiteHeader />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center">
         <h1 className="text-2xl font-semibold text-slate-900">Email verification</h1>
         <p className="mt-4 text-sm text-slate-500">
@@ -51,5 +54,6 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
