@@ -197,8 +197,16 @@ export function AppShell({ title, children }: AppShellProps) {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-            <Link to="/" className="text-lg font-semibold text-slate-900">
-              NeuralDocx
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-lg font-semibold text-slate-900"
+            >
+              <img
+                src="/compliance-icon.svg"
+                alt="NeuralDocx"
+                className="h-7 w-7 rounded-xl border border-slate-900/10 bg-white p-1 shadow-sm"
+              />
+              <span className="whitespace-nowrap">NeuralDocx</span>
             </Link>
             <div className="flex items-center gap-3 lg:hidden">
               <button
