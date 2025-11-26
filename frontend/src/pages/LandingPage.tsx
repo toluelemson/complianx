@@ -13,11 +13,18 @@ export default function LandingPage() {
       <div className="pointer-events-none absolute -right-24 top-1/3 h-80 w-80 rounded-full bg-gradient-to-tr from-fuchsia-500/30 via-amber-400/20 to-sky-400/20 blur-3xl animate-blob animation-delay-2000" />
       <div className="pointer-events-none absolute left-1/3 bottom-0 h-64 w-64 rounded-full bg-gradient-to-tr from-emerald-400/30 via-sky-400/20 to-fuchsia-400/20 blur-3xl animate-blob animation-delay-4000" />
       <div className="relative mx-auto flex max-w-5xl flex-col gap-12 px-6 py-24">
-        <div>
-          <p className="text-sm uppercase tracking-wide text-sky-400">AI Trust Platform</p>
+      <div>
+          <div className="flex items-center gap-4">
+          <img
+            src="/compliance-icon.svg"
+            alt="NeuralDocx logo"
+            className="h-12 w-12 rounded-xl border border-white/40 bg-white/10 p-2"
+          />
+            <p className="text-sm uppercase tracking-wide text-sky-400"> NeuralDocx - your AI Trust Platform</p>
+          </div>
           <h1 className="mt-4 bg-gradient-to-r from-white via-sky-200 to-white bg-clip-text text-4xl font-semibold leading-tight text-transparent md:text-5xl">
-            Documentation + Trust Monitoring for responsible AI teams.
-          </h1>
+              Documentation + Trust Monitoring for responsible AI teams.
+            </h1>
           <p className="mt-6 max-w-2xl text-lg text-slate-200">
             Capture system details and generate compliance‑ready documents, then
             continuously assess fairness, robustness, and data drift — in one
@@ -46,7 +53,7 @@ export default function LandingPage() {
               Book a demo
             </a>
           </div>
-        </div>
+      </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-white/20 hover:shadow-xl hover:shadow-sky-500/10">
           <p className="text-sm uppercase tracking-wide text-slate-300">What you can do</p>
           <ul className="mt-4 grid gap-3 text-slate-100 sm:grid-cols-2">
@@ -99,8 +106,8 @@ export default function LandingPage() {
             <Link to="/contact" className="mt-4 inline-block rounded-md border border-white/30 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10">
               Contact sales
             </Link>
-            </div>
           </div>
+        </div>
           <p className="mt-4 text-xs text-slate-300">You can change plans anytime. Taxes may apply.</p>
         </div>
       </div>
