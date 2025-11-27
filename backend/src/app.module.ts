@@ -23,6 +23,7 @@ import { MonetizationService } from './monetization/monetization.service';
 import { BillingService } from './billing/billing.service';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ContactModule } from './contact/contact.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ContactModule } from './contact/contact.module';
     TrustModule,
     NotificationsModule,
     ContactModule,
+    AnalyticsModule,
   ],
   controllers: [BillingController, BillingWebhookController],
   providers: [MonetizationService, BillingService],
