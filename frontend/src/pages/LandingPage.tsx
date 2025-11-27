@@ -4,6 +4,7 @@ import api from '../api/client';
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -54,6 +55,7 @@ export default function LandingPage() {
   const [activeStep, setActiveStep] = useState(0);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [cardWidth, setCardWidth] = useState(0);
+  const [carouselOffset, setCarouselOffset] = useState(0);
   const CARD_GAP_PX = 20;
   const DRAG_THRESHOLD = 34;
   const WHEEL_THROTTLE_MS = 250;
@@ -109,11 +111,14 @@ export default function LandingPage() {
     () => setActiveStep((prev) => (prev + 1) % pipeline.length),
     [pipeline.length],
   );
-  const updateCardWidth = useCallback(() => {
-    const firstCard = stepRefs.current[0];
-    if (firstCard) {
-      setCardWidth(firstCard.offsetWidth);
+  const updateCardMetrics = useCallback(() => {
+    const refs = stepRefs.current;
+    if (refs.length === 0) {
+      setCardWidth(0);
+      return;
     }
+    const firstCard = refs[0];
+    setCardWidth(firstCard?.offsetWidth ?? 0);
   }, []);
 
   const handlePointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
@@ -163,15 +168,25 @@ export default function LandingPage() {
     [goNextStep, goPrevStep],
   );
 
+  useLayoutEffect(() => {
+    updateCardMetrics();
+  }, [updateCardMetrics, pipeline.length]);
+
   useEffect(() => {
     const interval = setInterval(goNextStep, 6500);
     return () => clearInterval(interval);
   }, [goNextStep]);
   useEffect(() => {
-    updateCardWidth();
-    window.addEventListener('resize', updateCardWidth);
-    return () => window.removeEventListener('resize', updateCardWidth);
-  }, [updateCardWidth]);
+    updateCardMetrics();
+    window.addEventListener('resize', updateCardMetrics);
+    return () => window.removeEventListener('resize', updateCardMetrics);
+  }, [updateCardMetrics]);
+  useEffect(() => {
+    const activeCard = stepRefs.current[activeStep];
+    const offset =
+      activeCard?.offsetLeft ?? activeStep * (cardWidth + CARD_GAP_PX);
+    setCarouselOffset(offset);
+  }, [activeStep, cardWidth]);
 
   if (!initializing && token) {
     return <Navigate to="/dashboard" replace />;
@@ -251,7 +266,7 @@ export default function LandingPage() {
               <div
                 className="flex gap-5 px-2 pb-1 pt-2 transition-transform duration-700 ease-out"
                 style={{
-                  transform: `translateX(-${activeStep * (cardWidth + CARD_GAP_PX)}px)`,
+                  transform: `translateX(-${carouselOffset}px)`,
                 }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
@@ -274,6 +289,7 @@ export default function LandingPage() {
                         ? 'active border-sky-400/60 shadow-2xl shadow-cyan-500/40 scale-105 animate-pulse-card'
                         : 'border-white/10'
                     }`}
+                    onClick={() => setActiveStep(idx)}
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="text-[0.6rem] uppercase tracking-[0.5em] text-slate-400">
@@ -324,7 +340,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-        <div className="mt-10 grid gap-4 md:grid-cols-4 relative z-10">
+        {/* <div className="mt-10 grid gap-4 md:grid-cols-4 relative z-10">
           {[
             { label: 'Docs processed', value: stats.docs },
             { label: 'Reviews done', value: stats.approvals },
@@ -342,7 +358,7 @@ export default function LandingPage() {
               </div>
             );
           })}
-        </div>
+        </div> */}
         <div className="mt-8 grid gap-6 md:grid-cols-2 relative z-10">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-slate-200 shadow-lg shadow-sky-500/10 backdrop-blur">
             <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Audit readiness</p>
