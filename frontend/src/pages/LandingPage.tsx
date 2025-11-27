@@ -59,14 +59,30 @@ export default function LandingPage() {
 
   const pipeline = useMemo(
     () => [
-      { title: 'Evidence intake', icon: '📥', detail: 'Drop in prompts, files, and data snippets.' },
-      { title: 'Doc generation', icon: '🧾', detail: 'We turn your inputs into ready-to-share writeups.' },
-      { title: 'Review & approve', icon: '✅', detail: 'Loop in teammates and lock final sections.' },
-      { title: 'Release notes', icon: '📝', detail: 'Bundle summaries and share with stakeholders.' },
+      {
+        title: 'Evidence intake',
+        icon: '📥',
+        detail: 'Upload prompts, policies, and proof so every document starts with a clear audit trail.',
+      },
+      {
+        title: 'Doc generation',
+        icon: '🧾',
+        detail: 'Auto-draft compliance notes that reference the rules and context your team cares about.',
+      },
+      {
+        title: 'Review & approve',
+        icon: '✅',
+        detail: 'Invite reviewers, gather approvals, and keep each comment attached to the right section.',
+      },
+      {
+        title: 'Release notes',
+        icon: '📝',
+        detail: 'Bundle summaries and approvals together, then export for regulators or teammates.',
+      },
       {
         title: 'Trust monitoring',
         icon: '🛰️',
-        detail: 'Fairness, robustness, drift dashboards (coming soon)',
+        detail: 'Watch performance and drift so you can update documentation before questions arrive.',
         comingSoon: true,
       },
     ],
@@ -235,9 +251,9 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="mt-6 flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.4em] text-slate-300">
-              <span className="rounded-full border border-white/20 px-4 py-1">Streaming connectors</span>
-              <span className="rounded-full border border-white/20 px-4 py-1">Live metrics</span>
-              <span className="rounded-full border border-white/20 px-4 py-1">Trust layer soon</span>
+              <span className="rounded-full border border-white/20 px-4 py-1">Evidence sources</span>
+              <span className="rounded-full border border-white/20 px-4 py-1">Live compliance stats</span>
+              <span className="rounded-full border border-white/20 px-4 py-1">Trust insights soon</span>
             </div>
             </div>
           </div>
@@ -263,74 +279,73 @@ export default function LandingPage() {
         </div>
         <div className="mt-8 grid gap-6 md:grid-cols-2 relative z-10">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-slate-200 shadow-lg shadow-sky-500/10 backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Trust layer</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Coming soon</h3>
+            <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Audit readiness</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">Evidence trails for regulators</h3>
             <p className="mt-2 text-slate-300">
-              AI fairness scoring, drift alerts, and approval locks keep regulators confident without slowing your document flow.
+              Approvals, prompts, and derivations in one timeline ensure every AI doc carries context auditors expect.
             </p>
             <div className="mt-4 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.4em] text-slate-200">
               <span className="rounded-full bg-white/10 px-3 py-1">EU AI Act</span>
               <span className="rounded-full bg-white/10 px-3 py-1">NIST AI RMF</span>
-              <span className="rounded-full bg-white/10 px-3 py-1">ISO 27001</span>
+              <span className="rounded-full bg-white/10 px-3 py-1">SOC 2</span>
             </div>
           </div>
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-slate-200 shadow-lg shadow-emerald-500/10 backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Live insight</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Data that drives the demo</h3>
+            <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Workflow visibility</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">Know what to finish</h3>
             <p className="mt-2 text-slate-300">
-              NeuralDocx pulls counts from uploads, approvals, and AI systems created so the streaming line always feels alive.
+              Spot drafts and waiting approvals so you can clear the next blocker.
             </p>
             <p className="mt-4 text-sm text-slate-300">
-              Every pipeline step reacts to what teams are doing — the same numbers fuel the animation, analytics, and CTA you just clicked.
+              Personal workspaces feed company views so leads always know where to follow up.
             </p>
           </div>
         </div>
         <div className="mt-10 relative z-10">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-white/20 hover:shadow-xl hover:shadow-sky-500/10">
-            <p className="text-sm uppercase tracking-wide text-slate-300">Pricing</p>
-            <h2 className="mt-2 text-2xl font-semibold">Simple plans that scale with you</h2>
+            <p className="text-sm uppercase tracking-wide text-slate-300">Pricing & workspaces</p>
+            <h2 className="mt-2 text-2xl font-semibold">Choose a workspace sized for your team</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-white/20 hover:shadow-lg hover:shadow-sky-500/10">
-                <p className="text-lg font-semibold">Free</p>
+                <p className="text-lg font-semibold">Starter</p>
                 <p className="mt-1 text-3xl font-bold">$0</p>
                 <ul className="mt-3 space-y-1 text-slate-200 text-sm">
-                  <li>• 3 documents per month</li>
-                  <li>• 10 trust analyses per month</li>
-                  <li>• Evidence attachments</li>
+                  <li>• Personal workspace + solo dashboard</li>
+                  <li>• Three compliance documents per month</li>
+                  <li>• Evidence attachments + version history</li>
                 </ul>
-                <Link to="/signup" className="mt-4 inline-block rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400">
-                  Get started
+                <Link to="/signup?type=personal" className="mt-4 inline-block rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400">
+                  Start personal workspace
                 </Link>
               </div>
               <div className="rounded-xl border border-sky-500/40 bg-sky-500/10 p-5 ring-1 ring-inset ring-sky-500/20 transition hover:-translate-y-1 hover:shadow-lg hover:shadow-sky-500/20">
-                <p className="text-lg font-semibold">Pro</p>
+                <p className="text-lg font-semibold">Team</p>
                 <p className="mt-1 text-3xl font-bold">
                   $49<span className="text-base font-normal">/mo</span>
                 </p>
                 <ul className="mt-3 space-y-1 text-slate-200 text-sm">
-                  <li>• 25 documents per month</li>
-                  <li>• 250 trust analyses per month</li>
-                  <li>• All Free features</li>
-                  <li>• Priority support</li>
+                  <li>• Shared company workspace & approvals</li>
+                  <li>• 25 documents + 250 compliance reviews per month</li>
+                  <li>• Slack/Teams notifications & priority support</li>
                 </ul>
-                <Link to="/signup" className="mt-4 inline-block rounded-md bg-white/90 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-white">
-                  Start Pro
+                <Link to="/signup?type=company" className="mt-4 inline-block rounded-md bg-white/90 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-white">
+                  Start team workspace
                 </Link>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-white/20 hover:shadow-lg hover:shadow-sky-500/10">
                 <p className="text-lg font-semibold">Enterprise</p>
                 <p className="mt-1 text-3xl font-bold">Custom</p>
                 <ul className="mt-3 space-y-1 text-slate-200 text-sm">
-                  <li>• Unlimited documents & analyses</li>
-                  <li>• SSO/SAML, audit logs</li>
-                  <li>• Custom templates & SLAs</li>
+                  <li>• Unlimited documents, projects, and integrations</li>
+                  <li>• Dedicated compliance advisor & SSO/SAML</li>
+                  <li>• API access + audit logs for regulators</li>
                 </ul>
                 <Link to="/contact" className="mt-4 inline-block rounded-md border border-white/30 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10">
                   Contact sales
                 </Link>
               </div>
             </div>
-            <p className="mt-4 text-xs text-slate-300">You can change plans anytime. Taxes may apply.</p>
+            <p className="mt-4 text-xs text-slate-300">Workspace upgrades unlock more reviewers, evidence storage, and convenience features.</p>
           </div>
         </div>
       </div>
