@@ -250,7 +250,7 @@ export default function LandingPage() {
                 Launch company workspace
               </Link>
               <a
-                href="https://calendly.com/neuraldocx/demo"
+                href="https://calendly.com/neuraldocx"
                 target="_blank"
                 rel="noreferrer"
               className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/90 transition hover:border-white/50"

@@ -242,6 +242,26 @@ export function AppShell({ title, children }: AppShellProps) {
               </button>
             </div>
             <div className="hidden flex-1 items-center justify-end gap-4 lg:flex">
+              <Link
+                to="/"
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Home
+              </Link>
+              <a
+                href="https://calendly.com/neuraldocx"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Book demo
+              </a>
+              <Link
+                to="/contact"
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Contact
+              </Link>
               <button
                 onClick={() => setBillingOpen(true)}
                 className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -250,12 +270,6 @@ export function AppShell({ title, children }: AppShellProps) {
                 Billing
               </button>
               {renderNotificationsTrigger()}
-              <Link
-                to="/"
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Home
-              </Link>
               {renderDesktopNav()}
               <button
                 onClick={() => {
@@ -275,13 +289,6 @@ export function AppShell({ title, children }: AppShellProps) {
             <div className="mx-auto max-w-6xl space-y-4 px-4 py-4 sm:px-6">
               <div className="space-y-4">{renderMobileNav()}</div>
               <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => setBillingOpen(true)}
-                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  type="button"
-                >
-                  Billing
-                </button>
                 <Link
                   to="/"
                   onClick={closeMobileMenu}
@@ -289,6 +296,28 @@ export function AppShell({ title, children }: AppShellProps) {
                 >
                   Home
                 </Link>
+                <a
+                  href="https://calendly.com/neuraldocx"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Book demo
+                </a>
+                <Link
+                  to="/contact"
+                  onClick={closeMobileMenu}
+                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Contact
+                </Link>
+                <button
+                  onClick={() => setBillingOpen(true)}
+                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  type="button"
+                >
+                  Billing
+                </button>
                 {renderNotificationsTrigger()}
                 <button
                   onClick={() => {
