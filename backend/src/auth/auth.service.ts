@@ -60,15 +60,14 @@ export class AuthService {
     if (existing) {
       throw new ConflictException('Email already registered');
     }
-    const { companyId, invitationToken } = await this.resolveCompany(dto);
+    const { companyId, invitationToken, createdCompany } =
+      await this.resolveCompany(dto);
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const isNewCompany =
-      Boolean(dto.companyName?.trim() && !dto.companyId && !invitationToken);
     const user = await this.usersService.create(
       dto.email,
       passwordHash,
-      companyId ?? undefined,
-      isNewCompany ? 'ADMIN' : undefined,
+      companyId,
+      createdCompany ? 'ADMIN' : undefined,
     );
     await this.enqueueEmailVerification(user);
     if (invitationToken) {
@@ -80,7 +79,7 @@ export class AuthService {
 
   private async resolveCompany(
     dto: SignupDto,
-  ): Promise<{ companyId: string | null; invitationToken?: string }> {
+  ): Promise<{ companyId: string; invitationToken?: string; createdCompany: boolean }> {
     if (dto.invitationToken) {
       const invitation = await this.invitationsService.getInvitationByToken(
         dto.invitationToken,
@@ -90,7 +89,11 @@ export class AuthService {
           'Invitation email does not match signup email',
         );
       }
-      return { companyId: invitation.companyId, invitationToken: invitation.token };
+      return {
+        companyId: invitation.companyId,
+        invitationToken: invitation.token,
+        createdCompany: false,
+      };
     }
     if (dto.companyId) {
       const existing = await (this.prisma as any).company.findUnique({
@@ -99,20 +102,30 @@ export class AuthService {
       if (!existing) {
         throw new NotFoundException('Company not found');
       }
-      return { companyId: existing.id };
+      return { companyId: existing.id, createdCompany: false };
     }
     if (dto.companyName?.trim()) {
       const company = await (this.prisma as any).company.create({
         data: { name: dto.companyName.trim() },
       });
-      return { companyId: company.id };
+      return { companyId: company.id, createdCompany: true };
     }
     if (dto.accountType === 'organization') {
       throw new ConflictException(
         'Provide a company name to create one or a valid company id to join.',
       );
     }
-    return { companyId: null };
+    const localPart = dto.email.split('@')[0] || 'Personal';
+    const company = await (this.prisma as any).company.create({
+      data: {
+        name: `${localPart}'s workspace`,
+        billingEmail: dto.email,
+      },
+    });
+    return {
+      companyId: company.id,
+      createdCompany: true,
+    };
   }
 
   async validateUser(email: string, password: string) {

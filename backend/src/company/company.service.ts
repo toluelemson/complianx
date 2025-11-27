@@ -57,4 +57,29 @@ export class CompanyService {
       data: { companyId: null, role: 'USER' },
     });
   }
+
+  async leaveCompany(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { company: true },
+    });
+    if (!user?.companyId || !user.company) {
+      throw new NotFoundException('User is not part of a company');
+    }
+    if (user.role === 'ADMIN') {
+      const adminCount = await this.prisma.user.count({
+        where: { companyId: user.companyId, role: 'ADMIN' },
+      });
+      if (adminCount <= 1) {
+        throw new ForbiddenException(
+          'Assign another admin before leaving the company',
+        );
+      }
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { companyId: null, role: 'USER' },
+    });
+    return { ok: true };
+  }
 }

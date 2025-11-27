@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function CompanyPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
+  const [leftCompany, setLeftCompany] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+
   const companyQuery = useQuery({
     queryKey: ['company'],
     queryFn: () => api.get('/company').then((res) => res.data),
@@ -35,12 +38,18 @@ export default function CompanyPage() {
     },
   });
 
-  if (!companyQuery.data && companyQuery.isError) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const leaveCompanyMutation = useMutation({
+    mutationFn: () => api.post('/company/leave').then((res) => res.data),
+    onSuccess: () => {
+      toast.success('You have left the company');
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      setLeftCompany(true);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message ?? 'Unable to leave the company');
+    },
+  });
 
-  const company = companyQuery.data?.company;
-  const members = companyQuery.data?.members ?? [];
   const isCompanyAdmin = user?.role === 'ADMIN' || user?.role === 'COMPANY_ADMIN';
   const invitationsQuery = useQuery({
     queryKey: ['invitations'],
@@ -55,7 +64,58 @@ export default function CompanyPage() {
       setInviteEmail('');
     },
   });
-  const [inviteEmail, setInviteEmail] = useState('');
+
+  useEffect(() => {
+    if (companyQuery.isSuccess && companyQuery.data?.company) {
+      setLeftCompany(false);
+    }
+  }, [companyQuery.isSuccess, companyQuery.data]);
+
+  if (leftCompany) {
+    return (
+      <AppShell title="Company Settings">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-lg font-semibold text-slate-900">
+            You’re not part of a shared company workspace
+          </p>
+          <p className="text-sm text-slate-500">
+            Leaving removed your access. Use the dashboard to manage your personal workspace or accept a new invitation.
+          </p>
+          <Link
+            to="/dashboard"
+            className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+          >
+            Back to dashboard
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
+  if (companyQuery.isError) {
+    return (
+      <AppShell title="Company Settings">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-lg font-semibold text-slate-900">
+            Unable to load a shared company workspace
+          </p>
+          <p className="text-sm text-slate-500">
+            You’re not currently assigned to one. Visit the dashboard to start a personal workspace or accept a teammate invite.
+          </p>
+          <Link
+            to="/dashboard"
+            className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+          >
+            Back to dashboard
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const company = companyQuery.data?.company;
+  const members = companyQuery.data?.members ?? [];
+  const adminCount = members.filter((member: any) => member.role === 'ADMIN').length;
+  const isSoleAdmin = user?.role === 'ADMIN' && adminCount <= 1;
 
   return (
     <AppShell title="Company Settings">
@@ -94,7 +154,43 @@ export default function CompanyPage() {
                 >
                   Rename
                 </button>
-              </form>
+                </form>
+              )}
+            {company && (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-700">
+                  Need to exit this company?
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Leaving will remove your access to the shared workspace. You can join a different company or create a fresh personal workspace afterward.
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          'Are you sure you want to leave this company? You will lose access to its workspace.'
+                        )
+                      ) {
+                        return;
+                      }
+                      leaveCompanyMutation.mutate();
+                    }}
+                    disabled={leaveCompanyMutation.isPending || isSoleAdmin}
+                    className="inline-flex items-center rounded-md border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+                  >
+                    {leaveCompanyMutation.isPending
+                      ? 'Leaving…'
+                      : 'Leave company'}
+                  </button>
+                  {isSoleAdmin && (
+                    <p className="text-xs text-rose-500">
+                      Assign another admin before leaving.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">

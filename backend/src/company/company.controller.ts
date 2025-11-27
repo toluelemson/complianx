@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -20,5 +20,10 @@ export class CompanyController {
   @Patch('members/:memberId/remove')
   removeMember(@Request() req, @Param('memberId') memberId: string) {
     return this.companyService.removeMember(req.user.userId, memberId);
+  }
+
+  @Post('leave')
+  leave(@Request() req) {
+    return this.companyService.leaveCompany(req.user.userId);
   }
 }

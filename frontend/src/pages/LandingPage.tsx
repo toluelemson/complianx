@@ -401,7 +401,7 @@ export default function LandingPage() {
                 </Link>
               </div>
               <div className="rounded-xl border border-sky-500/40 bg-sky-500/10 p-5 ring-1 ring-inset ring-sky-500/20 transition hover:-translate-y-1 hover:shadow-lg hover:shadow-sky-500/20">
-                <p className="text-lg font-semibold">Team</p>
+                <p className="text-lg font-semibold">Pro</p>
                 <p className="mt-1 text-3xl font-bold">
                   $49<span className="text-base font-normal">/mo</span>
                 </p>
@@ -411,7 +411,7 @@ export default function LandingPage() {
                   <li>• Slack/Teams notifications & priority support</li>
                 </ul>
                 <Link to="/signup?type=company" className="mt-4 inline-block rounded-md bg-white/90 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-white">
-                  Start team workspace
+                  Start pro workspace
                 </Link>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-white/20 hover:shadow-lg hover:shadow-sky-500/10">
