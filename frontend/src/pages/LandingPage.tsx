@@ -133,6 +133,12 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
+                to="/login"
+                className="rounded-full border border-slate-600 px-5 py-2 text-sm font-semibold text-slate-200 transition hover:border-white/80"
+              >
+                Log in
+              </Link>
+              <Link
                 to="/signup?type=personal"
                 className="rounded-full bg-sky-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-400"
               >
@@ -196,20 +202,7 @@ export default function LandingPage() {
               <span className="rounded-full border border-white/20 px-4 py-1">Live metrics</span>
               <span className="rounded-full border border-white/20 px-4 py-1">Trust layer soon</span>
             </div>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  to="/signup?type=personal"
-                  className="rounded-full bg-gradient-to-r from-sky-500 via-cyan-500 to-indigo-500 px-5 py-2 text-sm font-semibold text-white transition hover:from-sky-400 hover:to-indigo-400"
-                >
-                  Try the personal flow
-                </Link>
-                <Link
-                  to="/contact"
-                  className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/90 transition hover:border-white/60"
-                >
-                  Book a demo
-                </Link>
-              </div>
+            
           </div>
         </div>
         <div className="mt-10 grid gap-4 md:grid-cols-4 relative z-10">
