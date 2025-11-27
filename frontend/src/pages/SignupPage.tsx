@@ -215,7 +215,7 @@ export default function SignupPage() {
                       placeholder="Acme Compliance"
                     />
                   </label>
-                  <label className="block text-sm font-medium text-slate-700">
+                  {/* <label className="block text-sm font-medium text-slate-700">
                     Existing Company ID (optional)
                     <input
                       type="text"
@@ -226,7 +226,7 @@ export default function SignupPage() {
                   </label>
                   <p className="text-xs text-slate-500">
                     Already have a workspace? Share the ID above to join it.
-                  </p>
+                  </p> */}
                 </>
               )}
             </>
