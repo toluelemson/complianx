@@ -106,7 +106,7 @@ export default function LandingPage() {
       <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-gradient-to-tr from-sky-500/25 via-slate-400/20 to-emerald-400/20 blur-3xl animate-blob" />
       <div className="pointer-events-none absolute -right-24 top-1/3 h-80 w-80 rounded-full bg-gradient-to-tr from-fuchsia-500/30 via-amber-400/20 to-sky-400/20 blur-3xl animate-blob animation-delay-2000" />
       <div className="pointer-events-none absolute left-1/3 bottom-0 h-64 w-64 rounded-full bg-gradient-to-tr from-emerald-400/25 via-sky-400/20 to-fuchsia-400/20 blur-3xl animate-blob animation-delay-4000" />
-      <div className="relative mx-auto max-w-6xl px-6 py-20">
+      <div className="relative mx-auto max-w-7xl px-8 py-24">
         <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-8 relative z-10">
             <div className="flex items-center gap-4">
@@ -120,11 +120,11 @@ export default function LandingPage() {
               </p>
             </div>
             <div>
-              <h1 className="relative overflow-hidden bg-gradient-to-r from-white via-sky-200 to-white bg-clip-text text-4xl font-semibold leading-tight text-transparent md:text-5xl">
+              <h1 className="relative overflow-hidden bg-gradient-to-r from-white via-sky-200 to-white bg-clip-text text-4xl font-black leading-tight text-transparent md:text-5xl">
                 Build trustworthy AI docs in minutes.
                 <span className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-r from-sky-400/80 via-emerald-400/60 to-fuchsia-500/70 opacity-70 animate-pulse" />
               </h1>
-              <p className="mt-4 max-w-2xl text-lg text-slate-200">
+              <p className="mt-4 max-w-2xl text-lg font-semibold text-slate-200">
                 Collect prompts, evidence, and approvals in a single workflow so regulators always see what they expect.
               </p>
               <div className="mt-6 flex flex-wrap gap-3 text-xs uppercase tracking-[0.4em] text-slate-400">
@@ -158,14 +158,14 @@ export default function LandingPage() {
               >
                 Launch company workspace
               </Link>
-                <a
-                  href="https://calendly.com/neuraldocx"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/90 transition hover:border-white/50"
-                >
-                  Book a demo
-                </a>
+              <a
+                href="https://calendly.com/neuraldocx/demo"
+                target="_blank"
+                rel="noreferrer"
+              className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/90 transition hover:border-white/50"
+              >
+                Book a demo
+              </a>
             </div>
           </div>
           <div className="pipeline-panel relative z-10 overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-slate-900/70 via-slate-900/90 to-slate-950/80 p-6 shadow-2xl shadow-sky-500/20">
