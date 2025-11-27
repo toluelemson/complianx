@@ -149,6 +149,18 @@ export default function ProjectPage() {
   const canApprove = user?.role === 'REVIEWER';
   const canReviewEvidence = canApprove;
   const canAssignSelf = user?.role === 'REVIEWER';
+  const wizardSectionRef = useRef<HTMLElement | null>(null);
+  const sectionScrollInitiated = useRef(false);
+  useEffect(() => {
+    if (!sectionScrollInitiated.current) {
+      sectionScrollInitiated.current = true;
+      return;
+    }
+    wizardSectionRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, [activeStepId]);
 
   const projectQuery = useQuery({
     queryKey: ['project', projectId],
@@ -1384,7 +1396,7 @@ export default function ProjectPage() {
         />
 
 
-        <section className="space-y-6">
+        <section ref={wizardSectionRef} className="space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
