@@ -57,6 +57,13 @@ export default function LandingPage() {
       { title: 'Evidence intake', icon: '📥', detail: 'Import docs, prompts, and models.' },
       { title: 'Doc generation', icon: '🧾', detail: 'Auto-generate regulator-ready sections.' },
       { title: 'Review & approve', icon: '✅', detail: 'Assign reviewers, lock sections.' },
+      { title: 'Release notes', icon: '📝', detail: 'Export changelog-ready PDFs.' },
+      {
+        title: 'Trust monitoring',
+        icon: '🛰️',
+        detail: 'Fairness, robustness, drift (coming soon)',
+        comingSoon: true,
+      },
     ],
     [],
   );
@@ -164,12 +171,12 @@ export default function LandingPage() {
         <div className="rounded-[32px] border border-white/5 bg-[#050911] p-6 overflow-hidden relative z-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.35),transparent_45%)] blur-3xl opacity-70" />
           <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_24px)]" />
-          <div className="pipeline grid relative gap-6 lg:grid-cols-3">
+          <div className="pipeline relative flex gap-6 overflow-x-auto pb-4 lg:grid lg:grid-cols-5">
             <div className="pipeline-line" aria-hidden="true" />
             {pipeline.map((segment, idx) => (
               <div
                 key={segment.title}
-                className={`pipeline-card relative z-10 flex flex-col items-start gap-3 rounded-[24px] border border-white/10 bg-gradient-to-br from-[#0c1b33] to-[#0f172a] p-5 text-slate-100 animate-pulse-card transition-transform duration-500 ${
+                className={`pipeline-card relative z-10 flex min-w-[220px] flex-col items-start gap-3 rounded-[24px] border border-white/10 bg-gradient-to-br from-[#0c1b33] to-[#0f172a] p-5 text-slate-100 animate-pulse-card transition-transform duration-500 ${
                   activeStep === idx
                     ? 'scale-105 border-sky-400 shadow-[0_25px_60px_rgba(14,165,233,0.35)]'
                     : ''
@@ -185,6 +192,11 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-2xl font-semibold text-white">{segment.title}</h3>
                 <p className="text-sm text-slate-300">{segment.detail}</p>
+                {segment.comingSoon && (
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-amber-400/10 px-3 py-1 text-xs uppercase tracking-wide text-amber-200">
+                    Coming soon
+                  </span>
+                )}
                 <div className="h-1 w-full rounded-full bg-gradient-to-r from-sky-500 via-emerald-400 to-fuchsia-500 opacity-70" />
                 <span className="pipeline-progress" />
               </div>
@@ -270,6 +282,10 @@ export default function LandingPage() {
         .pipeline {
           position: relative;
           isolation: isolate;
+          scrollbar-width: none;
+        }
+        .pipeline::-webkit-scrollbar {
+          display: none;
         }
         .pipeline-line {
           position: absolute;
