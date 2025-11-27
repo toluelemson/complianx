@@ -165,10 +165,11 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.35),transparent_45%)] blur-3xl opacity-70" />
           <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_24px)]" />
           <div className="pipeline grid relative gap-6 lg:grid-cols-3">
+            <div className="pipeline-line" aria-hidden="true" />
             {pipeline.map((segment, idx) => (
               <div
                 key={segment.title}
-                className={`pipeline-card relative flex flex-col items-start gap-3 rounded-[24px] border border-white/10 bg-gradient-to-br from-[#0c1b33] to-[#0f172a] p-5 text-slate-100 animate-pulse-card transition-transform duration-500 ${
+                className={`pipeline-card relative z-10 flex flex-col items-start gap-3 rounded-[24px] border border-white/10 bg-gradient-to-br from-[#0c1b33] to-[#0f172a] p-5 text-slate-100 animate-pulse-card transition-transform duration-500 ${
                   activeStep === idx
                     ? 'scale-105 border-sky-400 shadow-[0_25px_60px_rgba(14,165,233,0.35)]'
                     : ''
@@ -270,21 +271,20 @@ export default function LandingPage() {
           position: relative;
           isolation: isolate;
         }
-        .pipeline::after {
-          content: '';
+        .pipeline-line {
           position: absolute;
-          top: 60%;
-          left: 6%;
-          right: 6%;
-          height: 1px;
+          inset: 48% 4%;
+          height: 2px;
           background: repeating-linear-gradient(
             90deg,
-            rgba(255,255,255,0.25) 0,
-            rgba(255,255,255,0.25) 15px,
-            transparent 15px,
-            transparent 30px
+            rgba(56,189,248,0.75) 0,
+            rgba(56,189,248,0.75) 10px,
+            transparent 10px,
+            transparent 20px
           );
-          animation: dashSlide 3s linear infinite;
+          border-radius: 999px;
+          animation: dashSlide 4s linear infinite;
+          z-index: 0;
         }
         .pipeline-card::before {
           content: '';
@@ -309,7 +309,7 @@ export default function LandingPage() {
         }
         @keyframes dashSlide {
           0% { background-position: 0 0; }
-          100% { background-position: -40px 0; }
+          100% { background-position: 100px 0; }
         }
         @keyframes floatCard {
           0% { transform: translateY(0); }
