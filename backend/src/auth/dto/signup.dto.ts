@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class SignupDto {
   @IsEmail()
@@ -19,4 +19,8 @@ export class SignupDto {
   @IsOptional()
   @IsString()
   invitationToken?: string;
+
+  @IsOptional()
+  @IsIn(['personal', 'organization'])
+  accountType?: 'personal' | 'organization';
 }

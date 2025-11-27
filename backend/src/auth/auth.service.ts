@@ -62,11 +62,12 @@ export class AuthService {
     }
     const { companyId, invitationToken } = await this.resolveCompany(dto);
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const isNewCompany = !dto.companyId && !invitationToken;
+    const isNewCompany =
+      Boolean(dto.companyName?.trim() && !dto.companyId && !invitationToken);
     const user = await this.usersService.create(
       dto.email,
       passwordHash,
-      companyId,
+      companyId ?? undefined,
       isNewCompany ? 'ADMIN' : undefined,
     );
     await this.enqueueEmailVerification(user);
@@ -77,7 +78,9 @@ export class AuthService {
     return { user: this.sanitize(user), token };
   }
 
-  private async resolveCompany(dto: SignupDto) {
+  private async resolveCompany(
+    dto: SignupDto,
+  ): Promise<{ companyId: string | null; invitationToken?: string }> {
     if (dto.invitationToken) {
       const invitation = await this.invitationsService.getInvitationByToken(
         dto.invitationToken,
@@ -104,9 +107,12 @@ export class AuthService {
       });
       return { companyId: company.id };
     }
-    throw new ConflictException(
-      'Provide a company name to create one or a valid company id to join.',
-    );
+    if (dto.accountType === 'organization') {
+      throw new ConflictException(
+        'Provide a company name to create one or a valid company id to join.',
+      );
+    }
+    return { companyId: null };
   }
 
   async validateUser(email: string, password: string) {
