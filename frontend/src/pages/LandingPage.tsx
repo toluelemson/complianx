@@ -1,7 +1,15 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+  type WheelEvent,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 function useAnimatedStats(targets: {
@@ -47,6 +55,11 @@ export default function LandingPage() {
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [cardWidth, setCardWidth] = useState(0);
   const CARD_GAP_PX = 20;
+  const DRAG_THRESHOLD = 34;
+  const WHEEL_THROTTLE_MS = 250;
+  const WHEEL_DELTA_THRESHOLD = 12;
+  const pointerStartXRef = useRef<number | null>(null);
+  const lastWheelTimeRef = useRef(0);
 
   const summaryQuery = useQuery({
     queryKey: ['analytics', 'summary'],
@@ -102,6 +115,53 @@ export default function LandingPage() {
       setCardWidth(firstCard.offsetWidth);
     }
   }, []);
+
+  const handlePointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    pointerStartXRef.current = event.clientX;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      const startX = pointerStartXRef.current;
+      if (startX === null) return;
+      const delta = event.clientX - startX;
+      if (Math.abs(delta) < DRAG_THRESHOLD) return;
+      if (delta > 0) {
+        goPrevStep();
+      } else {
+        goNextStep();
+      }
+      pointerStartXRef.current = event.clientX;
+    },
+    [goNextStep, goPrevStep],
+  );
+
+  const releasePointer = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    pointerStartXRef.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+  }, []);
+
+  const handleWheel = useCallback(
+    (event: WheelEvent<HTMLDivElement>) => {
+      const now = performance.now();
+      if (now - lastWheelTimeRef.current < WHEEL_THROTTLE_MS) return;
+
+      const activeDelta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY;
+      if (Math.abs(activeDelta) < WHEEL_DELTA_THRESHOLD) return;
+
+      lastWheelTimeRef.current = now;
+      if (activeDelta > 0) {
+        goNextStep();
+      } else {
+        goPrevStep();
+      }
+    },
+    [goNextStep, goPrevStep],
+  );
 
   useEffect(() => {
     const interval = setInterval(goNextStep, 6500);
@@ -193,6 +253,12 @@ export default function LandingPage() {
                 style={{
                   transform: `translateX(-${activeStep * (cardWidth + CARD_GAP_PX)}px)`,
                 }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={releasePointer}
+                onPointerCancel={releasePointer}
+                onPointerLeave={releasePointer}
+                onWheel={handleWheel}
               >
                 {pipeline.map((segment, idx) => {
                 const isActive = activeStep === idx;
@@ -372,6 +438,11 @@ export default function LandingPage() {
           z-index: 5;
           scroll-behavior: smooth;
           scrollbar-width: none;
+          touch-action: pan-y;
+          cursor: grab;
+        }
+        .pipeline-cards:active {
+          cursor: grabbing;
         }
         .pipeline-cards::-webkit-scrollbar {
           display: none;
