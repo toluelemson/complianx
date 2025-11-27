@@ -117,6 +117,14 @@ export default function BillingModal({ isOpen, onClose }: Props) {
                 Choose the option that best fits your next step.
               </p>
             </div>
+            <div className="hidden flex-wrap items-center gap-3 lg:flex">
+              <div className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
+                Pro features
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Unlimited documents, advanced review controls, and priority support.
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               {isPaidPlan ? (
                 <button
@@ -154,6 +162,17 @@ export default function BillingModal({ isOpen, onClose }: Props) {
               Unable to contact billing service. Please try again.
             </p>
           )}
+          <div className="mt-4 space-y-2 rounded-lg border border-dashed border-slate-200 bg-white/80 px-3 py-2 text-xs text-slate-600">
+            <p className="font-semibold text-slate-900">Pro unlocks</p>
+            <p className="text-[11px] text-slate-500">
+              Upgrade for unlimited document exports, collaborative review workflows, and faster support response.
+            </p>
+            <ul className="space-y-1 text-[11px] text-slate-600">
+              <li>• Unlimited AI documentation generation</li>
+              <li>• Multi-reviewer workflows with role-based approvals</li>
+              <li>• Priority support and roadmap previews</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
