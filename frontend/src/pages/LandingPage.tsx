@@ -1,7 +1,7 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 function useAnimatedStats(targets: {
@@ -45,6 +45,8 @@ export default function LandingPage() {
   const { token, initializing } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [cardWidth, setCardWidth] = useState(0);
+  const CARD_GAP_PX = 20;
 
   const summaryQuery = useQuery({
     queryKey: ['analytics', 'summary'],
@@ -70,24 +72,30 @@ export default function LandingPage() {
     ],
     [],
   );
+  const goPrevStep = useCallback(
+    () => setActiveStep((prev) => (prev - 1 + pipeline.length) % pipeline.length),
+    [pipeline.length],
+  );
+  const goNextStep = useCallback(
+    () => setActiveStep((prev) => (prev + 1) % pipeline.length),
+    [pipeline.length],
+  );
+  const updateCardWidth = useCallback(() => {
+    const firstCard = stepRefs.current[0];
+    if (firstCard) {
+      setCardWidth(firstCard.offsetWidth);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!stepRefs.current.length) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveStep(Number(entry.target.getAttribute('data-step') ?? 0));
-          }
-        });
-      },
-      { threshold: 0.55 },
-    );
-    stepRefs.current.forEach((el) => {
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [pipeline]);
+    const interval = setInterval(goNextStep, 6500);
+    return () => clearInterval(interval);
+  }, [goNextStep]);
+  useEffect(() => {
+    updateCardWidth();
+    window.addEventListener('resize', updateCardWidth);
+    return () => window.removeEventListener('resize', updateCardWidth);
+  }, [updateCardWidth]);
 
   if (!initializing && token) {
     return <Navigate to="/dashboard" replace />;
@@ -150,19 +158,27 @@ export default function LandingPage() {
               >
                 Launch company workspace
               </Link>
-              <Link
-                to="/contact"
-                className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/90 transition hover:border-white/50"
-              >
-                Book a demo
-              </Link>
+                <a
+                  href="https://calendly.com/neuraldocx"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/90 transition hover:border-white/50"
+                >
+                  Book a demo
+                </a>
             </div>
           </div>
           <div className="pipeline-panel relative z-10 overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-slate-900/70 via-slate-900/90 to-slate-950/80 p-6 shadow-2xl shadow-sky-500/20">
             <div className="network-grid" aria-hidden />
             <div className="pipeline-line" aria-hidden />
-            <div className="pipeline-cards relative flex gap-5 overflow-x-auto px-2 pb-1 pt-2">
-              {pipeline.map((segment, idx) => {
+            <div className="pipeline-cards relative overflow-hidden">
+              <div
+                className="flex gap-5 px-2 pb-1 pt-2 transition-transform duration-700 ease-out"
+                style={{
+                  transform: `translateX(-${activeStep * (cardWidth + CARD_GAP_PX)}px)`,
+                }}
+              >
+                {pipeline.map((segment, idx) => {
                 const isActive = activeStep === idx;
                 return (
                   <div
@@ -196,13 +212,34 @@ export default function LandingPage() {
                   </div>
                 );
               })}
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.4em] text-slate-300">
+              </div>
+              <div className="mt-4 relative z-20 flex items-center justify-between text-xs uppercase tracking-[0.4em] text-slate-400">
+                <span>
+                  Step {activeStep + 1} of {pipeline.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={goPrevStep}
+                    className="pointer-events-auto rounded-full border border-slate-600 px-3 py-1 text-[10px] font-semibold text-slate-200 transition hover:border-white"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNextStep}
+                    className="pointer-events-auto rounded-full border border-slate-600 px-3 py-1 text-[10px] font-semibold text-slate-200 transition hover:border-white"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.4em] text-slate-300">
               <span className="rounded-full border border-white/20 px-4 py-1">Streaming connectors</span>
               <span className="rounded-full border border-white/20 px-4 py-1">Live metrics</span>
               <span className="rounded-full border border-white/20 px-4 py-1">Trust layer soon</span>
             </div>
-            
+            </div>
           </div>
         </div>
         <div className="mt-10 grid gap-4 md:grid-cols-4 relative z-10">
@@ -316,6 +353,8 @@ export default function LandingPage() {
           z-index: 0;
         }
         .pipeline-cards {
+          position: relative;
+          z-index: 5;
           scroll-behavior: smooth;
           scrollbar-width: none;
         }
@@ -336,7 +375,7 @@ export default function LandingPage() {
           );
           border-radius: 999px;
           animation: dashSlide 3.5s linear infinite;
-          z-index: 1;
+          z-index: 0;
         }
         .pipeline-card {
           position: relative;
