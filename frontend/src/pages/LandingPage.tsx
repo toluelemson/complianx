@@ -54,14 +54,14 @@ export default function LandingPage() {
 
   const pipeline = useMemo(
     () => [
-      { title: 'Evidence intake', icon: '📥', detail: 'Import docs, prompts, and models.' },
-      { title: 'Doc generation', icon: '🧾', detail: 'Auto-generate regulator-ready sections.' },
-      { title: 'Review & approve', icon: '✅', detail: 'Assign reviewers, lock sections.' },
-      { title: 'Release notes', icon: '📝', detail: 'Export changelog-ready PDFs.' },
+      { title: 'Evidence intake', icon: '📥', detail: 'Drop in prompts, files, and data snippets.' },
+      { title: 'Doc generation', icon: '🧾', detail: 'We turn your inputs into ready-to-share writeups.' },
+      { title: 'Review & approve', icon: '✅', detail: 'Loop in teammates and lock final sections.' },
+      { title: 'Release notes', icon: '📝', detail: 'Bundle summaries and share with stakeholders.' },
       {
         title: 'Trust monitoring',
         icon: '🛰️',
-        detail: 'Fairness, robustness, drift (coming soon)',
+        detail: 'Fairness, robustness, drift dashboards (coming soon)',
         comingSoon: true,
       },
     ],
@@ -111,11 +111,11 @@ export default function LandingPage() {
           </div>
           <div>
             <h1 className="relative overflow-hidden bg-gradient-to-r from-white via-sky-200 to-white bg-clip-text text-4xl font-semibold leading-tight text-transparent md:text-5xl">
-              Documentation automation for responsible AI programs.
+              Build trustworthy AI docs in minutes.
               <span className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-r from-sky-400/80 via-emerald-400/60 to-fuchsia-500/70 opacity-70 animate-pulse" />
             </h1>
             <p className="mt-4 max-w-2xl text-lg text-slate-200">
-              Capture system archives, frame regulator-ready sections, and keep every doc updated with reviewers and approvals.
+              Collect your prompts, evidence, and decisions, turn them into ready-to-share write-ups, and keep approvals in one place.
             </p>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -145,33 +145,32 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4 relative z-10">
-          {[
-            { label: 'Docs processed', value: stats.docs },
-            { label: 'Approvals completed', value: stats.approvals },
-            { label: 'Sections created', value: stats.sections },
-            { label: 'AI systems created', value: stats.aiSystems },
-          ].map((stat) => {
-            const value =
-              typeof stat.value === 'number' && Number.isFinite(stat.value)
-                ? stat.value
-                : 0;
-            return (
-              <div
-                key={stat.label}
-                className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200 shadow-lg shadow-sky-500/10 backdrop-blur"
-              >
-                <p className="text-xs uppercase tracking-wide text-slate-400">{stat.label}</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{value.toLocaleString()}</p>
-              </div>
-            );
-          })}
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-white/20 hover:shadow-xl hover:shadow-sky-500/10 relative z-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm uppercase tracking-wide text-slate-300">What you can do</p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 font-semibold text-sky-200">
+                Coming soon · Trust monitoring
+              </span>
+              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 font-semibold text-emerald-200">
+                Optional fairness metrics
+              </span>
+            </div>
+          </div>
+          <ul className="mt-4 grid gap-3 text-slate-100 sm:grid-cols-2">
+            <li className="transition hover:text-white/90">✔ EU AI Act technical documentation generator</li>
+            <li className="transition hover:text-white/90">✔ Model cards and risk assessments</li>
+            <li className="transition hover:text-white/90">✔ Trust monitoring: fairness, robustness, drift, cohorts</li>
+            <li className="transition hover:text-white/90">✔ Evidence uploads with reviewer approval workflow</li>
+            <li className="transition hover:text-white/90">✔ PDF exports with Evidence Appendix</li>
+            <li className="transition hover:text-white/90">✔ Notifications, usage‑based limits, simple billing</li>
+          </ul>
         </div>
 
         <div className="rounded-[32px] border border-white/5 bg-[#050911] p-6 overflow-hidden relative z-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.35),transparent_45%)] blur-3xl opacity-70" />
           <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.05)_0,rgba(255,255,255,0.05)_2px,transparent_2px,transparent_24px)]" />
-          <div className="pipeline relative flex gap-6 overflow-x-auto pb-4 lg:grid lg:grid-cols-5">
+         <div className="pipeline relative flex gap-6 overflow-x-auto pb-4 lg:grid lg:grid-cols-5">
             <div className="pipeline-line" aria-hidden="true" />
             {pipeline.map((segment, idx) => (
               <div
@@ -204,27 +203,30 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-white/20 hover:shadow-xl hover:shadow-sky-500/10 relative z-10">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm uppercase tracking-wide text-slate-300">What you can do</p>
-            <div className="flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 font-semibold text-sky-200">
-                Coming soon · Trust monitoring
-              </span>
-              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 font-semibold text-emerald-200">
-                Optional fairness metrics
-              </span>
-            </div>
-          </div>
-          <ul className="mt-4 grid gap-3 text-slate-100 sm:grid-cols-2">
-            <li className="transition hover:text-white/90">✔ EU AI Act technical documentation generator</li>
-            <li className="transition hover:text-white/90">✔ Model cards and risk assessments</li>
-            <li className="transition hover:text-white/90">✔ Trust monitoring: fairness, robustness, drift, cohorts</li>
-            <li className="transition hover:text-white/90">✔ Evidence uploads with reviewer approval workflow</li>
-            <li className="transition hover:text-white/90">✔ PDF exports with Evidence Appendix</li>
-            <li className="transition hover:text-white/90">✔ Notifications, usage‑based limits, simple billing</li>
-          </ul>
+                <div className="mt-6 grid gap-4 md:grid-cols-4 relative z-10">
+            {[
+              { label: 'Docs processed', value: stats.docs },
+              { label: 'Reviews done', value: stats.approvals },
+              { label: 'Sections captured', value: stats.sections },
+              { label: 'AI setups tracked', value: stats.aiSystems },
+            ].map((stat) => {
+            const value =
+              typeof stat.value === 'number' && Number.isFinite(stat.value)
+                ? stat.value
+                : 0;
+            return (
+              <div
+                key={stat.label}
+                className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200 shadow-lg shadow-sky-500/10 backdrop-blur"
+              >
+                <p className="text-xs uppercase tracking-wide text-slate-400">{stat.label}</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{value.toLocaleString()}</p>
+              </div>
+            );
+          })}
         </div>
+
+
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-white/20 hover:shadow-xl hover:shadow-sky-500/10 relative z-10">
           <p className="text-sm uppercase tracking-wide text-slate-300">Pricing</p>
