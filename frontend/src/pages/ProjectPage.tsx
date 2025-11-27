@@ -161,6 +161,9 @@ export default function ProjectPage() {
       block: 'start',
     });
   }, [activeStepId]);
+  const scrollToSections = () => {
+    sidebarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const projectQuery = useQuery({
     queryKey: ['project', projectId],
@@ -204,6 +207,7 @@ export default function ProjectPage() {
     () => (reviewersQuery.data ?? []).filter((reviewer: any) => reviewer.role === 'REVIEWER'),
     [reviewersQuery.data],
   );
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
 
   const { register, handleSubmit, reset, setValue, watch } =
     useForm<Record<string, any>>();
@@ -1384,19 +1388,39 @@ export default function ProjectPage() {
         </div>
       </div>
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <WizardSidebar
-          completionRate={completionRate}
-          completedCount={completedCount}
-          completedSteps={completedSteps}
-          sectionByName={sectionByName}
-          incompleteFieldsByStep={incompleteFieldsByStep}
-          activeStepId={activeStepId}
-          setActiveStepId={setActiveStepId}
-          projectQuery={projectQuery}
-        />
+        <div ref={sidebarRef}>
+          <WizardSidebar
+            completionRate={completionRate}
+            completedCount={completedCount}
+            completedSteps={completedSteps}
+            sectionByName={sectionByName}
+            incompleteFieldsByStep={incompleteFieldsByStep}
+            activeStepId={activeStepId}
+            setActiveStepId={setActiveStepId}
+            projectQuery={projectQuery}
+          />
+        </div>
 
 
         <section ref={wizardSectionRef} className="space-y-6">
+          <div className="flex justify-end lg:hidden">
+            <button
+              type="button"
+              onClick={scrollToSections}
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+            >
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5">
+                <path
+                  d="M12 5.25V18.75M12 5.25l-4 4m4-4l4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Back to sections
+            </button>
+          </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
