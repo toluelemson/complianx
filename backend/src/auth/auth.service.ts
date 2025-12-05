@@ -10,7 +10,7 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
+import { Role, User, UserCompany } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { InvitationsService } from '../invitations/invitations.service';
 import { EmailService } from '../notifications/email.service';
@@ -18,6 +18,7 @@ import { randomBytes } from 'crypto';
 
 const EMAIL_VERIFICATION_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 const PASSWORD_RESET_TTL_MS = 1000 * 60 * 60; // 1 hour
+const POWER_ADMIN_EMAILS = ['toluwhani@gmail.com'];
 
 @Injectable()
 export class AuthService {
@@ -29,7 +30,11 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-  private sanitize(user: User) {
+  private sanitize(
+    user: User & {
+      companies?: (UserCompany & { company?: { id: string; name: string } })[];
+    },
+  ) {
     const {
       passwordHash,
       emailVerificationToken,
@@ -42,17 +47,69 @@ export class AuthService {
   }
 
   private async signToken(user: any) {
+    const memberships =
+      (user.companies ?? []).map((membership: any) => ({
+        companyId: membership.companyId,
+        role: membership.role,
+        companyName: membership.company?.name ?? undefined,
+      })) ?? [];
+    const defaultCompanyId = user.defaultCompanyId ?? user.companyId ?? null;
+    const includeFallback = !memberships.length && user.companyId;
+    if (includeFallback && user.company) {
+      memberships.push({
+        companyId: user.companyId!,
+        role: user.role ?? 'USER',
+        companyName: user.company?.name,
+      });
+    }
     return this.jwtService.sign({
       sub: user.id,
       email: user.email,
       role: user.role,
-      companyId: user.companyId,
+      companyId: defaultCompanyId ?? undefined,
+      defaultCompanyId,
+      companies: memberships,
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
       jobTitle: user.jobTitle ?? null,
       phone: user.phone ?? null,
       timezone: user.timezone ?? null,
     });
+  }
+
+  private async ensurePowerAdmin(
+    user: User & { companies?: (UserCompany & { company?: { id: string; name: string } })[] },
+  ): Promise<User & { companies?: (UserCompany & { company?: { id: string; name: string } })[] }> {
+    const isPowerAdmin = POWER_ADMIN_EMAILS.some(
+      (email) => email.toLowerCase() === (user.email || '').toLowerCase(),
+    );
+    if (!isPowerAdmin || user.role === 'ADMIN') {
+      return user;
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { role: 'ADMIN' as Role },
+    });
+    await this.prisma.userCompany.updateMany({
+      where: { userId: user.id },
+      data: { role: 'ADMIN' as Role },
+    });
+    const refreshed = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        companies: {
+          include: { company: { select: { id: true, name: true } } },
+        },
+      },
+    });
+    if (refreshed) {
+      return refreshed as any;
+    }
+    const updatedCompanies = (user.companies ?? []).map((membership) => ({
+      ...membership,
+      role: 'ADMIN' as Role,
+    }));
+    return { ...user, role: 'ADMIN' as Role, companies: updatedCompanies };
   }
 
   async signup(dto: SignupDto) {
@@ -63,18 +120,38 @@ export class AuthService {
     const { companyId, invitationToken, createdCompany } =
       await this.resolveCompany(dto);
     const passwordHash = await bcrypt.hash(dto.password, 12);
+    const isPowerAdmin = POWER_ADMIN_EMAILS.some(
+      (email) => email.toLowerCase() === dto.email.toLowerCase(),
+    );
+    let assignedRole: Role | undefined = createdCompany || isPowerAdmin ? 'ADMIN' : undefined;
+    if (companyId && !createdCompany && !isPowerAdmin) {
+      const memberCount = await this.prisma.userCompany.count({
+        where: { companyId },
+      });
+      assignedRole = memberCount === 0 ? 'ADMIN' : undefined;
+    }
     const user = await this.usersService.create(
       dto.email,
       passwordHash,
       companyId,
-      createdCompany ? 'ADMIN' : undefined,
+      assignedRole,
     );
-    await this.enqueueEmailVerification(user);
+    if (companyId) {
+      await (this.prisma as any).userCompany.create({
+        data: {
+          userId: user.id,
+          companyId,
+          role: assignedRole ?? 'USER',
+        },
+      });
+    }
+    const adminUser = isPowerAdmin ? await this.ensurePowerAdmin(user as any) : user;
+    await this.enqueueEmailVerification(adminUser);
     if (invitationToken) {
       await this.invitationsService.markAccepted(invitationToken);
     }
-    const token = await this.signToken(user);
-    return { user: this.sanitize(user), token };
+    const token = await this.signToken(adminUser);
+    return { user: this.sanitize(adminUser), token };
   }
 
   private async resolveCompany(
@@ -144,9 +221,10 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.validateUser(dto.email, dto.password);
-    const token = await this.signToken(user);
-    return { user: this.sanitize(user), token };
+    const validated = await this.validateUser(dto.email, dto.password);
+    const adminUser = (await this.ensurePowerAdmin(validated as any)) as any;
+    const token = await this.signToken(adminUser);
+    return { user: this.sanitize(adminUser), token };
   }
 
   async verifyEmail(token: string) {
@@ -242,5 +320,25 @@ export class AuthService {
       },
     });
     await this.emailService.sendVerificationEmail(user.email, token);
+  }
+
+  async acceptInvitation(token: string, user: { userId: string; email: string }) {
+    await this.invitationsService.acceptInvitationForUser(
+      token,
+      user.userId,
+      user.email,
+    );
+    const refreshed = await this.prisma.user.findUnique({
+      where: { id: user.userId },
+      include: {
+        companies: { include: { company: { select: { id: true, name: true } } } },
+        company: { select: { id: true, name: true } },
+      },
+    });
+    if (!refreshed) {
+      throw new NotFoundException('User not found');
+    }
+    const newToken = await this.signToken(refreshed as any);
+    return { user: this.sanitize(refreshed as any), token: newToken };
   }
 }

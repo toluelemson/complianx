@@ -37,8 +37,18 @@ export class ArtifactsService {
     return `${normalized}-A${versionSegment}`;
   }
 
-  async list(projectId: string, sectionId: string, userId: string) {
-    await this.projectsService.assertOwnership(projectId, userId);
+  async list(
+    projectId: string,
+    sectionId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    await this.projectsService.assertAccess(projectId, userId, companyId, {
+      allowOwner: true,
+      allowReviewer: true,
+      allowApprover: true,
+      allowCompanyMember: true,
+    });
     await this.ensureSection(projectId, sectionId);
     return this.prisma.sectionArtifact.findMany({
       where: { sectionId },
@@ -62,6 +72,7 @@ export class ArtifactsService {
     projectId: string,
     sectionId: string,
     userId: string,
+    companyId: string,
     file: Express.Multer.File | undefined,
     description?: string,
     purpose?: 'DATASET' | 'MODEL' | 'GENERIC',
@@ -69,7 +80,7 @@ export class ArtifactsService {
     if (!file) {
       throw new BadRequestException('File is required');
     }
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     const section = await this.ensureSection(projectId, sectionId);
     await fs.mkdir(this.storageRoot, { recursive: true });
     const storedName = `${sectionId}-${Date.now()}-${randomBytes(8).toString('hex')}${extname(file.originalname)}`;
@@ -114,14 +125,18 @@ export class ArtifactsService {
     });
   }
 
-  async remove(artifactId: string, userId: string) {
+  async remove(artifactId: string, userId: string, companyId: string) {
     const artifact = await this.prisma.sectionArtifact.findUnique({
       where: { id: artifactId },
     });
     if (!artifact) {
       throw new NotFoundException('Artifact not found');
     }
-    await this.projectsService.assertOwnership(artifact.projectId, userId);
+    await this.projectsService.assertOwnership(
+      artifact.projectId,
+      userId,
+      companyId,
+    );
     const newerCount = await this.prisma.sectionArtifact.count({
       where: { previousArtifactId: artifactId },
     });
@@ -140,14 +155,19 @@ export class ArtifactsService {
     return { success: true };
   }
 
-  async download(artifactId: string, userId: string) {
+  async download(artifactId: string, userId: string, companyId: string) {
     const artifact = await this.prisma.sectionArtifact.findUnique({
       where: { id: artifactId },
     });
     if (!artifact) {
       throw new NotFoundException('Artifact not found');
     }
-    await this.projectsService.assertOwnership(artifact.projectId, userId);
+    await this.projectsService.assertAccess(
+      artifact.projectId,
+      userId,
+      companyId,
+      { allowOwner: true, allowReviewer: true, allowApprover: true },
+    );
     const filePath = join(this.storageRoot, artifact.storedName);
     if (!existsSync(filePath)) {
       throw new NotFoundException('Stored file missing');
@@ -164,15 +184,6 @@ export class ArtifactsService {
     status: ArtifactStatus,
     comment?: string,
   ) {
-    const reviewer = await this.prisma.user.findUnique({
-      where: { id: reviewerId },
-    });
-    if (!reviewer) {
-      throw new NotFoundException('Reviewer not found');
-    }
-    if (reviewer.role !== 'ADMIN' && reviewer.role !== 'REVIEWER') {
-      throw new ForbiddenException('Only reviewers may approve evidence');
-    }
     const artifact = await this.prisma.sectionArtifact.findUnique({
       where: { id: artifactId },
       include: { project: true },
@@ -180,12 +191,18 @@ export class ArtifactsService {
     if (!artifact) {
       throw new NotFoundException('Artifact not found');
     }
+    const access = await this.projectsService.assertAccess(
+      artifact.projectId,
+      reviewerId,
+      artifact.project.companyId ?? undefined,
+      { allowOwner: false, allowReviewer: true, allowApprover: true },
+    );
+    const membershipRole = access.membershipRole;
     if (
-      reviewer.companyId &&
-      artifact.project.companyId &&
-      reviewer.companyId !== artifact.project.companyId
+      membershipRole !== 'REVIEWER' &&
+      membershipRole !== 'ADMIN'
     ) {
-      throw new ForbiddenException('Cannot review artifacts outside company');
+      throw new ForbiddenException('Only workspace reviewers may approve evidence');
     }
     return this.prisma.sectionArtifact.update({
       where: { id: artifactId },

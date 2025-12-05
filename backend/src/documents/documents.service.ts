@@ -15,8 +15,13 @@ export class DocumentsService {
     private readonly projectsService: ProjectsService,
   ) {}
 
-  async list(projectId: string, userId: string) {
-    await this.projectsService.assertOwnership(projectId, userId);
+  async list(projectId: string, userId: string, companyId: string) {
+    await this.projectsService.assertAccess(projectId, userId, companyId, {
+      allowOwner: true,
+      allowReviewer: true,
+      allowApprover: true,
+      allowCompanyMember: true,
+    });
     return this.prisma.document.findMany({
       where: { projectId },
       orderBy: { createdAt: 'desc' },
@@ -33,7 +38,7 @@ export class DocumentsService {
     });
   }
 
-  async getDocumentForDownload(id: string, userId: string) {
+  async getDocumentForDownload(id: string, userId: string, companyId: string) {
     const doc = await this.prisma.document.findUnique({
       where: { id },
       include: { project: true },
@@ -41,9 +46,12 @@ export class DocumentsService {
     if (!doc) {
       throw new NotFoundException('Document not found');
     }
-    if (doc.project.ownerId !== userId) {
-      throw new NotFoundException('Document not found');
-    }
+    await this.projectsService.assertAccess(
+      doc.projectId,
+      userId,
+      companyId,
+      { allowOwner: true, allowReviewer: true, allowApprover: true, allowCompanyMember: true },
+    );
     const filePath = join(this.storageRoot, doc.url);
     if (!existsSync(filePath)) {
       throw new NotFoundException('File missing from storage');
@@ -54,8 +62,12 @@ export class DocumentsService {
     });
   }
 
-  async zipDocuments(projectId: string, userId: string) {
-    await this.projectsService.assertOwnership(projectId, userId);
+  async zipDocuments(projectId: string, userId: string, companyId: string) {
+    await this.projectsService.assertAccess(projectId, userId, companyId, {
+      allowOwner: true,
+      allowReviewer: true,
+      allowApprover: true,
+    });
     const docs = await this.prisma.document.findMany({
       where: { projectId },
       orderBy: { createdAt: 'asc' },

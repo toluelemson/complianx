@@ -25,8 +25,13 @@ export class SectionsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async list(projectId: string, userId: string) {
-    await this.projectsService.assertOwnership(projectId, userId);
+  async list(projectId: string, userId: string, companyId: string) {
+    await this.projectsService.assertAccess(projectId, userId, companyId, {
+      allowOwner: true,
+      allowReviewer: true,
+      allowApprover: true,
+      allowCompanyMember: true,
+    });
     const sectionInclude: any = {
       lastEditor: { select: { id: true, email: true } },
       comments: {
@@ -60,8 +65,13 @@ export class SectionsService {
     });
   }
 
-  async save(projectId: string, userId: string, dto: CreateSectionDto) {
-    await this.projectsService.assertOwnership(projectId, userId);
+  async save(
+    projectId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateSectionDto,
+  ) {
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     const existing = await this.prisma.section.findFirst({
       where: { projectId, name: dto.name },
     });
@@ -109,9 +119,10 @@ export class SectionsService {
     projectId: string,
     sectionId: string,
     userId: string,
+    companyId: string,
     dto: UpdateSectionDto,
   ) {
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     const section = await this.prisma.section.findUnique({
       where: { id: sectionId },
     });
@@ -156,16 +167,23 @@ export class SectionsService {
     projectId: string,
     sectionId: string,
     userId: string,
+    companyId: string,
     dto: CreateCommentDto,
   ) {
-    await this.projectsService.assertOwnership(projectId, userId);
+    const access = await this.projectsService.assertAccess(
+      projectId,
+      userId,
+      companyId,
+      { allowOwner: true, allowReviewer: true, allowApprover: true },
+    );
+    const workspaceId = access.project.companyId ?? companyId;
     const section = await this.prisma.section.findUnique({
       where: { id: sectionId },
     });
     if (!section || section.projectId !== projectId) {
       throw new NotFoundException('Section not found');
     }
-    return this.prisma.sectionComment.create({
+    const comment = await this.prisma.sectionComment.create({
       data: {
         body: dto.body,
         sectionId,
@@ -175,10 +193,54 @@ export class SectionsService {
         author: { select: { id: true, email: true } },
       },
     });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        ownerId: true,
+        reviewerId: true,
+        approverId: true,
+        name: true,
+        companyId: true,
+      },
+    });
+    if (project) {
+      const targetWorkspaceId = project.companyId ?? workspaceId;
+      const recipients = new Set<string>();
+      if (project.ownerId && project.ownerId !== userId) {
+        recipients.add(project.ownerId);
+      }
+      if (access.accessRole === 'OWNER') {
+        if (project.reviewerId && project.reviewerId !== userId) {
+          recipients.add(project.reviewerId);
+        }
+        if (project.approverId && project.approverId !== userId) {
+          recipients.add(project.approverId);
+        }
+      }
+      for (const recipientId of recipients) {
+        await this.notifications.create({
+          userId: recipientId,
+          title: `New comment on ${section.name}`,
+          body: dto.body.slice(0, 140),
+          type: 'comment',
+          meta: { projectId, sectionId, companyId: targetWorkspaceId },
+        });
+      }
+    }
+    return comment;
   }
 
-  async listComments(projectId: string, sectionId: string, userId: string) {
-    await this.projectsService.assertOwnership(projectId, userId);
+  async listComments(
+    projectId: string,
+    sectionId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    await this.projectsService.assertAccess(projectId, userId, companyId, {
+      allowOwner: true,
+      allowReviewer: true,
+      allowApprover: true,
+    });
     const section = await this.prisma.section.findUnique({
       where: { id: sectionId },
     });
@@ -198,9 +260,10 @@ export class SectionsService {
     projectId: string,
     sectionName: string,
     userId: string,
+    companyId: string,
     dto: SuggestSectionDto,
   ) {
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     const sections = await this.prisma.section.findMany({
       where: { projectId },
     });
@@ -273,6 +336,7 @@ export class SectionsService {
     projectId: string,
     sectionId: string,
     userId: string,
+    companyId: string,
     dto: UpdateSectionStatusDto,
   ) {
     const actor = (await this.prisma.user.findUnique({
@@ -281,14 +345,23 @@ export class SectionsService {
     if (!actor) {
       throw new NotFoundException('User not found');
     }
-    await this.projectsService.assertOwnership(projectId, userId);
+    const access = await this.projectsService.assertAccess(
+      projectId,
+      userId,
+      companyId,
+      { allowOwner: true, allowReviewer: true, allowApprover: true },
+    );
+    const workspaceId = access.project.companyId ?? companyId;
     const section = await this.prisma.section.findUnique({
       where: { id: sectionId },
     });
     if (!section || section.projectId !== projectId) {
       throw new NotFoundException('Section not found');
     }
-    if (dto.status === 'APPROVED' && actor.role === 'USER') {
+    const membershipRole = access.membershipRole ?? actor.role;
+    const isReviewerRole =
+      membershipRole === 'REVIEWER' || membershipRole === 'ADMIN';
+    if (dto.status === 'APPROVED' && !isReviewerRole) {
       throw new ForbiddenException('Only reviewers can approve sections');
     }
     if (dto.status === 'APPROVED' && !dto.signature?.trim()) {
@@ -308,6 +381,20 @@ export class SectionsService {
           actorId: userId,
         } as any),
       });
+      if (dto.status === 'CHANGES_REQUESTED') {
+        await (tx as any).project.update({
+          where: { id: projectId },
+          data: { status: 'CHANGES_REQUESTED' as any },
+        });
+        await (tx as any).projectStatusEvent.create({
+          data: ({
+            projectId,
+            status: 'CHANGES_REQUESTED' as any,
+            note: dto.note ?? 'Section changes requested',
+            actorId: userId,
+          } as any),
+        });
+      }
     });
     // Auto-notify approver if all sections are approved
     const sections = await this.prisma.section.findMany({
@@ -318,10 +405,17 @@ export class SectionsService {
     if (allApproved) {
       const projectAny = (await (this.prisma as any).project.findUnique({
         where: { id: projectId },
-        include: ({ approver: { select: { email: true } }, owner: true } as any),
+        select: ({
+          id: true,
+          name: true,
+          companyId: true,
+          approverId: true,
+          approver: { select: { email: true } },
+          owner: true,
+        } as any),
       })) as any;
       if (projectAny?.approver?.email) {
-        const link = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/projects/${projectId}`;
+        const link = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/projects/${projectId}?companyId=${projectAny.companyId ?? workspaceId}`;
         const subject = `Approval requested: ${projectAny.name}`;
         const body = `All sections have been approved by reviewers. Please approve the project.\n\nLink: ${link}`;
         await this.emailService.sendReminder(projectAny.approver.email, subject, body);
@@ -330,7 +424,7 @@ export class SectionsService {
           title: `Approval requested: ${projectAny.name}`,
           body: 'All sections are approved and ready for your approval.',
           type: 'approval',
-          meta: { projectId },
+          meta: { projectId, companyId: projectAny.companyId ?? workspaceId },
         });
         await this.prisma.projectStatusEvent.create({
           data: {
@@ -342,6 +436,31 @@ export class SectionsService {
         });
       }
     }
-    return this.list(projectId, userId);
+    if (
+      (dto.status === 'APPROVED' || dto.status === 'CHANGES_REQUESTED') &&
+      access.project.ownerId !== userId
+    ) {
+      const owner = await this.prisma.user.findUnique({
+        where: { id: access.project.ownerId },
+        select: { id: true, email: true },
+      });
+      if (owner) {
+        await this.notifications.create({
+          userId: owner.id,
+          title:
+            dto.status === 'APPROVED'
+              ? `Section approved: ${section.name}`
+              : `Changes requested: ${section.name}`,
+          body:
+            dto.note?.trim() ||
+            (dto.status === 'APPROVED'
+              ? 'A reviewer approved a section.'
+              : 'A reviewer requested changes.'),
+          type: 'review',
+          meta: { projectId, sectionId, companyId: workspaceId },
+        });
+      }
+    }
+    return this.list(projectId, userId, companyId);
   }
 }

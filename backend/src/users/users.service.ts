@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role, User } from '@prisma/client';
+import { Role, User, UserCompany } from '@prisma/client';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
@@ -18,13 +18,24 @@ export class UsersService {
         email,
         passwordHash,
         companyId,
+        defaultCompanyId: companyId ?? undefined,
         role: role ?? undefined,
       },
     });
   }
 
-  findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email } });
+  findByEmail(email: string): Promise<
+    (User & { companies: (UserCompany & { company?: { id: string; name: string } })[] }) | null
+  > {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        companies: {
+          include: { company: { select: { id: true, name: true } } },
+        },
+        company: { select: { id: true, name: true } },
+      },
+    });
   }
 
   findById(id: string): Promise<User | null> {
@@ -33,19 +44,22 @@ export class UsersService {
 
   listByCompany(companyId: string): Promise<User[]> {
     return this.prisma.user.findMany({
-      where: { companyId },
+      where: { companies: { some: { companyId } } },
       orderBy: { createdAt: 'asc' },
     });
   }
 
-  listAdminsByCompany(companyId: string): Promise<User[]> {
-    return this.prisma.user.findMany({
+  async listAdminsByCompany(companyId: string): Promise<User[]> {
+    const memberships = await this.prisma.userCompany.findMany({
       where: { companyId, role: 'ADMIN' },
-      orderBy: { createdAt: 'asc' },
+      include: { user: true },
     });
+    return memberships.map((membership) => membership.user);
   }
 
-  private sanitize(user: User) {
+  private sanitize(
+    user: User & { companies?: (UserCompany & { company?: { id: string; name: string } })[] },
+  ) {
     if (!user) {
       return null;
     }
@@ -80,15 +94,27 @@ export class UsersService {
     role: Role;
     companyId: string;
   }): Promise<User> {
-    const target = await this.prisma.user.findUnique({
-      where: { id: params.targetUserId },
+    const membership = await this.prisma.userCompany.findUnique({
+      where: { userId_companyId: { userId: params.targetUserId, companyId: params.companyId } },
     });
-    if (!target) {
-      throw new NotFoundException('User not found');
+    if (!membership) {
+      throw new NotFoundException('User not part of this company');
     }
-    if (target.companyId !== params.companyId) {
-      throw new ForbiddenException('User belongs to another company');
+    if (
+      membership.role === 'ADMIN' &&
+      params.role !== 'ADMIN'
+    ) {
+      const adminCount = await this.prisma.userCompany.count({
+        where: { companyId: params.companyId, role: 'ADMIN' },
+      });
+      if (adminCount <= 1) {
+        throw new ForbiddenException('Company must retain at least one admin');
+      }
     }
+    await this.prisma.userCompany.update({
+      where: { userId_companyId: { userId: params.targetUserId, companyId: params.companyId } },
+      data: { role: params.role },
+    });
     return this.prisma.user.update({
       where: { id: params.targetUserId },
       data: { role: params.role },

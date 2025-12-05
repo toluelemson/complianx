@@ -14,8 +14,12 @@ export class TrustService {
     private readonly monetization: MonetizationService,
   ) {}
 
-  async listByProject(projectId: string, userId: string) {
-    await this.projectsService.assertOwnership(projectId, userId);
+  async listByProject(projectId: string, userId: string, companyId: string) {
+    await this.projectsService.assertAccess(projectId, userId, companyId, {
+      allowOwner: true,
+      allowReviewer: true,
+      allowApprover: true,
+    });
     return this.prisma.trustMetric.findMany({
       where: { projectId },
       include: {
@@ -30,6 +34,7 @@ export class TrustService {
   async create(
     projectId: string,
     userId: string,
+    companyId: string,
     dto: {
       name: string;
       pillar: string;
@@ -41,7 +46,7 @@ export class TrustService {
       sectionId?: string;
     },
   ) {
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     return this.prisma.trustMetric.create({
       data: {
         projectId,
@@ -60,6 +65,7 @@ export class TrustService {
   async addSample(
     metricId: string,
     userId: string,
+    companyId: string,
     payload: {
       value: number;
       note?: string;
@@ -76,6 +82,7 @@ export class TrustService {
     await this.projectsService.assertOwnership(
       metric.projectId,
       userId,
+      companyId,
     );
     const status = this.evaluateStatus(metric, payload.value);
     return this.prisma.trustSample.create({
@@ -99,7 +106,7 @@ export class TrustService {
     return 'OK';
   }
 
-  async analyzeFairness(userId: string, dto: {
+  async analyzeFairness(userId: string, companyId: string, dto: {
     projectId: string;
     datasetArtifactId: string;
     modelArtifactId?: string;
@@ -107,7 +114,7 @@ export class TrustService {
     metricId?: string;
   }) {
     const { projectId } = dto;
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     await this.monetization.checkAndConsumeForProject(projectId, 'trust', 1);
     const dataset = await this.prisma.sectionArtifact.findUnique({
       where: { id: dto.datasetArtifactId },
@@ -352,14 +359,14 @@ export class TrustService {
     return rows;
   }
 
-  async analyzeFairnessSegments(userId: string, dto: {
+  async analyzeFairnessSegments(userId: string, companyId: string, dto: {
     projectId: string;
     datasetArtifactId: string;
     columns?: { sensitive_attribute?: string; y_true?: string; y_pred?: string };
     segments: Array<{ name: string; filter: { column: string; values: (string | number)[] } }>;
   }) {
     const { projectId } = dto;
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     const dataset = await this.prisma.sectionArtifact.findUnique({
       where: { id: dto.datasetArtifactId },
     });
@@ -446,7 +453,7 @@ export class TrustService {
     return { dataset: dataset.originalName, results };
   }
 
-  async removeMetric(metricId: string, userId: string) {
+  async removeMetric(metricId: string, userId: string, companyId: string) {
     const metric = await this.prisma.trustMetric.findUnique({
       where: { id: metricId },
       include: { project: true },
@@ -454,14 +461,14 @@ export class TrustService {
     if (!metric) {
       throw new NotFoundException('Metric not found');
     }
-    await this.projectsService.assertOwnership(metric.projectId, userId);
+    await this.projectsService.assertOwnership(metric.projectId, userId, companyId);
     // Delete samples first to satisfy FK constraints
     await this.prisma.trustSample.deleteMany({ where: { metricId } });
     await this.prisma.trustMetric.delete({ where: { id: metricId } });
     return { success: true };
   }
 
-  async removeSample(sampleId: string, userId: string) {
+  async removeSample(sampleId: string, userId: string, companyId: string) {
     const sample = await this.prisma.trustSample.findUnique({
       where: { id: sampleId },
       include: { metric: true },
@@ -469,18 +476,18 @@ export class TrustService {
     if (!sample) {
       throw new NotFoundException('Sample not found');
     }
-    await this.projectsService.assertOwnership(sample.metric.projectId, userId);
+    await this.projectsService.assertOwnership(sample.metric.projectId, userId, companyId);
     await this.prisma.trustSample.delete({ where: { id: sampleId } });
     return { success: true };
   }
 
-  async analyzeRobustness(userId: string, dto: {
+  async analyzeRobustness(userId: string, companyId: string, dto: {
     projectId: string;
     datasetArtifactId: string;
     columns?: { y_pred_baseline?: string; y_pred_perturbed?: string; y_score?: string };
   }) {
     const { projectId } = dto;
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     // Enforce plan limits for trust analyses
     await this.monetization.checkAndConsumeForProject(projectId, 'trust', 1);
     const dataset = await this.prisma.sectionArtifact.findUnique({
@@ -592,7 +599,7 @@ export class TrustService {
     return { flipMetric, flipSample, vulnMetric, vulnSample };
   }
 
-  async analyzeDrift(userId: string, dto: {
+  async analyzeDrift(userId: string, companyId: string, dto: {
     projectId: string;
     baselineArtifactId: string;
     currentArtifactId: string;
@@ -600,7 +607,7 @@ export class TrustService {
     targets?: { y_true?: string; y_score?: string };
   }) {
     const { projectId } = dto;
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     // Enforce plan limits for trust analyses
     await this.monetization.checkAndConsumeForProject(projectId, 'trust', 1);
     const baseline = await this.prisma.sectionArtifact.findUnique({

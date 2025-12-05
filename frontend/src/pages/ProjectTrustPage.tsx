@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   useMutation,
   useQuery,
@@ -32,28 +32,45 @@ export default function ProjectTrustPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, activeCompanyId, setActiveCompany } = useAuth();
+  const location = useLocation();
   const canApprove = user?.role === 'REVIEWER' || user?.role === 'ADMIN';
 
+  useEffect(() => {
+    const paramsCompanyId = new URLSearchParams(location.search).get('companyId');
+    const hasMembership =
+      !user?.companies?.length ||
+      user?.companies?.some((company) => company.companyId === paramsCompanyId);
+    if (
+      paramsCompanyId &&
+      paramsCompanyId !== activeCompanyId &&
+      hasMembership
+    ) {
+      setActiveCompany(paramsCompanyId);
+    }
+  }, [location.search, activeCompanyId, setActiveCompany, user?.companies]);
+
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: ['project', projectId, activeCompanyId],
     queryFn: () => api.get(`/projects/${projectId}`).then((res) => res.data),
-    enabled: Boolean(projectId),
+    enabled: Boolean(projectId && activeCompanyId),
   });
 
   const sectionsQuery = useQuery<SectionSummary[]>({
-    queryKey: ['sections', projectId],
+    queryKey: ['sections', projectId, activeCompanyId],
     queryFn: () =>
       api.get(`/projects/${projectId}/sections`).then((res) => res.data),
-    enabled: Boolean(projectId),
+    enabled: Boolean(projectId && activeCompanyId),
   });
 
   const trustMetricsQuery = useQuery({
-    queryKey: ['trustMetrics', projectId],
-    enabled: Boolean(projectId),
+    queryKey: ['trustMetrics', projectId, activeCompanyId],
+    enabled: Boolean(projectId && activeCompanyId),
     queryFn: () =>
       api.get(`/projects/${projectId}/metrics`).then((res) => res.data),
   });
+  const viewerRole = projectQuery.data?.viewerRole ?? 'OWNER';
+  const isOwner = viewerRole === 'OWNER';
 
   const fairnessMetrics = useMemo(
     () =>
@@ -150,7 +167,7 @@ export default function ProjectTrustPage() {
         })
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId, activeCompanyId] });
       toast.success('Fairness metric created');
     },
     onError: () => {
@@ -171,7 +188,7 @@ export default function ProjectTrustPage() {
         )
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId, activeCompanyId] });
       toast.success('Fairness sample recorded');
     },
     onError: () => {
@@ -193,7 +210,7 @@ export default function ProjectTrustPage() {
         .then((res) => res.data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId, activeCompanyId] });
       toast.success('Fairness analysis complete');
     },
     onError: () => {
@@ -215,7 +232,7 @@ export default function ProjectTrustPage() {
         .then((res) => res.data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId, activeCompanyId] });
       toast.success('Robustness analysis complete');
     },
     onError: () => toast.error('Robustness analysis failed'),
@@ -239,7 +256,7 @@ export default function ProjectTrustPage() {
         .then((res) => res.data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId, activeCompanyId] });
       toast.success('Drift analysis complete');
     },
     onError: () => toast.error('Drift analysis failed'),
@@ -273,7 +290,7 @@ export default function ProjectTrustPage() {
         .delete(`/projects/${projectId}/metrics/${metricId}`)
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId, activeCompanyId] });
       toast.success('Metric deleted');
     },
     onError: () => toast.error('Unable to delete metric'),
@@ -283,7 +300,7 @@ export default function ProjectTrustPage() {
     mutationFn: (sampleId: string) =>
       api.delete(`/samples/${sampleId}`).then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['trustMetrics', projectId, activeCompanyId] });
       toast.success('Sample deleted');
     },
     onError: () => toast.error('Unable to delete sample'),
@@ -667,15 +684,16 @@ export default function ProjectTrustPage() {
                     className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
                     placeholder="Manual fairness gap"
                   />
-                  <button
-                    type="button"
-                    onClick={handleManualSampleSubmit}
-                    disabled={
-                      submitFairnessSampleMutation.isPending ||
-                      !fairnessSampleValue
-                    }
-                    className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
-                  >
+                <button
+                  type="button"
+                  onClick={handleManualSampleSubmit}
+                  disabled={
+                    !isOwner ||
+                    submitFairnessSampleMutation.isPending ||
+                    !fairnessSampleValue
+                  }
+                  className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                >
                     {submitFairnessSampleMutation.isPending
                       ? 'Saving...'
                       : 'Submit'}
@@ -687,7 +705,7 @@ export default function ProjectTrustPage() {
               <button
                 type="button"
                 onClick={() => createFairnessMetricMutation.mutate()}
-                disabled={createFairnessMetricMutation.isPending}
+                disabled={!isOwner || createFairnessMetricMutation.isPending}
                 className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
               >
                 {createFairnessMetricMutation.isPending
@@ -697,7 +715,7 @@ export default function ProjectTrustPage() {
               <button
                 type="button"
                 onClick={handleFairnessAnalysis}
-                disabled={analyzeFairnessMutation.isPending}
+                disabled={!isOwner || analyzeFairnessMutation.isPending}
                 className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
               >
                 {analyzeFairnessMutation.isPending
@@ -789,14 +807,14 @@ export default function ProjectTrustPage() {
                       className="rounded-md border border-slate-200 px-2 py-1 text-xs"
                       placeholder="y_score"
                     />
-                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleRobustnessAnalysis}
-                  disabled={analyzeRobustnessMutation.isPending}
-                  className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
-                >
+              </div>
+              <button
+                type="button"
+                onClick={handleRobustnessAnalysis}
+                disabled={!isOwner || analyzeRobustnessMutation.isPending}
+                className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+              >
                   {analyzeRobustnessMutation.isPending
                     ? 'Analyzing...'
                     : 'Run robustness analysis'}
@@ -908,7 +926,7 @@ export default function ProjectTrustPage() {
                 <button
                   type="button"
                   onClick={handleDriftAnalysis}
-                  disabled={analyzeDriftMutation.isPending}
+                  disabled={!isOwner || analyzeDriftMutation.isPending}
                   className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
                 >
                   {analyzeDriftMutation.isPending

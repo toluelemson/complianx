@@ -46,7 +46,7 @@ export class BillingService {
     );
   }
 
-  async createCheckoutSession(userId: string, plan: PaidPlan) {
+  async createCheckoutSession(userId: string, companyId: string, plan: PaidPlan) {
     if (!this.isEnabled() || !this.stripe) {
       throw new BadRequestException('Stripe is not configured');
     }
@@ -54,31 +54,18 @@ export class BillingService {
     if (!priceId) {
       throw new BadRequestException(`Price for plan ${plan} is not configured`);
     }
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { company: true },
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
     });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    let company = user.company;
     if (!company) {
-      company = await this.prisma.company.create({
-        data: {
-          name: `${user.email}'s Workspace`,
-          billingEmail: user.email,
-        },
-      });
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { companyId: company.id },
-      });
+      throw new NotFoundException('Company not found');
     }
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
     let customerId = company.stripeCustomerId;
     if (!customerId) {
       const customer = await this.stripe.customers.create({
         name: company.name,
-        email: company.billingEmail ?? user.email,
+        email: company.billingEmail ?? user?.email ?? undefined,
         metadata: { companyId: company.id },
       });
       customerId = customer.id;
@@ -111,24 +98,18 @@ export class BillingService {
     return session.url;
   }
 
-  async createPortalSession(userId: string) {
+  async createPortalSession(userId: string, companyId: string) {
     if (!this.isEnabled() || !this.stripe) {
       throw new BadRequestException('Stripe is not configured');
     }
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { company: true },
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
     });
-    if (!user?.company) {
-      throw new NotFoundException('Join a company to manage billing');
-    }
-    if (!user.company.stripeCustomerId) {
-      throw new BadRequestException(
-        'No customer on file. Start a new checkout first.',
-      );
+    if (!company || !company.stripeCustomerId) {
+      throw new NotFoundException('No Stripe customer attached to this company');
     }
     const portal = await this.stripe.billingPortal.sessions.create({
-      customer: user.company.stripeCustomerId,
+      customer: company.stripeCustomerId,
       return_url: `${this.frontendUrl}/billing`,
     });
     return portal.url;

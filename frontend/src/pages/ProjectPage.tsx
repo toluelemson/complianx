@@ -1,5 +1,5 @@
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   useMutation,
   useQuery,
@@ -77,7 +77,7 @@ export type SectionWithMeta = {
     email: string;
   };
   comments: SectionComment[];
-  status: 'DRAFT' | 'IN_REVIEW' | 'APPROVED';
+  status: 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
   statusEvents?: StatusEvent[];
   artifacts?: SectionArtifactItem[];
 };
@@ -140,15 +140,31 @@ export default function ProjectPage() {
   const [previewDoc, setPreviewDoc] = useState<{ id: string; type: string } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const { token, user } = useAuth();
+  const { token, user, activeCompanyId, setActiveCompany } = useAuth();
+  const location = useLocation();
+  useEffect(() => {
+    const paramsCompanyId = new URLSearchParams(location.search).get('companyId');
+    const hasMembership =
+      !user?.companies?.length ||
+      user?.companies?.some((company) => company.companyId === paramsCompanyId);
+    if (
+      paramsCompanyId &&
+      paramsCompanyId !== activeCompanyId &&
+      hasMembership
+    ) {
+      setActiveCompany(paramsCompanyId);
+    }
+  }, [location.search, activeCompanyId, setActiveCompany, user?.companies]);
   const activeStep = useMemo(
     () => STEP_CONFIG.find((step) => step.id === activeStepId)!,
     [activeStepId],
   );
   const isFormStep = activeStep.fields.length > 0;
-  const canApprove = user?.role === 'REVIEWER';
-  const canReviewEvidence = canApprove;
-  const canAssignSelf = user?.role === 'REVIEWER';
+  const projectQueryKey = ['project', projectId, activeCompanyId];
+  const sectionsQueryKey = ['sections', projectId, activeCompanyId];
+  const documentsQueryKey = ['documents', projectId, activeCompanyId];
+  const remindersQueryKey = ['reminders', projectId, activeCompanyId];
+  const reviewersQueryKey = ['projectReviewers', projectId, activeCompanyId];
   const wizardSectionRef = useRef<HTMLElement | null>(null);
   const sectionScrollInitiated = useRef(false);
   useEffect(() => {
@@ -166,18 +182,21 @@ export default function ProjectPage() {
   };
 
   const projectQuery = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: projectQueryKey,
+    enabled: Boolean(projectId && activeCompanyId),
     queryFn: () => api.get(`/projects/${projectId}`).then((res) => res.data),
   });
 
   const sectionsQuery = useQuery<SectionWithMeta[]>({
-    queryKey: ['sections', projectId],
+    queryKey: sectionsQueryKey,
+    enabled: Boolean(projectId && activeCompanyId),
     queryFn: () =>
       api.get(`/projects/${projectId}/sections`).then((res) => res.data),
   });
 
   const documentsQuery = useQuery<DocumentItem[]>({
-    queryKey: ['documents', projectId],
+    queryKey: documentsQueryKey,
+    enabled: Boolean(projectId && activeCompanyId),
     queryFn: () =>
       api.get(`/projects/${projectId}/documents`).then((res) => res.data),
   });
@@ -193,20 +212,32 @@ export default function ProjectPage() {
   });
 
   const remindersQuery = useQuery({
-    queryKey: ['reminders', projectId],
+    queryKey: remindersQueryKey,
+    enabled: Boolean(projectId && activeCompanyId),
     queryFn: () =>
       api.get(`/projects/${projectId}/reminders`).then((res) => res.data),
   });
+  const viewerRole = projectQuery.data?.viewerRole ?? 'OWNER';
+  const isOwner = viewerRole === 'OWNER';
+  const isAssignedReviewer = viewerRole === 'REVIEWER' || viewerRole === 'APPROVER';
+  const canApprove = isAssignedReviewer;
+  const canReviewEvidence = isAssignedReviewer;
+  const canAssignSelf =
+    isOwner && (user?.role === 'REVIEWER' || user?.role === 'ADMIN');
   const reviewersQuery = useQuery({
-    queryKey: ['projectReviewers', projectId],
+    queryKey: reviewersQueryKey,
     queryFn: () =>
       api.get(`/projects/${projectId}/reviewers`).then((res) => res.data),
-    enabled: Boolean(projectId && projectQuery.data?.companyId),
+    enabled:
+      Boolean(projectId && projectQuery.data?.companyId && activeCompanyId) &&
+      isOwner,
   });
-  const availableReviewers = useMemo(
-    () => (reviewersQuery.data ?? []).filter((reviewer: any) => reviewer.role === 'REVIEWER'),
-    [reviewersQuery.data],
-  );
+  const availableReviewers = useMemo(() => {
+    const allowedRoles = new Set(['REVIEWER', 'ADMIN']);
+    return (reviewersQuery.data ?? []).filter((reviewer: any) =>
+      allowedRoles.has(reviewer.role),
+    );
+  }, [reviewersQuery.data]);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
   const { register, handleSubmit, reset, setValue, watch } =
@@ -330,7 +361,7 @@ export default function ProjectPage() {
         })
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections', projectId] });
+      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Section saved');
       setLastSavedAt(new Date().toISOString());
     },
@@ -345,7 +376,7 @@ export default function ProjectPage() {
         .post(`/projects/${projectId}/generate`, payload)
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
+      queryClient.invalidateQueries({ queryKey: documentsQueryKey });
       toast.success('Compliance documents are being prepared');
     },
     onError: () => {
@@ -440,7 +471,7 @@ export default function ProjectPage() {
         .then((res) => res.data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections', projectId] });
+      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       setArtifactFile(null);
       setArtifactDescription('');
       setArtifactPurpose('GENERIC');
@@ -458,7 +489,7 @@ export default function ProjectPage() {
     mutationFn: (artifactId: string) =>
       api.delete(`/artifacts/${artifactId}`).then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections', projectId] });
+      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Evidence removed');
     },
     onError: () => {
@@ -479,7 +510,7 @@ export default function ProjectPage() {
         })
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections', projectId] });
+      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Evidence review updated');
     },
     onError: () => {
@@ -508,6 +539,10 @@ export default function ProjectPage() {
   };
 
   const handleGenerateClick = () => {
+    if (!isOwner) {
+      toast.error('Only the project owner can generate documentation');
+      return;
+    }
     if (!selectedDocumentTypes.length) {
       toast.error('Select at least one framework before generating');
       return;
@@ -528,6 +563,10 @@ export default function ProjectPage() {
   };
 
   const handleArtifactUpload = () => {
+    if (!isOwner) {
+      toast.error('Only the project owner can upload evidence');
+      return;
+    }
     if (!currentSection) {
       toast.error('Save this section before attaching evidence');
       return;
@@ -582,6 +621,10 @@ export default function ProjectPage() {
   };
 
   const handleArtifactDelete = (artifactId: string) => {
+    if (!isOwner) {
+      toast.error('Only the project owner can remove evidence');
+      return;
+    }
     artifactDeleteMutation.mutate(artifactId);
   };
 
@@ -624,6 +667,10 @@ export default function ProjectPage() {
   };
 
   const handleArtifactReviewSubmit = (artifactId: string) => {
+    if (!canReviewEvidence) {
+      toast.error('Only assigned reviewers or approvers can review evidence');
+      return;
+    }
     const draft = artifactReviewDraft[artifactId];
     if (!draft) {
       return;
@@ -757,7 +804,7 @@ export default function ProjectPage() {
         )
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections', projectId] });
+      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Comment added');
       setCommentBody('');
     },
@@ -1007,7 +1054,7 @@ export default function ProjectPage() {
         .post(`/projects/${projectId}/reminders`, payload)
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reminders', projectId] });
+      queryClient.invalidateQueries({ queryKey: remindersQueryKey });
       toast.success('Reminder scheduled');
     },
     onError: () => {
@@ -1023,12 +1070,16 @@ export default function ProjectPage() {
         })
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reminders', projectId] });
+      queryClient.invalidateQueries({ queryKey: remindersQueryKey });
     },
   });
 
   const handleReminderSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (!isOwner) {
+      toast.error('Only the project owner can create reminders');
+      return;
+    }
     if (!reminderForm.message || !reminderForm.dueAt) {
       toast.error('Provide reminder text and due date');
       return;
@@ -1052,7 +1103,7 @@ export default function ProjectPage() {
         .post(`/projects/${projectId}/status`, payload)
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: projectQueryKey });
       toast.success('Project status updated');
     },
     onError: () => toast.error('Unable to update project status'),
@@ -1068,7 +1119,7 @@ export default function ProjectPage() {
         .post(`/projects/${projectId}/request-review`, payload)
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: projectQueryKey });
       toast.success('Review request sent');
       setReviewMessage('');
     },
@@ -1076,6 +1127,10 @@ export default function ProjectPage() {
   });
 
   const sendProjectForReview = () => {
+    if (!isOwner) {
+      toast.error('Only owners can send for review');
+      return;
+    }
     if (!allFieldsComplete) {
       toast.error('Complete every required field before sending for review');
       return;
@@ -1093,7 +1148,7 @@ export default function ProjectPage() {
 
   const approveProject = () => {
     if (!canApprove) {
-      toast.error('Only reviewers can approve');
+      toast.error('Only assigned reviewers or approvers can approve');
       return;
     }
     if (projectStatusLabel !== 'IN_REVIEW') {
@@ -1116,7 +1171,11 @@ export default function ProjectPage() {
   };
 
   const requestChanges = () => {
-    projectStatusMutation.mutate({ status: 'DRAFT' });
+    if (!canApprove) {
+      toast.error('Only assigned reviewers or approvers can request changes');
+      return;
+    }
+    projectStatusMutation.mutate({ status: 'CHANGES_REQUESTED' });
   };
 
   const completedSteps = new Set(
@@ -1166,7 +1225,15 @@ export default function ProjectPage() {
       })),
     [trackableStepIds, stepTitleMap, incompleteFieldsByStep, sectionByName],
   );
+  const PROJECT_STATUS_LABELS: Record<string, string> = {
+    DRAFT: 'Draft',
+    IN_REVIEW: 'In review',
+    CHANGES_REQUESTED: 'Changes requested',
+    APPROVED: 'Approved',
+  };
   const projectStatusLabel = projectQuery.data?.status ?? 'DRAFT';
+  const projectStatusDisplay =
+    PROJECT_STATUS_LABELS[projectStatusLabel] ?? projectStatusLabel;
   const allFieldsComplete = useMemo(
     () =>
       [...incompleteFieldsByStep.values()].every(
@@ -1526,162 +1593,164 @@ export default function ProjectPage() {
                   </div>
                 )}
                 <form
-                  className="mt-6 space-y-4"
+                  className="mt-6"
                   onSubmit={handleSubmit((values) =>
                     saveMutation.mutate({ stepId: activeStepId, values }),
                   )}
                 >
-                  {activeStep.fields.map((field) => (
-                    <div key={field.name}>
-                      <div className="flex items-center justify-between text-sm font-medium text-slate-700">
-                        <label className="flex-1" htmlFor={`field-${field.name}`}>
-                          {field.label}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => requestFieldSuggestion(field.name)}
-                          disabled={
-                            suggestionMutation.isPending || !currentSection
-                          }
-                          className="text-xs font-semibold text-sky-600 hover:text-sky-500 disabled:opacity-60"
-                        >
-                          Ask AI
-                        </button>
-                      </div>
-                      {field.type === 'textarea' ? (
-                        <textarea
-                          id={`field-${field.name}`}
-                          {...register(field.name)}
-                          rows={4}
-                          onFocus={() => setActiveField(field.name)}
-                          onBlur={() => setActiveField(null)}
-                          className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                        />
-                      ) : (
-                        <input
-                          id={`field-${field.name}`}
-                          {...register(field.name)}
-                          onFocus={() => setActiveField(field.name)}
-                          onBlur={() => setActiveField(null)}
-                          className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                        />
-                      )}
-                      {aiFieldSuggestions[field.name] && (
-                        <div className="mt-1 flex items-start justify-between rounded-md bg-sky-50 px-3 py-2 text-xs text-slate-600">
-                          <span className="pr-2">
-                            <span className="font-semibold text-slate-800">
-                              AI Suggestion:
-                            </span>{' '}
-                            {aiFieldSuggestions[field.name]}
-                          </span>
-                            <div className="flex flex-col items-end gap-1 text-[11px] font-semibold">
-                              <div className="flex gap-2 text-lg">
-                              <button
-                                type="button"
-                                title="Helpful"
-                                onClick={() =>
-                                  currentSection &&
-                                  handleSuggestionFeedback(
-                                    currentSection.id,
-                                    field.name,
-                                    aiFieldSuggestions[field.name],
-                                    true,
-                                  )
-                                }
-                                className="text-emerald-500 hover:text-emerald-600"
-                              >
-                                👍
-                              </button>
-                              <button
-                                type="button"
-                                title="Not helpful"
-                                onClick={() =>
-                                  currentSection &&
-                                  handleSuggestionFeedback(
-                                    currentSection.id,
-                                    field.name,
-                                    aiFieldSuggestions[field.name],
-                                    false,
-                                  )
-                                }
-                                className="text-rose-500 hover:text-rose-600"
-                              >
-                                👎
-                              </button>
-                            </div>
-                              <button
-                                type="button"
-                                onClick={() => handleApplyFieldSuggestion(field.name)}
-                                className="text-sky-600 hover:text-sky-500"
-                              >
-                                Apply
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleAppendFieldSuggestion(field.name)}
-                                className="text-slate-600 hover:text-slate-800"
-                              >
-                                Append
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setAiFieldSuggestions((prev) => {
-                                    const next = { ...prev };
-                                  delete next[field.name];
-                                  return next;
-                                })
-                              }
-                              className="text-slate-400 hover:text-slate-600"
-                            >
-                              Clear
-                            </button>
-                          </div>
+                  <fieldset className="space-y-4" disabled={!isOwner}>
+                    {activeStep.fields.map((field) => (
+                      <div key={field.name}>
+                        <div className="flex items-center justify-between text-sm font-medium text-slate-700">
+                          <label className="flex-1" htmlFor={`field-${field.name}`}>
+                            {field.label}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => requestFieldSuggestion(field.name)}
+                            disabled={
+                              suggestionMutation.isPending || !currentSection
+                            }
+                            className="text-xs font-semibold text-sky-600 hover:text-sky-500 disabled:opacity-60"
+                          >
+                            Ask AI
+                          </button>
                         </div>
-                      )}
-                      {aiFieldHistory[field.name]?.length ? (
-                        <div className="mt-1 rounded-md border border-slate-100 bg-white px-3 py-2 text-[11px] text-slate-500">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                            Recent suggestions
-                          </p>
-                          <ul className="mt-1 space-y-1">
-                            {aiFieldHistory[field.name].map((item, idx) => (
-                              <li
-                                key={`${field.name}-hist-${idx}`}
-                                className="flex items-center justify-between gap-2"
-                              >
-                                <span className="flex-1 truncate">{item}</span>
+                        {field.type === 'textarea' ? (
+                          <textarea
+                            id={`field-${field.name}`}
+                            {...register(field.name)}
+                            rows={4}
+                            onFocus={() => setActiveField(field.name)}
+                            onBlur={() => setActiveField(null)}
+                            className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                          />
+                        ) : (
+                          <input
+                            id={`field-${field.name}`}
+                            {...register(field.name)}
+                            onFocus={() => setActiveField(field.name)}
+                            onBlur={() => setActiveField(null)}
+                            className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                          />
+                        )}
+                        {aiFieldSuggestions[field.name] && (
+                          <div className="mt-1 flex items-start justify-between rounded-md bg-sky-50 px-3 py-2 text-xs text-slate-600">
+                            <span className="pr-2">
+                              <span className="font-semibold text-slate-800">
+                                AI Suggestion:
+                              </span>{' '}
+                              {aiFieldSuggestions[field.name]}
+                            </span>
+                              <div className="flex flex-col items-end gap-1 text-[11px] font-semibold">
+                                <div className="flex gap-2 text-lg">
                                 <button
                                   type="button"
+                                  title="Helpful"
                                   onClick={() =>
-                                    handleApplyHistorySuggestion(field.name, item)
+                                    currentSection &&
+                                    handleSuggestionFeedback(
+                                      currentSection.id,
+                                      field.name,
+                                      aiFieldSuggestions[field.name],
+                                      true,
+                                    )
                                   }
+                                  className="text-emerald-500 hover:text-emerald-600"
+                                >
+                                  👍
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Not helpful"
+                                  onClick={() =>
+                                    currentSection &&
+                                    handleSuggestionFeedback(
+                                      currentSection.id,
+                                      field.name,
+                                      aiFieldSuggestions[field.name],
+                                      false,
+                                    )
+                                  }
+                                  className="text-rose-500 hover:text-rose-600"
+                                >
+                                  👎
+                                </button>
+                              </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyFieldSuggestion(field.name)}
                                   className="text-sky-600 hover:text-sky-500"
                                 >
                                   Apply
                                 </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                      {suggestionMutation.isPending &&
-                        suggestionFieldRef.current === field.name && (
-                          <p className="mt-1 text-[11px] text-slate-400">
-                            AI drafting suggestion...
-                          </p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAppendFieldSuggestion(field.name)}
+                                  className="text-slate-600 hover:text-slate-800"
+                                >
+                                  Append
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setAiFieldSuggestions((prev) => {
+                                      const next = { ...prev };
+                                    delete next[field.name];
+                                    return next;
+                                  })
+                                }
+                                className="text-slate-400 hover:text-slate-600"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
                         )}
+                        {aiFieldHistory[field.name]?.length ? (
+                          <div className="mt-1 rounded-md border border-slate-100 bg-white px-3 py-2 text-[11px] text-slate-500">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              Recent suggestions
+                            </p>
+                            <ul className="mt-1 space-y-1">
+                              {aiFieldHistory[field.name].map((item, idx) => (
+                                <li
+                                  key={`${field.name}-hist-${idx}`}
+                                  className="flex items-center justify-between gap-2"
+                                >
+                                  <span className="flex-1 truncate">{item}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleApplyHistorySuggestion(field.name, item)
+                                    }
+                                    className="text-sky-600 hover:text-sky-500"
+                                  >
+                                    Apply
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                        {suggestionMutation.isPending &&
+                          suggestionFieldRef.current === field.name && (
+                            <p className="mt-1 text-[11px] text-slate-400">
+                              AI drafting suggestion...
+                            </p>
+                          )}
+                      </div>
+                    ))}
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={saveMutation.isPending}
+                        className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+                      >
+                        {saveMutation.isPending ? 'Saving...' : 'Save Section'}
+                      </button>
                     </div>
-                  ))}
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={saveMutation.isPending}
-                      className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
-                    >
-                      {saveMutation.isPending ? 'Saving...' : 'Save Section'}
-                    </button>
-                  </div>
+                  </fieldset>
                 </form>
                 <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1710,11 +1779,13 @@ export default function ProjectPage() {
                             type="file"
                             className="hidden"
                             onChange={handleArtifactFileChange}
+                            disabled={!isOwner}
                           />
                           <button
                             type="button"
-                            onClick={() => artifactInputRef.current?.click()}
-                            className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-slate-300"
+                            onClick={() => isOwner && artifactInputRef.current?.click()}
+                            disabled={!isOwner}
+                            className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <span className="truncate text-slate-700">
                               {artifactFile
@@ -1733,12 +1804,14 @@ export default function ProjectPage() {
                             setArtifactDescription(event.target.value)
                           }
                           placeholder="Optional description"
-                          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                          disabled={!isOwner}
+                          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50"
                         />
                         <select
                           value={artifactPurpose}
                           onChange={(e) => setArtifactPurpose(e.target.value as any)}
-                          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+                          disabled={!isOwner}
+                          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none disabled:bg-slate-50"
                           title="Purpose"
                         >
                           <option value="GENERIC">Generic</option>
@@ -1746,20 +1819,23 @@ export default function ProjectPage() {
                           <option value="MODEL">Model</option>
                         </select>
                         <div className="flex items-center justify-end gap-2">
-                          {artifactFile ? (
-                            <button
-                              type="button"
-                              onClick={clearArtifactSelection}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-800"
-                            >
-                              Clear
-                            </button>
-                          ) : null}
+                            {artifactFile ? (
+                              <button
+                                type="button"
+                                onClick={clearArtifactSelection}
+                                disabled={!isOwner}
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-50"
+                              >
+                                Clear
+                              </button>
+                            ) : null}
                           <button
                             type="button"
                             onClick={handleArtifactUpload}
                             disabled={
-                              artifactUploadMutation.isPending || !artifactFile
+                              !isOwner ||
+                              artifactUploadMutation.isPending ||
+                              !artifactFile
                             }
                             className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                           >
@@ -1902,6 +1978,7 @@ export default function ProjectPage() {
                                     type="button"
                                     onClick={() => handleArtifactDelete(artifact.id)}
                                     disabled={
+                                      !isOwner ||
                                       artifactDeleteMutation.isPending ||
                                       hasNewerVersion
                                     }
@@ -2142,6 +2219,7 @@ export default function ProjectPage() {
                 <ReviewApprovalPanel
                   trackableSteps={trackableStepSummaries}
                   projectStatusLabel={projectStatusLabel}
+                  projectStatusDisplay={projectStatusDisplay}
                   onSendForReview={sendProjectForReview}
                   onApprove={approveProject}
                   onRequestChanges={requestChanges}
@@ -2154,6 +2232,9 @@ export default function ProjectPage() {
                   reviewers={reviewersQuery.data ?? []}
                   availableReviewers={availableReviewers}
                   canAssignSelf={canAssignSelf}
+                  canSendForReview={isOwner}
+                  canApprove={canApprove}
+                  canRequestChanges={canApprove}
                   userId={user?.id}
                 />
                 <div
@@ -2191,11 +2272,12 @@ export default function ProjectPage() {
                             isSelected
                               ? 'border-sky-400 bg-white shadow-sm shadow-sky-100'
                               : 'border-slate-200 bg-white hover:border-slate-300'
-                          }`}
+                          } ${!isOwner ? 'opacity-60 cursor-not-allowed' : ''}`}
                         >
                           <input
                             type="checkbox"
                             className="sr-only"
+                            disabled={!isOwner}
                             checked={isSelected}
                             onChange={() => toggleDocumentType(option.type)}
                           />
@@ -2231,6 +2313,7 @@ export default function ProjectPage() {
                 <button
                   onClick={handleGenerateClick}
                   disabled={
+                    !isOwner ||
                     generateMutation.isPending ||
                     !selectedDocumentTypes.length ||
                     projectStatusLabel !== 'APPROVED'
@@ -2661,7 +2744,7 @@ export default function ProjectPage() {
 }
 type StatusEvent = {
   id: string;
-  status: 'DRAFT' | 'IN_REVIEW' | 'APPROVED';
+  status: 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
   note?: string;
   signature?: string;
   createdAt: string;

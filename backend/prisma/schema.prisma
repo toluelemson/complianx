@@ -32,6 +32,8 @@ model User {
   role         Role     @default(USER)
   companyId    String?
   company      Company? @relation(fields: [companyId], references: [id])
+  defaultCompanyId String? // keep for backward compatibility; will be deprecated
+  companies    UserCompany[]
   projects     Project[]
   editedSections Section[] @relation("SectionLastEditor")
   sectionComments SectionComment[]
@@ -172,6 +174,7 @@ model Company {
   stripeSubscriptionId String?
   trialEndsAt DateTime?
   usage     CompanyUsage[]
+  members   UserCompany[]
 }
 
 enum Plan {
@@ -231,12 +234,14 @@ model SectionStatusEvent {
 enum ProjectStatus {
   DRAFT
   IN_REVIEW
+  CHANGES_REQUESTED
   APPROVED
 }
 
 enum SectionStatus {
   DRAFT
   IN_REVIEW
+  CHANGES_REQUESTED
   APPROVED
 }
 
@@ -244,6 +249,16 @@ enum Role {
   USER
   REVIEWER
   ADMIN
+}
+
+model UserCompany {
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+  role      Role    @default(USER)
+
+  @@id([userId, companyId])
 }
 
 model SectionArtifact {

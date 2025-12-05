@@ -1,0 +1,5 @@
+-- AlterEnum
+ALTER TYPE "ProjectStatus" ADD VALUE 'CHANGES_REQUESTED';
+
+-- AlterEnum
+ALTER TYPE "SectionStatus" ADD VALUE 'CHANGES_REQUESTED';

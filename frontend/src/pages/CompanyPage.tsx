@@ -7,15 +7,36 @@ import toast from 'react-hot-toast';
 import { useEffect, useState } from 'react';
 
 export default function CompanyPage() {
-  const { user } = useAuth();
+  const { user, activeCompanyId, setActiveCompany } = useAuth();
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
+  const [createName, setCreateName] = useState('');
   const [leftCompany, setLeftCompany] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const hasCompanyMembership = Boolean(user?.companies?.length);
+  const [createdCompanyId, setCreatedCompanyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hasCompanyMembership && activeCompanyId) {
+      setActiveCompany(undefined);
+    }
+  }, [hasCompanyMembership, activeCompanyId, setActiveCompany]);
+
+  useEffect(() => {
+    if (activeCompanyId !== createdCompanyId) {
+      setCreatedCompanyId(null);
+    }
+  }, [activeCompanyId, createdCompanyId]);
+
+  const hasWorkspaceContext =
+    Boolean(activeCompanyId) &&
+    (hasCompanyMembership || (createdCompanyId && createdCompanyId === activeCompanyId));
 
   const companyQuery = useQuery({
-    queryKey: ['company'],
-    queryFn: () => api.get('/company').then((res) => res.data),
+    queryKey: ['company', activeCompanyId],
+    enabled: Boolean(hasWorkspaceContext),
+    queryFn: () =>
+      api.get('/company').then((res) => res.data),
   });
 
   const renameMutation = useMutation({
@@ -53,7 +74,7 @@ export default function CompanyPage() {
   const isCompanyAdmin = user?.role === 'ADMIN' || user?.role === 'COMPANY_ADMIN';
   const invitationsQuery = useQuery({
     queryKey: ['invitations'],
-    enabled: Boolean(isCompanyAdmin),
+    enabled: Boolean(isCompanyAdmin && hasWorkspaceContext),
     queryFn: () => api.get('/invitations').then((res) => res.data),
   });
   const inviteMutation = useMutation({
@@ -65,49 +86,85 @@ export default function CompanyPage() {
     },
   });
 
+  const createCompanyMutation = useMutation({
+    mutationFn: (name?: string) =>
+      api.post('/company/create', { name: name?.trim() || undefined }).then((res) => res.data),
+    onSuccess: (data) => {
+      const companyId = data?.companyId;
+      if (companyId) {
+        setCreatedCompanyId(companyId);
+        setActiveCompany(companyId);
+        queryClient.invalidateQueries({ queryKey: ['company'] });
+        toast.success('Workspace created');
+      }
+      setCreateName('');
+      setLeftCompany(false);
+    },
+    onError: () => toast.error('Unable to create workspace'),
+  });
+
   useEffect(() => {
     if (companyQuery.isSuccess && companyQuery.data?.company) {
       setLeftCompany(false);
     }
   }, [companyQuery.isSuccess, companyQuery.data]);
 
+  const renderCreateWorkspace = (message: { title: string; body: string }) => (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+      <p className="text-lg font-semibold text-slate-900">{message.title}</p>
+      <p className="text-sm text-slate-500">{message.body}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          value={createName}
+          onChange={(e) => setCreateName(e.target.value)}
+          placeholder="Workspace name (optional)"
+          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        />
+        <button
+          type="button"
+          onClick={() => createCompanyMutation.mutate(createName)}
+          disabled={createCompanyMutation.isPending}
+          className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+        >
+          {createCompanyMutation.isPending ? 'Creating...' : 'Create workspace'}
+        </button>
+      </div>
+      <Link
+        to="/dashboard"
+        className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      >
+        Back to dashboard
+      </Link>
+    </div>
+  );
+
+  if (!activeCompanyId) {
+    return (
+      <AppShell title="Company Settings">
+        {renderCreateWorkspace({
+          title: 'No workspace selected',
+          body: 'Create a workspace to start collaborating, or select one from the header.',
+        })}
+      </AppShell>
+    );
+  }
   if (leftCompany) {
     return (
       <AppShell title="Company Settings">
-        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-          <p className="text-lg font-semibold text-slate-900">
-            You’re not part of a shared company workspace
-          </p>
-          <p className="text-sm text-slate-500">
-            Leaving removed your access. Use the dashboard to manage your personal workspace or accept a new invitation.
-          </p>
-          <Link
-            to="/dashboard"
-            className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
-          >
-            Back to dashboard
-          </Link>
-        </div>
+        {renderCreateWorkspace({
+          title: 'You’re not part of a shared company workspace',
+          body: 'Leaving removed your access. Create a new workspace or accept an invite.',
+        })}
       </AppShell>
     );
   }
   if (companyQuery.isError) {
     return (
       <AppShell title="Company Settings">
-        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-          <p className="text-lg font-semibold text-slate-900">
-            Unable to load a shared company workspace
-          </p>
-          <p className="text-sm text-slate-500">
-            You’re not currently assigned to one. Visit the dashboard to start a personal workspace or accept a teammate invite.
-          </p>
-          <Link
-            to="/dashboard"
-            className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
-          >
-            Back to dashboard
-          </Link>
-        </div>
+        {renderCreateWorkspace({
+          title: 'Unable to load a shared company workspace',
+          body: 'Create a workspace or accept an invite to continue.',
+        })}
       </AppShell>
     );
   }

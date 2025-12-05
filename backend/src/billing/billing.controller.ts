@@ -11,6 +11,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonetizationService } from '../monetization/monetization.service';
 import { BillingService } from './billing.service';
+import { CompanyContextService } from '../company/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('billing')
@@ -19,14 +20,20 @@ export class BillingController {
     private readonly prisma: PrismaService,
     private readonly monetization: MonetizationService,
     private readonly billing: BillingService,
+    private readonly companyContext: CompanyContextService,
   ) {}
+
+  private resolveCompanyId(req: any) {
+    return this.companyContext.resolveCompany(
+      req.user,
+      (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
+    ).companyId;
+  }
 
   @Get('plan')
   async getPlan(@Request() req) {
-    const user = await this.prisma.user.findUnique({ where: { id: req.user.userId } });
-    const company = user?.companyId
-      ? await this.prisma.company.findUnique({ where: { id: user.companyId } })
-      : null;
+    const companyId = this.resolveCompanyId(req);
+    const company = await this.prisma.company.findUnique({ where: { id: companyId } });
     const plan = company?.plan || 'FREE';
     const limits = (this.monetization as any).getLimits(plan);
     return { plan, limits };
@@ -34,9 +41,8 @@ export class BillingController {
 
   @Get('usage')
   async getUsage(@Request() req) {
-    const user = await this.prisma.user.findUnique({ where: { id: req.user.userId } });
-    if (!user?.companyId) return { month: '', docsGenerated: 0, trustAnalyses: 0 };
-    const u = await this.monetization.getUsage(user.companyId);
+    const companyId = this.resolveCompanyId(req);
+    const u = await this.monetization.getUsage(companyId);
     return u;
   }
 
@@ -51,7 +57,12 @@ export class BillingController {
         message: 'Stripe not configured. Contact support to upgrade.',
       };
     }
-    const url = await this.billing.createCheckoutSession(req.user.userId, body.plan);
+    const companyId = this.resolveCompanyId(req);
+    const url = await this.billing.createCheckoutSession(
+      req.user.userId,
+      companyId,
+      body.plan,
+    );
     return { url };
   }
 
@@ -60,7 +71,8 @@ export class BillingController {
     if (!this.billing.isEnabled()) {
       return { url: null, message: 'Stripe not configured.' };
     }
-    const url = await this.billing.createPortalSession(req.user.userId);
+    const companyId = this.resolveCompanyId(req);
+    const url = await this.billing.createPortalSession(req.user.userId, companyId);
     return { url };
   }
 }

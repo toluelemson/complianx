@@ -16,11 +16,22 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ReviewArtifactDto } from './dto/review-artifact.dto';
+import { CompanyContextService } from '../company/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class ArtifactsController {
-  constructor(private readonly artifactsService: ArtifactsService) {}
+  constructor(
+    private readonly artifactsService: ArtifactsService,
+    private readonly companyContext: CompanyContextService,
+  ) {}
+
+  private resolveCompanyId(req: any) {
+    return this.companyContext.resolveCompany(
+      req.user,
+      (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
+    ).companyId;
+  }
 
   @Get('projects/:projectId/sections/:sectionId/artifacts')
   list(
@@ -28,7 +39,13 @@ export class ArtifactsController {
     @Param('sectionId') sectionId: string,
     @Request() req,
   ) {
-    return this.artifactsService.list(projectId, sectionId, req.user.userId);
+    const companyId = this.resolveCompanyId(req);
+    return this.artifactsService.list(
+      projectId,
+      sectionId,
+      req.user.userId,
+      companyId,
+    );
   }
 
   @Post('projects/:projectId/sections/:sectionId/artifacts')
@@ -46,10 +63,12 @@ export class ArtifactsController {
     @Body('description') description?: string,
     @Body('purpose') purpose?: 'DATASET' | 'MODEL' | 'GENERIC',
   ) {
+    const companyId = this.resolveCompanyId(req);
     return this.artifactsService.upload(
       projectId,
       sectionId,
       req.user.userId,
+      companyId,
       file,
       description,
       purpose,
@@ -58,12 +77,18 @@ export class ArtifactsController {
 
   @Delete('artifacts/:artifactId')
   remove(@Param('artifactId') artifactId: string, @Request() req) {
-    return this.artifactsService.remove(artifactId, req.user.userId);
+    const companyId = this.resolveCompanyId(req);
+    return this.artifactsService.remove(artifactId, req.user.userId, companyId);
   }
 
   @Get('artifacts/:artifactId/download')
   download(@Param('artifactId') artifactId: string, @Request() req) {
-    return this.artifactsService.download(artifactId, req.user.userId);
+    const companyId = this.resolveCompanyId(req);
+    return this.artifactsService.download(
+      artifactId,
+      req.user.userId,
+      companyId,
+    );
   }
 
   @Patch('artifacts/:artifactId/review')

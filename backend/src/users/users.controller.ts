@@ -15,6 +15,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../notifications/email.service';
+import { CompanyContextService } from '../company/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
@@ -23,10 +24,25 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly notifications: NotificationsService,
     private readonly email: EmailService,
+    private readonly companyContext: CompanyContextService,
   ) {}
 
+  private resolveCompanyId(req: any) {
+    return this.companyContext.resolveCompany(
+      req.user,
+      (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
+    ).companyId;
+  }
+
   private ensureAdmin(req: any) {
-    if (req.user?.role !== 'ADMIN') {
+    const companyId = this.resolveCompanyId(req);
+    const membership = this.companyContext.resolveCompany(req.user, companyId).membership;
+    const membershipRole = membership?.role;
+    if (
+      req.user?.role !== 'ADMIN' &&
+      membershipRole !== 'ADMIN' &&
+      membershipRole !== 'COMPANY_ADMIN'
+    ) {
       throw new ForbiddenException('Admin access required');
     }
   }
@@ -34,7 +50,8 @@ export class UsersController {
   @Get()
   async list(@Request() req) {
     this.ensureAdmin(req);
-    return this.usersService.listByCompany(req.user.companyId);
+    const companyId = this.resolveCompanyId(req);
+    return this.usersService.listByCompany(companyId);
   }
 
   @Get('me')
@@ -54,17 +71,19 @@ export class UsersController {
     @Request() req,
   ) {
     this.ensureAdmin(req);
+    const companyId = this.resolveCompanyId(req);
     return this.usersService.updateRole({
       targetUserId: id,
       role: dto.role,
-      companyId: req.user.companyId,
+      companyId,
     });
   }
 
   // Non-admin users can request reviewer role; not auto-granted, just notifies admins
   @Post('request-reviewer')
   async requestReviewer(@Request() req) {
-    const { userId, companyId, email } = req.user || {};
+    const { userId, email } = req.user || {};
+    const companyId = this.resolveCompanyId(req);
     if (!userId || !companyId) {
       throw new ForbiddenException('Invalid user');
     }

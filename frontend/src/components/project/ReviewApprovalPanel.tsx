@@ -16,6 +16,7 @@ interface Reviewer {
 interface ReviewApprovalPanelProps {
   trackableSteps: TrackableStepSummary[];
   projectStatusLabel: string;
+  projectStatusDisplay?: string;
   onSendForReview: () => void;
   onApprove: () => void;
   onRequestChanges: () => void;
@@ -28,12 +29,16 @@ interface ReviewApprovalPanelProps {
   reviewers: Reviewer[];
   availableReviewers: Reviewer[];
   canAssignSelf: boolean;
+  canSendForReview?: boolean;
+  canApprove?: boolean;
+  canRequestChanges?: boolean;
   userId?: string;
 }
 
 export function ReviewApprovalPanel({
   trackableSteps,
   projectStatusLabel,
+  projectStatusDisplay,
   onSendForReview,
   onApprove,
   onRequestChanges,
@@ -46,6 +51,9 @@ export function ReviewApprovalPanel({
   reviewers,
   availableReviewers,
   canAssignSelf,
+  canSendForReview = true,
+  canApprove = true,
+  canRequestChanges = true,
   userId,
 }: ReviewApprovalPanelProps) {
   return (
@@ -54,7 +62,7 @@ export function ReviewApprovalPanel({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-900">Review & approval</h3>
           <span className="text-xs font-semibold text-slate-500">
-            Project status · {projectStatusLabel}
+            Project status · {projectStatusDisplay ?? projectStatusLabel}
           </span>
         </div>
         <p className="text-xs text-slate-500">
@@ -74,7 +82,8 @@ export function ReviewApprovalPanel({
             </label>
             <div className="flex items-center gap-2">
               <select
-                className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm"
+                disabled={!canSendForReview}
+                className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-50"
                 value={reviewerId ?? ''}
                 onChange={(event) => onReviewerChange(event.target.value)}
               >
@@ -89,7 +98,8 @@ export function ReviewApprovalPanel({
                 <button
                   type="button"
                   onClick={() => onReviewerChange(userId)}
-                  className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  disabled={!canSendForReview}
+                  className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Use me
                 </button>
@@ -107,7 +117,8 @@ export function ReviewApprovalPanel({
             </label>
             <div className="flex items-center gap-2">
               <select
-                className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm"
+                disabled={!canSendForReview}
+                className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-50"
                 value={approverId ?? ''}
                 onChange={(event) => onApproverChange(event.target.value)}
               >
@@ -122,7 +133,8 @@ export function ReviewApprovalPanel({
                 <button
                   type="button"
                   onClick={() => onApproverChange(userId)}
-                  className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  disabled={!canSendForReview}
+                  className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Use me
                 </button>
@@ -138,7 +150,8 @@ export function ReviewApprovalPanel({
             value={reviewMessage}
             onChange={(event) => setReviewMessage(event.target.value)}
             rows={2}
-            className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
+            disabled={!canSendForReview}
+            className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none disabled:bg-slate-50"
             placeholder="Share context or special instructions with the reviewer"
           />
         </div>
@@ -148,7 +161,11 @@ export function ReviewApprovalPanel({
           type="button"
           className="flex-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
           onClick={onSendForReview}
-          disabled={projectStatusLabel === 'IN_REVIEW' || projectStatusLabel === 'APPROVED'}
+          disabled={
+            !canSendForReview ||
+            projectStatusLabel === 'IN_REVIEW' ||
+            projectStatusLabel === 'APPROVED'
+          }
         >
           Send for review
         </button>
@@ -156,7 +173,7 @@ export function ReviewApprovalPanel({
           type="button"
           className="flex-1 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
           onClick={onApprove}
-          disabled={projectStatusLabel !== 'IN_REVIEW'}
+          disabled={!canApprove || projectStatusLabel !== 'IN_REVIEW'}
         >
           Approve project
         </button>
@@ -164,7 +181,11 @@ export function ReviewApprovalPanel({
           type="button"
           className="flex-1 rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
           onClick={onRequestChanges}
-          disabled={projectStatusLabel === 'DRAFT'}
+          disabled={
+            !canRequestChanges ||
+            projectStatusLabel === 'DRAFT' ||
+            projectStatusLabel === 'CHANGES_REQUESTED'
+          }
         >
           Request changes
         </button>

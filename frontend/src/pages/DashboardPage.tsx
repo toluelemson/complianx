@@ -12,13 +12,14 @@ import { DOCUMENT_LABELS } from '../constants/documents';
 import { useAuth } from '../context/AuthContext';
 
 export default function DashboardPage() {
-  const { token, initializing } = useAuth();
+  const { token, initializing, activeCompanyId } = useAuth();
   const queryClient = useQueryClient();
+  const workspaceSuffix = activeCompanyId ? `?companyId=${activeCompanyId}` : '';
   const [isModalOpen, setModalOpen] = useState(false);
   const [cloneTarget, setCloneTarget] = useState<{ id: string; name: string } | null>(null);
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
-    enabled: Boolean(token),
+    queryKey: ['projects', activeCompanyId],
+    enabled: Boolean(token && activeCompanyId),
     queryFn: () => api.get('/projects').then((res) => res.data),
   });
 
@@ -26,7 +27,7 @@ export default function DashboardPage() {
     mutationFn: (values: NewProjectFormValues) =>
       api.post('/projects', values).then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', activeCompanyId] });
       setModalOpen(false);
       toast.success('Project created');
     },
@@ -41,7 +42,7 @@ export default function DashboardPage() {
         .post(`/projects/${payload.projectId}/clone`, { name: payload.name })
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', activeCompanyId] });
       setCloneTarget(null);
       toast.success('Project duplicated');
     },
@@ -50,6 +51,12 @@ export default function DashboardPage() {
     },
   });
   const projects = projectsQuery.data ?? [];
+  const ownedProjects = projects.filter(
+    (project: any) => !project.viewerRole || project.viewerRole === 'OWNER',
+  );
+  const assignedProjects = projects.filter(
+    (project: any) => project.viewerRole && project.viewerRole !== 'OWNER',
+  );
   const readinessBadgeClass = (value: number) =>
     value >= 80
       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -66,7 +73,7 @@ export default function DashboardPage() {
       projectName: string;
     }> = [];
 
-    (projectsQuery.data ?? []).forEach((project: any) => {
+    ownedProjects.forEach((project: any) => {
       const uniqueSections = new Set(
         (project.sections ?? []).map((section: any) => section.name),
       );
@@ -96,7 +103,7 @@ export default function DashboardPage() {
         : 0,
       recentDocuments: docs.slice(0, 4),
     };
-  }, [projectsQuery.data]);
+  }, [ownedProjects]);
 
   if (!initializing && !token) {
     return <Navigate to="/login" replace />;
@@ -167,7 +174,7 @@ export default function DashboardPage() {
             {averageReadiness}%
           </p>
           <p className="text-sm text-slate-500">
-            Average completion across {projects.length || '0'} AI systems
+            Average completion across {ownedProjects.length || '0'} AI systems
           </p>
           <div className="mt-4 h-3 w-full rounded-full bg-slate-100">
             <div
@@ -214,6 +221,37 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      {assignedProjects.length ? (
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-700">Assigned reviews</p>
+            <span className="text-xs text-slate-400">
+              {assignedProjects.length} active
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {assignedProjects.map((project: any) => (
+              <Link
+                key={project.id}
+                to={`/projects/${project.id}${workspaceSuffix}`}
+                className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2 hover:border-sky-200"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {project.name}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Role: {project.viewerRole?.toLowerCase() ?? 'reviewer'}
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-slate-500">
+                  {(project.status ?? 'IN_REVIEW').replace('_', ' ')}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="mt-8 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -228,8 +266,8 @@ export default function DashboardPage() {
             </tr>
           </thead>
             <tbody>
-              {projects.length ? (
-                projects.map((project: any) => {
+              {ownedProjects.length ? (
+                ownedProjects.map((project: any) => {
                   const readiness = readinessByProject.get(project.id) ?? 0;
                   const readinessBadge = readinessBadgeClass(readiness);
                   return (
@@ -267,13 +305,13 @@ export default function DashboardPage() {
                             Duplicate
                           </button>
                           <Link
-                            to={`/projects/${project.id}/trust`}
+                            to={`/projects/${project.id}/trust${workspaceSuffix}`}
                             className="text-sm font-medium text-slate-500 hover:text-sky-600"
                           >
                             Trust →
                           </Link>
                           <Link
-                            to={`/projects/${project.id}`}
+                            to={`/projects/${project.id}${workspaceSuffix}`}
                             className="text-sm font-medium text-sky-600 hover:text-sky-500"
                           >
                             Open →
@@ -297,8 +335,8 @@ export default function DashboardPage() {
         </div>
       </div>
       <div className="mt-6 space-y-4 md:hidden">
-        {projects.length ? (
-          projects.map((project: any) => {
+        {ownedProjects.length ? (
+          ownedProjects.map((project: any) => {
             const readiness = readinessByProject.get(project.id) ?? 0;
             const readinessBadge = readinessBadgeClass(readiness);
             return (
@@ -333,13 +371,13 @@ export default function DashboardPage() {
                     Duplicate
                   </button>
                   <Link
-                    to={`/projects/${project.id}/trust`}
+                    to={`/projects/${project.id}/trust${workspaceSuffix}`}
                     className="text-sm font-medium text-slate-500 hover:text-sky-600"
                   >
                     Trust →
                   </Link>
                   <Link
-                    to={`/projects/${project.id}`}
+                    to={`/projects/${project.id}${workspaceSuffix}`}
                     className="text-sm font-medium text-sky-600 hover:text-sky-500"
                   >
                     Open →

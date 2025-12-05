@@ -22,6 +22,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     email: string;
     role?: string;
     companyId?: string;
+    defaultCompanyId?: string;
+    companies?: { companyId: string; role?: string; companyName?: string }[];
     firstName?: string | null;
     lastName?: string | null;
     jobTitle?: string | null;
@@ -32,7 +34,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId: payload.sub,
       email: payload.email,
       role: payload.role,
-      companyId: payload.companyId,
+      companyId: payload.companyId ?? payload.defaultCompanyId,
+      defaultCompanyId: payload.defaultCompanyId,
+      companies: payload.companies ?? [],
       firstName: payload.firstName ?? null,
       lastName: payload.lastName ?? null,
       jobTitle: payload.jobTitle ?? null,

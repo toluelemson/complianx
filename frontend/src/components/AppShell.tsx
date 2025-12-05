@@ -20,7 +20,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ title, children }: AppShellProps) {
-  const { logout, user } = useAuth();
+  const { logout, user, activeCompanyId, setActiveCompany } = useAuth();
   const qc = useQueryClient();
   const countQuery = useQuery<{ count: number }>({
     queryKey: ['notifications', 'count'],
@@ -66,20 +66,20 @@ export function AppShell({ title, children }: AppShellProps) {
     return () => window.removeEventListener('paywall', handler);
   }, []);
   const navSections = useMemo(() => {
-    const workspace = [
+    const primary = [
       { label: 'Dashboard', to: '/dashboard', show: true },
+      { label: 'Company', to: '/company', show: Boolean(user) },
       { label: 'Profile', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
-    const organization = [
-      { label: 'Company', to: '/company', show: Boolean(user?.companyId) },
+    const admin = [
       { label: 'Roles', to: '/admin/roles', show: user?.role === 'ADMIN' },
     ].filter((link) => link.show);
-    const sections = workspace.length ? [{ title: 'Workspace', links: workspace }] : [];
-    if (organization.length) {
-      sections.push({ title: 'Organization', links: organization });
+    const sections = primary.length ? [{ title: 'Navigation', links: primary }] : [];
+    if (admin.length) {
+      sections.push({ title: 'Admin', links: admin });
     }
     return sections;
-  }, [user?.companyId, user?.role]);
+  }, [user]);
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const renderDesktopNav = () =>
     navSections.map((section, idx) => (
@@ -262,6 +262,21 @@ export function AppShell({ title, children }: AppShellProps) {
               >
                 Contact
               </Link>
+              {user?.companies && user.companies.length > 1 && (
+                <select
+                  value={
+                    activeCompanyId ?? user.companies[0]?.companyId ?? ''
+                  }
+                  onChange={(event) => setActiveCompany(event.target.value)}
+                  className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                >
+                  {user.companies.map((company) => (
+                    <option key={company.companyId} value={company.companyId}>
+                      {company.companyName ?? company.companyId}
+                    </option>
+                  ))}
+                </select>
+              )}
               <button
                 onClick={() => setBillingOpen(true)}
                 className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -296,6 +311,24 @@ export function AppShell({ title, children }: AppShellProps) {
                 >
                   Home
                 </Link>
+                {user?.companies && user.companies.length > 1 && (
+                  <select
+                    value={
+                      activeCompanyId ?? user.companies[0]?.companyId ?? ''
+                    }
+                    onChange={(event) => {
+                      setActiveCompany(event.target.value);
+                      closeMobileMenu();
+                    }}
+                    className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  >
+                    {user.companies.map((company) => (
+                      <option key={company.companyId} value={company.companyId}>
+                        {company.companyName ?? company.companyId}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <a
                   href="https://calendly.com/neuraldocx"
                   target="_blank"

@@ -15,15 +15,27 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { SuggestSectionDto } from './dto/suggest-section.dto';
 import { UpdateSectionStatusDto } from './dto/update-section-status.dto';
+import { CompanyContextService } from '../company/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('projects/:projectId/sections')
 export class SectionsController {
-  constructor(private readonly sectionsService: SectionsService) {}
+  constructor(
+    private readonly sectionsService: SectionsService,
+    private readonly companyContext: CompanyContextService,
+  ) {}
+
+  private resolveCompanyId(req: any) {
+    return this.companyContext.resolveCompany(
+      req.user,
+      (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
+    ).companyId;
+  }
 
   @Get()
   list(@Param('projectId') projectId: string, @Request() req) {
-    return this.sectionsService.list(projectId, req.user.userId);
+    const companyId = this.resolveCompanyId(req);
+    return this.sectionsService.list(projectId, req.user.userId, companyId);
   }
 
   @Post()
@@ -32,7 +44,8 @@ export class SectionsController {
     @Request() req,
     @Body() dto: CreateSectionDto,
   ) {
-    return this.sectionsService.save(projectId, req.user.userId, dto);
+    const companyId = this.resolveCompanyId(req);
+    return this.sectionsService.save(projectId, req.user.userId, companyId, dto);
   }
 
   @Put(':sectionId')
@@ -42,10 +55,12 @@ export class SectionsController {
     @Request() req,
     @Body() dto: UpdateSectionDto,
   ) {
+    const companyId = this.resolveCompanyId(req);
     return this.sectionsService.update(
       projectId,
       sectionId,
       req.user.userId,
+      companyId,
       dto,
     );
   }
@@ -56,10 +71,12 @@ export class SectionsController {
     @Param('sectionId') sectionId: string,
     @Request() req,
   ) {
+    const companyId = this.resolveCompanyId(req);
     return this.sectionsService.listComments(
       projectId,
       sectionId,
       req.user.userId,
+      companyId,
     );
   }
 
@@ -70,10 +87,12 @@ export class SectionsController {
     @Request() req,
     @Body() dto: CreateCommentDto,
   ) {
+    const companyId = this.resolveCompanyId(req);
     return this.sectionsService.addComment(
       projectId,
       sectionId,
       req.user.userId,
+      companyId,
       dto,
     );
   }
@@ -85,10 +104,12 @@ export class SectionsController {
     @Request() req,
     @Body() dto: SuggestSectionDto,
   ) {
+    const companyId = this.resolveCompanyId(req);
     return this.sectionsService.suggest(
       projectId,
       sectionName,
       req.user.userId,
+      companyId,
       dto,
     );
   }
@@ -100,10 +121,12 @@ export class SectionsController {
     @Request() req,
     @Body() dto: UpdateSectionStatusDto,
   ) {
+    const companyId = this.resolveCompanyId(req);
     return this.sectionsService.updateStatus(
       projectId,
       sectionId,
       req.user.userId,
+      companyId,
       dto,
     );
   }

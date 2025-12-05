@@ -5,9 +5,10 @@ import { ProjectsModule } from '../projects/projects.module';
 import { LlmModule } from '../llm/llm.module';
 import { EmailService } from '../notifications/email.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CompanyModule } from '../company/company.module';
 
 @Module({
-  imports: [ProjectsModule, LlmModule, NotificationsModule],
+  imports: [ProjectsModule, LlmModule, NotificationsModule, CompanyModule],
   controllers: [SectionsController],
   providers: [SectionsService, EmailService],
   exports: [SectionsService],

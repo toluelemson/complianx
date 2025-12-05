@@ -31,13 +31,6 @@ export default function SignupPage() {
       },
     });
   const [searchParams] = useSearchParams();
-  const queryType = searchParams.get('type');
-  const [signupType, setSignupType] = useState<'personal' | 'company'>(() =>
-    queryType === 'company' ? 'company' : 'personal',
-  );
-  useEffect(() => {
-    setSignupType(queryType === 'company' ? 'company' : 'personal');
-  }, [queryType]);
   const [inviteInfo, setInviteInfo] =
     useState<{ email: string; company: { name: string } } | null>(null);
   useEffect(() => {
@@ -59,7 +52,7 @@ export default function SignupPage() {
     }
   }, [searchParams, setValue]);
   const invitationToken = watch('invitationToken');
-  const isCompanyFlow = signupType === 'company' || Boolean(invitationToken);
+  const isCompanyFlow = Boolean(invitationToken);
 
   const mutation = useMutation({
     mutationFn: (values: SignupFormValues) =>
@@ -93,40 +86,6 @@ export default function SignupPage() {
         <p className="mt-2 text-sm text-slate-500">
           Start generating AI compliance documentation.
         </p>
-        <div className="mt-4 space-y-2">
-          <p className="text-xs uppercase tracking-[0.4em] text-slate-400">
-            Workspace type
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setSignupType('personal')}
-              className={`rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
-                signupType === 'personal'
-                  ? 'border-sky-500 bg-sky-50 text-slate-900'
-                  : 'border-slate-200 bg-white text-slate-500'
-              }`}
-            >
-              Personal
-            </button>
-            <button
-              type="button"
-              onClick={() => setSignupType('company')}
-              className={`rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
-                signupType === 'company'
-                  ? 'border-sky-500 bg-sky-50 text-slate-900'
-                  : 'border-slate-200 bg-white text-slate-500'
-              }`}
-            >
-              Company
-            </button>
-          </div>
-          <p className="text-xs text-slate-500">
-            {isCompanyFlow
-              ? 'Create or join a company workspace with teammates in mind.'
-              : 'Launch a lightweight personal workspace you can expand later.'}
-          </p>
-        </div>
         <form
           className="mt-8 space-y-5"
           onSubmit={handleSubmit((values: SignupFormValues) => {
@@ -134,15 +93,7 @@ export default function SignupPage() {
               ...values,
               accountType: isCompanyFlow ? 'organization' : 'personal',
             };
-            if (
-              isCompanyFlow &&
-              !payload.invitationToken &&
-              !payload.companyName &&
-              !payload.companyId
-            ) {
-              setError('Enter a company name or an existing company ID to join.');
-              return;
-            }
+            // Company creation via signup is disabled; only invite-based org signup is allowed.
             mutation.mutate(payload);
           })}
         >
@@ -197,44 +148,15 @@ export default function SignupPage() {
           {successMessage && (
             <p className="text-sm text-emerald-600">{successMessage}</p>
           )}
-          {isCompanyFlow && (
-            <>
-              {inviteInfo ? (
-                <div className="rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                  Joining <strong>{inviteInfo.company.name}</strong> as{' '}
-                  <strong>{inviteInfo.email || watch('email')}</strong>
-                </div>
-              ) : (
-                <>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Company Name (create new)
-                    <input
-                      type="text"
-                      {...register('companyName')}
-                      className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                      placeholder="Acme Compliance"
-                    />
-                  </label>
-                  {/* <label className="block text-sm font-medium text-slate-700">
-                    Existing Company ID (optional)
-                    <input
-                      type="text"
-                      {...register('companyId')}
-                      className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                      placeholder="company uuid"
-                    />
-                  </label>
-                  <p className="text-xs text-slate-500">
-                    Already have a workspace? Share the ID above to join it.
-                  </p> */}
-                </>
-              )}
-            </>
+          {isCompanyFlow && inviteInfo && (
+            <div className="rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+              Joining <strong>{inviteInfo.company.name}</strong> as{' '}
+              <strong>{inviteInfo.email || watch('email')}</strong>
+            </div>
           )}
           {!isCompanyFlow && (
             <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              Personal workspaces spin up instantly and you can invite teammates
-              or connect to a company workspace anytime from the dashboard.
+              Personal workspaces spin up instantly. To join a company workspace, accept an invitation after signup.
             </div>
           )}
           <button

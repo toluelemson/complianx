@@ -22,6 +22,14 @@ export function setAuthToken(token?: string) {
   }
 }
 
+export function setCompanyId(companyId?: string) {
+  if (companyId) {
+    api.defaults.headers.common['X-Company-Id'] = companyId;
+  } else {
+    delete api.defaults.headers.common['X-Company-Id'];
+  }
+}
+
 export default api;
 
 // Global PAYWALL interceptor -> dispatch event for UI

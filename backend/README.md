@@ -31,6 +31,22 @@
 $ npm install
 ```
 
+## Email / SMTP configuration
+
+The backend's `EmailService` wraps Nodemailer and relies on the following environment variables:
+
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASS=<app-password>
+EMAIL_FROM="AI Compliance Doc" <you@gmail.com>
+```
+
+Gmail requires you to enable 2-factor authentication and then create an [App password](https://support.google.com/accounts/answer/185833) that you can drop into `SMTP_PASS`. Use the same Gmail address for `SMTP_USER` and the address portion of `EMAIL_FROM`.
+
+If you switch to a different provider later, just replace the SMTP host/user/pass values and keep `EMAIL_FROM` in `Name <email>` format; the service will log emails instead of sending them when credentials are missing.
+
 ## Compile and run the project
 
 ```bash
