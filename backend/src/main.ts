@@ -25,7 +25,7 @@ async function bootstrap() {
       );
       res.header(
         'Access-Control-Allow-Headers',
-        'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Company-Id'
+        'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Company-Id, x-company-id'
       );
 
        // 🔥 debug marker
@@ -69,6 +69,7 @@ async function bootstrap() {
       'Accept',
       'Origin',
       'X-Company-Id',
+      'x-company-id',
     ],
   });
 
