@@ -190,6 +190,18 @@ export function ReviewApprovalPanel({
           Request changes
         </button>
       </div>
+      {!canSendForReview && (
+        <p className="mt-2 text-[11px] font-semibold text-slate-500">
+          Reviews are available on paid plans.&nbsp;
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('paywall'))}
+            className="text-sky-600 underline decoration-sky-300 underline-offset-2 hover:text-sky-500"
+          >
+            See plans
+          </button>
+        </p>
+      )}
     </div>
   );
 }

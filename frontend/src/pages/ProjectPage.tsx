@@ -538,6 +538,48 @@ export default function ProjectPage() {
     setSelectedDocumentTypes([...DEFAULT_DOCUMENT_SELECTION]);
   };
 
+  const planQuery = useQuery({
+    queryKey: ['billing', 'plan'],
+    queryFn: () => api.get('/billing/plan').then((r) => r.data),
+  });
+  const usageQuery = useQuery({
+    queryKey: ['billing', 'usage'],
+    queryFn: () => api.get('/billing/usage').then((r) => r.data),
+  });
+  const docLimit =
+    planQuery.data?.limits?.docs ?? Number.MAX_SAFE_INTEGER;
+  const docsUsed = usageQuery.data?.docsGenerated ?? 0;
+  const docsRemaining =
+    docLimit === Number.MAX_SAFE_INTEGER
+      ? Number.MAX_SAFE_INTEGER
+      : Math.max(0, docLimit - docsUsed);
+  const currentPlan = planQuery.data?.plan ?? 'FREE';
+  const isPaidPlan = currentPlan !== 'FREE';
+  const showReviewPaywall = !isPaidPlan;
+
+  useEffect(() => {
+    if (!planQuery.data || !usageQuery.data) return;
+    if (docLimit === Number.MAX_SAFE_INTEGER) return;
+    if (docsRemaining <= 0) return;
+    if (selectedDocumentTypes.length > docsRemaining) {
+      const allowed = Math.max(0, docsRemaining);
+      const nextSelection =
+        allowed === 0
+          ? []
+          : DOCUMENT_GENERATION_OPTIONS.slice(0, allowed).map((opt) => opt.type);
+      setSelectedDocumentTypes(nextSelection);
+      if (allowed === 0) {
+        toast.error('You have no document credits left this month on your plan.');
+      } else {
+        toast(
+          `You can generate up to ${allowed} document${
+            allowed === 1 ? '' : 's'
+          } with your current plan this month.`,
+        );
+      }
+    }
+  }, [docLimit, docsRemaining, planQuery.data, selectedDocumentTypes.length, usageQuery.data]);
+
   const handleGenerateClick = () => {
     if (!isOwner) {
       toast.error('Only the project owner can generate documentation');
@@ -545,6 +587,23 @@ export default function ProjectPage() {
     }
     if (!selectedDocumentTypes.length) {
       toast.error('Select at least one framework before generating');
+      return;
+    }
+    if (docLimit !== Number.MAX_SAFE_INTEGER && docsRemaining <= 0) {
+      window.dispatchEvent(new Event('paywall'));
+      toast.error('You have reached your document limit. Upgrade to generate more.');
+      return;
+    }
+    if (
+      docLimit !== Number.MAX_SAFE_INTEGER &&
+      selectedDocumentTypes.length > docsRemaining
+    ) {
+      window.dispatchEvent(new Event('paywall'));
+      toast.error(
+        `You can generate ${docsRemaining || 0} more document${
+          docsRemaining === 1 ? '' : 's'
+        } this month. Upgrade for more.`,
+      );
       return;
     }
     generateMutation.mutate({ documentTypes: selectedDocumentTypes });
@@ -1131,6 +1190,11 @@ export default function ProjectPage() {
       toast.error('Only owners can send for review');
       return;
     }
+    if (!isPaidPlan) {
+      window.dispatchEvent(new Event('paywall'));
+      toast.error('Upgrade to request reviews and approvals.');
+      return;
+    }
     if (!allFieldsComplete) {
       toast.error('Complete every required field before sending for review');
       return;
@@ -1149,6 +1213,11 @@ export default function ProjectPage() {
   const approveProject = () => {
     if (!canApprove) {
       toast.error('Only assigned reviewers or approvers can approve');
+      return;
+    }
+    if (!isPaidPlan) {
+      window.dispatchEvent(new Event('paywall'));
+      toast.error('Upgrade to approve projects.');
       return;
     }
     if (projectStatusLabel !== 'IN_REVIEW') {
@@ -1173,6 +1242,11 @@ export default function ProjectPage() {
   const requestChanges = () => {
     if (!canApprove) {
       toast.error('Only assigned reviewers or approvers can request changes');
+      return;
+    }
+    if (!isPaidPlan) {
+      window.dispatchEvent(new Event('paywall'));
+      toast.error('Upgrade to request changes and run approvals.');
       return;
     }
     projectStatusMutation.mutate({ status: 'CHANGES_REQUESTED' });
@@ -2232,9 +2306,9 @@ export default function ProjectPage() {
                   reviewers={reviewersQuery.data ?? []}
                   availableReviewers={availableReviewers}
                   canAssignSelf={canAssignSelf}
-                  canSendForReview={isOwner}
-                  canApprove={canApprove}
-                  canRequestChanges={canApprove}
+                  canSendForReview={isOwner && isPaidPlan}
+                  canApprove={canApprove && isPaidPlan}
+                  canRequestChanges={canApprove && isPaidPlan}
                   userId={user?.id}
                 />
                 <div
@@ -2315,8 +2389,7 @@ export default function ProjectPage() {
                   disabled={
                     !isOwner ||
                     generateMutation.isPending ||
-                    !selectedDocumentTypes.length ||
-                    projectStatusLabel !== 'APPROVED'
+                    !selectedDocumentTypes.length
                   }
                   className="rounded-md bg-emerald-600 px-5 py-3 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
                 >
@@ -2336,9 +2409,10 @@ export default function ProjectPage() {
                     saved and try again.
                   </p>
                 )}
-                {projectStatusLabel !== 'APPROVED' && (
-                  <p className="mt-2 text-xs font-semibold text-amber-600">
-                    Document generation is locked until project approval.
+                {planQuery.data && usageQuery.data && docLimit !== Number.MAX_SAFE_INTEGER && (
+                  <p className="mt-2 text-xs font-semibold text-slate-500">
+                    Plan allowance: {docLimit} docs/month · Used {docsUsed} · Remaining{' '}
+                    {docsRemaining}. Select that many or fewer to generate.
                   </p>
                 )}
               </div>

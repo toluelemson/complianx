@@ -190,6 +190,7 @@ model CompanyUsage {
   month         String   // format: YYYY-MM
   docsGenerated Int      @default(0)
   trustAnalyses Int      @default(0)
+  reviewsLogged Int      @default(0)
 
   @@unique([companyId, month])
 }

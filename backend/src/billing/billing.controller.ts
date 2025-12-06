@@ -35,7 +35,7 @@ export class BillingController {
     const companyId = this.resolveCompanyId(req);
     const company = await this.prisma.company.findUnique({ where: { id: companyId } });
     const plan = company?.plan || 'FREE';
-    const limits = (this.monetization as any).getLimits(plan);
+    const limits = this.monetization.getLimits(plan);
     return { plan, limits };
   }
 

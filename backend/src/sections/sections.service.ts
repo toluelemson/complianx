@@ -14,6 +14,7 @@ import { LlmService } from '../llm/llm.service';
 import { EmailService } from '../notifications/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateSectionStatusDto } from './dto/update-section-status.dto';
+import { MonetizationService } from '../monetization/monetization.service';
 
 @Injectable()
 export class SectionsService {
@@ -23,6 +24,7 @@ export class SectionsService {
     private readonly llmService: LlmService,
     private readonly emailService: EmailService,
     private readonly notifications: NotificationsService,
+    private readonly monetization: MonetizationService,
   ) {}
 
   async list(projectId: string, userId: string, companyId: string) {
@@ -75,6 +77,10 @@ export class SectionsService {
     const existing = await this.prisma.section.findFirst({
       where: { projectId, name: dto.name },
     });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { status: true },
+    });
     const baseInclude: any = {
       lastEditor: { select: { id: true, email: true } },
       comments: {
@@ -98,11 +104,28 @@ export class SectionsService {
       },
     };
     if (existing) {
-    return (this.prisma as any).section.update({
-      where: { id: existing.id },
-      data: { content: dto.content, lastEditorId: userId },
-      include: baseInclude,
-    });
+      return this.prisma.$transaction(async (tx) => {
+        const updated = await (tx as any).section.update({
+          where: { id: existing.id },
+          data: { content: dto.content, lastEditorId: userId, status: 'DRAFT' as any },
+          include: baseInclude,
+        });
+        if (project && (project.status === 'APPROVED' || project.status === 'IN_REVIEW')) {
+          await (tx as any).project.update({
+            where: { id: projectId },
+            data: { status: 'CHANGES_REQUESTED' as any },
+          });
+          await (tx as any).projectStatusEvent.create({
+            data: ({
+              projectId,
+              status: 'CHANGES_REQUESTED' as any,
+              note: 'Section edited; re-review required',
+              actorId: userId,
+            } as any),
+          });
+        }
+        return updated;
+      });
     }
     const createInclude: any = baseInclude;
     return (this.prisma as any).section.create({
@@ -129,37 +152,58 @@ export class SectionsService {
     if (!section || section.projectId !== projectId) {
       throw new NotFoundException('Section not found');
     }
-    return this.prisma.section.update({
-      where: { id: sectionId },
-      data: { content: dto.content, lastEditorId: userId },
-      include: {
-        lastEditor: { select: { id: true, email: true } },
-        comments: {
-          include: {
-            author: { select: { id: true, email: true } },
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { status: true },
+    });
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await (tx as any).section.update({
+        where: { id: sectionId },
+        data: { content: dto.content, lastEditorId: userId, status: 'DRAFT' as any },
+        include: {
+          lastEditor: { select: { id: true, email: true } },
+          comments: {
+            include: {
+              author: { select: { id: true, email: true } },
+            },
+            orderBy: { createdAt: 'asc' },
           },
-          orderBy: { createdAt: 'asc' },
-        },
-        statusEvents: {
-          include: { actor: { select: { id: true, email: true } } },
-          orderBy: { createdAt: 'desc' },
-        },
-        artifacts: {
-          include: {
-            uploadedBy: { select: { id: true, email: true } },
-            reviewedBy: { select: { id: true, email: true } },
-            previousArtifact: {
-              select: {
-                id: true,
-                version: true,
-                checksum: true,
-                citationKey: true,
+          statusEvents: {
+            include: { actor: { select: { id: true, email: true } } },
+            orderBy: { createdAt: 'desc' },
+          },
+          artifacts: {
+            include: {
+              uploadedBy: { select: { id: true, email: true } },
+              reviewedBy: { select: { id: true, email: true } },
+              previousArtifact: {
+                select: {
+                  id: true,
+                  version: true,
+                  checksum: true,
+                  citationKey: true,
+                },
               },
             },
+            orderBy: { version: 'desc' },
           },
-          orderBy: { version: 'desc' },
         },
-      },
+      });
+      if (project && (project.status === 'APPROVED' || project.status === 'IN_REVIEW')) {
+        await (tx as any).project.update({
+          where: { id: projectId },
+          data: { status: 'CHANGES_REQUESTED' as any },
+        });
+        await (tx as any).projectStatusEvent.create({
+          data: ({
+            projectId,
+            status: 'CHANGES_REQUESTED' as any,
+            note: 'Section edited; re-review required',
+            actorId: userId,
+          } as any),
+        });
+      }
+      return updated;
     });
   }
 
@@ -366,6 +410,10 @@ export class SectionsService {
     }
     if (dto.status === 'APPROVED' && !dto.signature?.trim()) {
       throw new BadRequestException('Signature is required to approve');
+    }
+    // Enforce plan-based review limits on approval / change requests
+    if (dto.status === 'APPROVED' || dto.status === 'CHANGES_REQUESTED') {
+      await this.monetization.checkAndConsumeForProject(projectId, 'review', 1);
     }
     await this.prisma.$transaction(async (tx) => {
       await (tx as any).section.update({

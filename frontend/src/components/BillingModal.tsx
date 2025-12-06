@@ -49,8 +49,9 @@ export default function BillingModal({ isOpen, onClose }: Props) {
 
   if (!isOpen) return null;
   const plan = planQuery.data?.plan ?? 'FREE';
-  const limits = planQuery.data?.limits ?? { docs: 0, trust: 0 };
-  const usage = usageQuery.data ?? { month: '', docsGenerated: 0, trustAnalyses: 0 };
+  const limits = planQuery.data?.limits ?? { docs: 0, trust: 0, reviews: 0 };
+  const usage =
+    usageQuery.data ?? { month: '', docsGenerated: 0, trustAnalyses: 0, reviewsLogged: 0 };
   const isPaidPlan = plan !== 'FREE';
 
   return (
@@ -92,7 +93,8 @@ export default function BillingModal({ isOpen, onClose }: Props) {
             <p className="mt-2 text-slate-600">
               Monthly limits · Documents:{' '}
               {limits.docs === Number.MAX_SAFE_INTEGER ? 'Unlimited' : limits.docs} · Analyses:{' '}
-              {limits.trust === Number.MAX_SAFE_INTEGER ? 'Unlimited' : limits.trust}
+              {limits.trust === Number.MAX_SAFE_INTEGER ? 'Unlimited' : limits.trust} · Reviews:{' '}
+              {limits.reviews === Number.MAX_SAFE_INTEGER ? 'Unlimited' : limits.reviews}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 p-4">
@@ -106,6 +108,10 @@ export default function BillingModal({ isOpen, onClose }: Props) {
             <p className="text-slate-600">
               Trust analyses:{' '}
               <span className="font-semibold text-slate-900">{usage.trustAnalyses}</span>
+            </p>
+            <p className="text-slate-600">
+              Reviews logged:{' '}
+              <span className="font-semibold text-slate-900">{usage.reviewsLogged}</span>
             </p>
           </div>
         </div>

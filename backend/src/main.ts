@@ -28,7 +28,7 @@ async function bootstrap() {
         'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Company-Id, x-company-id'
       );
 
-       // 🔥 debug marker
+    
       res.header('X-Cors-Debug', 'from-nest');
 
       return res.sendStatus(204);
