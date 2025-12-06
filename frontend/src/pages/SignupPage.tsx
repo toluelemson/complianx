@@ -17,6 +17,7 @@ interface SignupFormValues {
 
 export default function SignupPage() {
   const { token } = useAuth();
+  const signupsPaused = true;
   const [error, setError] = useState<string | undefined>();
   const [successMessage, setSuccessMessage] = useState<string | undefined>();
   const [showPassword, setShowPassword] = useState(false);
@@ -73,6 +74,37 @@ export default function SignupPage() {
 
   if (token) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (signupsPaused) {
+    return (
+      <>
+        <SiteHeader />
+        <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Signups paused</p>
+            <h1 className="mt-3 text-2xl font-bold text-slate-900">New accounts are closed for now</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              We&apos;re pausing new signups while we onboard current teams. Please log in or reach out for access.
+            </p>
+            <div className="mt-6 space-y-3">
+              <Link
+                to="/login"
+                className="block w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+              >
+                Go to login
+              </Link>
+              <Link
+                to="/contact"
+                className="block w-full rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:border-sky-300 hover:text-sky-700"
+              >
+                Contact us
+              </Link>
+            </div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (
