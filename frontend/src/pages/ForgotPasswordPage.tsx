@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useState } from 'react';
 import { SiteHeader } from '../components/SiteHeader';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface ForgotPasswordForm {
   email: string;
@@ -33,9 +36,10 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <SiteHeader />
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] px-4">
+      <Card className="w-full max-w-md rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.35)]">
+        <CardContent className="p-8">
+        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
           Forgot your password?
         </h1>
         <p className="mt-2 text-sm text-slate-500">
@@ -47,31 +51,32 @@ export default function ForgotPasswordPage() {
         >
           <label className="block text-sm font-medium text-slate-700">
             Email
-            <input
+            <Input
               type="email"
               {...register('email', { required: true })}
-              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="mt-1"
             />
           </label>
           {message && <p className="text-sm text-slate-500">{message}</p>}
-          <button
+          <Button
             type="submit"
             disabled={mutation.isPending}
-            className="w-full rounded-md bg-sky-600 px-4 py-2 font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+            className="w-full bg-slate-950 text-white hover:bg-black"
           >
             {mutation.isPending ? 'Sending...' : 'Send reset link'}
-          </button>
+          </Button>
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">
           Remembered your password?{' '}
           <Link
             to="/login"
-            className="font-medium text-sky-600 hover:text-sky-500"
+            className="font-medium text-slate-700 transition-colors hover:text-slate-950"
           >
             Sign in
           </Link>
         </p>
-      </div>
+        </CardContent>
+      </Card>
     </div>
     </>
   );

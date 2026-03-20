@@ -1,0 +1,59 @@
+{
+  "version": "2026.03.v2",
+  "references": [
+    {
+      "id": "art-2-scope",
+      "label": "Article 2",
+      "title": "Scope",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-3-ai-system",
+      "label": "Article 3",
+      "title": "AI system concept",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-5",
+      "label": "Article 5",
+      "title": "Prohibited AI practices",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-6",
+      "label": "Article 6",
+      "title": "High-risk classification",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "annex-iii",
+      "label": "Annex III",
+      "title": "High-risk use contexts",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-16",
+      "label": "Article 16",
+      "title": "Provider obligations",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-26",
+      "label": "Article 26",
+      "title": "Deployer obligations",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-49",
+      "label": "Article 49",
+      "title": "Registration",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-50",
+      "label": "Article 50",
+      "title": "Transparency obligations",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    }
+  ]
+}

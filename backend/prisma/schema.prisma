@@ -346,3 +346,92 @@ model Notification {
   readAt    DateTime?
   createdAt DateTime @default(now())
 }
+
+model CompliancePackVersion {
+  id            String            @id @default(uuid())
+  key           String
+  version       String
+  status        PackStatus        @default(DRAFT)
+  publishedAt   DateTime?
+  deprecatedAt  DateTime?
+  questionPack  Json
+  rulePack      Json
+  legalRegistry Json
+  changelog     String?
+  createdAt     DateTime          @default(now())
+  publicSessions PublicEuAiActSession[]
+  publicResults  PublicEuAiActResult[]
+
+  @@unique([key, version])
+}
+
+model PublicEuAiActSession {
+  id                String                @id @default(uuid())
+  sessionTokenHash  String                @unique
+  status            PublicSessionStatus   @default(DRAFT)
+  packVersionId     String
+  packVersion       CompliancePackVersion @relation(fields: [packVersionId], references: [id])
+  email             String?
+  locale            String?               @default("en")
+  startedAt         DateTime              @default(now())
+  completedAt       DateTime?
+  expiresAt         DateTime
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  answers           PublicEuAiActAnswer[]
+  result            PublicEuAiActResult?
+}
+
+model PublicEuAiActAnswer {
+  id             String             @id @default(uuid())
+  sessionId      String
+  session        PublicEuAiActSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionKey    String
+  answerType     AnswerType
+  valueJson      Json
+  normalizedJson Json
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([sessionId, questionKey])
+}
+
+model PublicEuAiActResult {
+  id                String                @id @default(uuid())
+  publicId          String                @unique
+  sessionId         String                @unique
+  session           PublicEuAiActSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  packVersionId     String
+  packVersion       CompliancePackVersion @relation(fields: [packVersionId], references: [id])
+  ruleVersion       String
+  legalVersion      String
+  resultSnapshot    Json
+  reasoningTrace    Json
+  obligations       Json
+  evidenceChecklist Json
+  nextDocuments     Json
+  ambiguityFlags    Json
+  reportFileUrl     String?
+  shareEnabled      Boolean               @default(true)
+  createdAt         DateTime              @default(now())
+}
+
+enum PackStatus {
+  DRAFT
+  PUBLISHED
+  DEPRECATED
+}
+
+enum PublicSessionStatus {
+  DRAFT
+  COMPLETED
+  EXPIRED
+}
+
+enum AnswerType {
+  SINGLE
+  MULTI
+  BOOLEAN
+  TEXT
+  NUMBER
+}

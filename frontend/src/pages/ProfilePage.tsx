@@ -4,6 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 import { AppShell } from '../components/AppShell';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 interface ProfileResponse {
   id: string;
@@ -95,7 +99,8 @@ export default function ProfilePage() {
 
   return (
     <AppShell title="Profile settings">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6">
+      <Card className="rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
+        <CardContent className="p-6">
         <form
           className="grid gap-6"
           onSubmit={form.handleSubmit((values) => updateMutation.mutate(values))}
@@ -143,26 +148,26 @@ export default function ProfilePage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-1 text-sm">
                 <span className="font-medium text-slate-700">First name</span>
-                <input
+                <Input
                   type="text"
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  className="rounded-2xl"
                   {...form.register('firstName')}
                 />
               </label>
               <label className="grid gap-1 text-sm">
                 <span className="font-medium text-slate-700">Last name</span>
-                <input
+                <Input
                   type="text"
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  className="rounded-2xl"
                   {...form.register('lastName')}
                 />
               </label>
             </div>
             <label className="grid gap-1 text-sm">
               <span className="font-medium text-slate-700">Job title</span>
-              <input
+              <Input
                 type="text"
-                className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                className="rounded-2xl"
                 {...form.register('jobTitle')}
               />
             </label>
@@ -172,16 +177,16 @@ export default function ProfilePage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-1 text-sm">
                 <span className="font-medium text-slate-700">Phone</span>
-                <input
+                <Input
                   type="text"
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  className="rounded-2xl"
                   {...form.register('phone')}
                 />
               </label>
               <label className="grid gap-1 text-sm">
                 <span className="font-medium text-slate-700">Timezone</span>
-                <select
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                <Select
+                  className="rounded-2xl"
                   {...form.register('timezone')}
                 >
                   {timezoneOptions.map((zone) => (
@@ -189,18 +194,18 @@ export default function ProfilePage() {
                       {zone}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             </div>
           </section>
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="submit"
               disabled={updateMutation.isPending}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+              className="bg-slate-950 text-white hover:bg-black"
             >
               {updateMutation.isPending ? 'Saving…' : 'Save changes'}
-            </button>
+            </Button>
             {updateMutation.isError && (
               <p className="text-sm text-rose-500">
                 Something went wrong. Please try again.
@@ -208,7 +213,8 @@ export default function ProfilePage() {
             )}
           </div>
         </form>
-      </div>
+        </CardContent>
+      </Card>
     </AppShell>
   );
 }

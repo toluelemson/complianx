@@ -2,6 +2,8 @@ import { useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../components/AppShell';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface BillingStatusPageProps {
   variant: 'success' | 'cancel';
@@ -47,7 +49,8 @@ export default function BillingStatusPage({ variant }: BillingStatusPageProps) {
 
   return (
     <AppShell title="Billing">
-      <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-8 text-center">
+      <Card className="mx-auto max-w-2xl rounded-2xl border-slate-200/90 bg-white/90 text-center shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
+        <CardContent className="p-8">
         <div className={`${iconStyles} mx-auto ${content.iconColor}`}>
           {isSuccess ? '✓' : '!'}
         </div>
@@ -55,31 +58,29 @@ export default function BillingStatusPage({ variant }: BillingStatusPageProps) {
         <p className="mt-2 text-sm text-slate-600">{content.description}</p>
         <p className="mt-4 text-xs text-slate-500">{content.hint}</p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link
-            to="/dashboard"
-            className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Back to dashboard
-          </Link>
+          <Button asChild variant="outline">
+            <Link to="/dashboard">Back to dashboard</Link>
+          </Button>
           {isSuccess ? (
-            <button
+            <Button
               type="button"
               onClick={() => window.dispatchEvent(new Event('paywall'))}
-              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+              className="bg-slate-950 text-white hover:bg-black"
             >
               Manage billing
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
               onClick={() => window.dispatchEvent(new Event('paywall'))}
-              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+              className="bg-slate-950 text-white hover:bg-black"
             >
               Retry checkout
-            </button>
+            </Button>
           )}
         </div>
-      </div>
+        </CardContent>
+      </Card>
     </AppShell>
   );
 }

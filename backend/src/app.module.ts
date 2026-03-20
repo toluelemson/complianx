@@ -24,6 +24,7 @@ import { BillingService } from './billing/billing.service';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ContactModule } from './contact/contact.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { EuAiActPublicModule } from './eu-ai-act-public/eu-ai-act-public.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     NotificationsModule,
     ContactModule,
     AnalyticsModule,
+    EuAiActPublicModule,
   ],
   controllers: [BillingController, BillingWebhookController],
   providers: [MonetizationService, BillingService],

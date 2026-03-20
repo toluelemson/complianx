@@ -5,6 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api/client';
 import BillingModal from './BillingModal';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 
 interface Notification {
   id: string;
@@ -119,14 +123,16 @@ export function AppShell({ title, children }: AppShellProps) {
     ));
   const renderNotificationsTrigger = () => (
     <div className="relative">
-      <button
+      <Button
         onClick={async () => {
           const next = !open;
           setOpen(next);
           await listQuery.refetch();
           await countQuery.refetch();
         }}
-        className="relative rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+        variant="outline"
+        size="sm"
+        className="relative"
         title="Notifications"
         type="button"
       >
@@ -136,16 +142,19 @@ export function AppShell({ title, children }: AppShellProps) {
             {unread > 9 ? '9+' : unread}
           </span>
         )}
-      </button>
+      </Button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-3 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+        <Card className="absolute right-0 top-full z-20 mt-3 w-80 max-w-[calc(100vw-2rem)]">
+          <CardContent className="p-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-900">Notifications</p>
+            <Badge variant="outline">{unread} unread</Badge>
           </div>
           <div className="mt-2 space-y-2">
             {listQuery.data?.length ? (
               listQuery.data.map((n) => (
-                <div key={n.id} className="rounded-lg border border-slate-200 px-3 py-2">
+                <Card key={n.id} className="rounded-xl shadow-none">
+                  <CardContent className="px-3 py-2">
                   <p className="text-sm font-medium text-slate-900">{n.title}</p>
                   <p className="text-xs text-slate-600">{n.body}</p>
                   <p className="text-[11px] text-slate-400">{new Date(n.createdAt).toLocaleString()}</p>
@@ -153,72 +162,82 @@ export function AppShell({ title, children }: AppShellProps) {
                     {n.read ? (
                       <span className="text-[11px] font-semibold text-slate-400">Read</span>
                     ) : (
-                      <button
+                      <Button
                         type="button"
                         onClick={() => {
                           setMarkingId(n.id);
                           markSingleMutation.mutate(n.id);
                         }}
                         disabled={markSingleMutation.isPending && markingId === n.id}
-                        className="rounded-md border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
                       >
                         {markSingleMutation.isPending && markingId === n.id ? 'Marking...' : 'Mark read'}
-                      </button>
+                      </Button>
                     )}
                   </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))
             ) : (
               <p className="text-sm text-slate-500">No new notifications.</p>
             )}
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[11px]">
-            <button
+            <Button
               onClick={() => markAllMutation.mutate()}
-              className="text-xs font-semibold text-sky-600 hover:text-sky-500 disabled:opacity-60"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs font-semibold text-sky-600 hover:text-sky-500"
             >
               Mark all read
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setOpen(false)}
-              className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              variant="outline"
+              size="sm"
               aria-label="Close notifications"
               title="Close"
             >
               Close
-            </button>
+            </Button>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_24%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]">
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
             <Link
               to="/"
-              className="flex items-center gap-2 text-lg font-semibold text-slate-900"
+              className="flex items-center gap-3 text-lg font-semibold tracking-[-0.02em] text-slate-900"
             >
               <img
                 src="/compliance-icon.svg"
                 alt="NeuralDocx"
-                className="h-7 w-7 rounded-xl border border-slate-900/10 bg-white p-1 shadow-sm"
+                className="h-8 w-8 rounded-2xl border border-slate-900/10 bg-white p-1 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)]"
               />
               <span className="whitespace-nowrap">NeuralDocx</span>
             </Link>
             <div className="flex items-center gap-3 lg:hidden">
-              <button
+              <Button
                 onClick={() => setBillingOpen(true)}
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                variant="outline"
+                size="sm"
                 type="button"
               >
                 Billing
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
-                className="inline-flex items-center rounded-md border border-slate-200 p-2 text-slate-700 hover:bg-slate-100"
+                variant="outline"
+                size="sm"
+                className="h-10 w-10 rounded-xl p-0"
                 aria-label="Toggle navigation menu"
                 type="button"
               >
@@ -239,80 +258,70 @@ export function AppShell({ title, children }: AppShellProps) {
                     <path d="M4 6.75A.75.75 0 0 1 4.75 6h14.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 6.75zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H4.75a.75.75 0 0 1-.75-.75zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H4.75a.75.75 0 0 1-.75-.75z" />
                   )}
                 </svg>
-              </button>
+              </Button>
             </div>
             <div className="hidden flex-1 items-center justify-end gap-4 lg:flex">
-              <Link
-                to="/"
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Home
-              </Link>
-              <a
-                href="https://calendly.com/neuraldocx"
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Book demo
-              </a>
-              <Link
-                to="/contact"
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Contact
-              </Link>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/">Home</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <a href="https://calendly.com/neuraldocx" target="_blank" rel="noreferrer">
+                  Book demo
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/contact">Contact</Link>
+              </Button>
               {user?.companies && user.companies.length > 1 && (
-                <select
+                <Select
                   value={
                     activeCompanyId ?? user.companies[0]?.companyId ?? ''
                   }
                   onChange={(event) => setActiveCompany(event.target.value)}
-                  className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="h-9 w-auto rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 shadow-none"
                 >
                   {user.companies.map((company) => (
                     <option key={company.companyId} value={company.companyId}>
                       {company.companyName ?? company.companyId}
                     </option>
                   ))}
-                </select>
+                </Select>
               )}
-              <button
+              <Button
                 onClick={() => setBillingOpen(true)}
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                variant="outline"
+                size="sm"
                 type="button"
               >
                 Billing
-              </button>
+              </Button>
               {renderNotificationsTrigger()}
               {renderDesktopNav()}
-              <button
+              <Button
                 onClick={() => {
                   logout();
                   closeMobileMenu();
                 }}
-                className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                variant="outline"
+                size="sm"
                 type="button"
               >
                 Logout
-              </button>
+              </Button>
             </div>
           </div>
         </div>
         {mobileMenuOpen && (
-          <div className="border-t border-slate-200 bg-white lg:hidden">
-            <div className="mx-auto max-w-6xl space-y-4 px-4 py-4 sm:px-6">
+          <div className="border-t border-slate-200/80 bg-white/95 backdrop-blur-xl lg:hidden">
+            <Card className="mx-auto max-w-6xl space-y-4 rounded-none border-0 shadow-none">
+              <CardContent className="space-y-4 px-4 py-4 sm:px-6">
               <div className="space-y-4">{renderMobileNav()}</div>
               <div className="flex flex-col gap-2">
-                <Link
-                  to="/"
-                  onClick={closeMobileMenu}
-                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  Home
-                </Link>
+                <Button asChild variant="outline" className="justify-start rounded-xl">
+                  <Link to="/" onClick={closeMobileMenu}>Home</Link>
+                </Button>
                 {user?.companies && user.companies.length > 1 && (
-                  <select
+                  <Select
                     value={
                       activeCompanyId ?? user.companies[0]?.companyId ?? ''
                     }
@@ -320,58 +329,54 @@ export function AppShell({ title, children }: AppShellProps) {
                       setActiveCompany(event.target.value);
                       closeMobileMenu();
                     }}
-                    className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                    className="rounded-xl text-sm font-semibold text-slate-700"
                   >
                     {user.companies.map((company) => (
                       <option key={company.companyId} value={company.companyId}>
                         {company.companyName ?? company.companyId}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 )}
-                <a
-                  href="https://calendly.com/neuraldocx"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  Book demo
-                </a>
-                <Link
-                  to="/contact"
-                  onClick={closeMobileMenu}
-                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  Contact
-                </Link>
-                <button
+                <Button asChild variant="outline" className="justify-start rounded-xl">
+                  <a href="https://calendly.com/neuraldocx" target="_blank" rel="noreferrer">
+                    Book demo
+                  </a>
+                </Button>
+                <Button asChild variant="outline" className="justify-start rounded-xl">
+                  <Link to="/contact" onClick={closeMobileMenu}>Contact</Link>
+                </Button>
+                <Button
                   onClick={() => setBillingOpen(true)}
-                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  variant="outline"
+                  className="justify-start rounded-xl"
                   type="button"
                 >
                   Billing
-                </button>
+                </Button>
                 {renderNotificationsTrigger()}
-                <button
+                <Button
                   onClick={() => {
                     logout();
                     closeMobileMenu();
                   }}
-                  className="rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  variant="outline"
+                  className="justify-start rounded-xl"
                   type="button"
                 >
                   Logout
-                </button>
+                </Button>
               </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <BillingModal isOpen={billingOpen} onClose={() => setBillingOpen(false)} />
         {title && (
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
+          <div className="mb-6 rounded-[1.5rem] border border-slate-200/90 bg-white/90 px-6 py-5 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)] backdrop-blur">
+            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">{title}</h1>
           </div>
         )}
         {children}

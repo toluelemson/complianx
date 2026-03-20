@@ -1,0 +1,200 @@
+{
+  "key": "eu-ai-act",
+  "version": "2026.03.v2",
+  "title": "AI Compliance Questionnaire",
+  "description": "A short compliance questionnaire for companies that want a fast readiness check.",
+  "steps": [
+    {
+      "key": "basics",
+      "title": "Basic fit",
+      "questions": [
+        {
+          "key": "is_ai_system",
+          "type": "boolean",
+          "label": "Is this actually an AI system?",
+          "helperText": "If the product is not an AI system, the rest of this quick audit will not apply.",
+          "required": true,
+          "legalReferenceIds": ["art-3-ai-system"]
+        },
+        {
+          "key": "used_in_eu",
+          "type": "boolean",
+          "label": "Is it placed on the market, put into service, or used in the EU?",
+          "helperText": "This is the minimum EU connection needed for this quick audit.",
+          "required": true,
+          "legalReferenceIds": ["art-2-scope"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true }
+            ]
+          }
+        },
+        {
+          "key": "company_role",
+          "type": "single",
+          "label": "What is your company’s main role?",
+          "required": true,
+          "legalReferenceIds": ["art-3-definitions"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ]
+          },
+          "options": [
+            { "key": "provider", "label": "We build or place the AI system on the market", "value": "provider" },
+            { "key": "deployer", "label": "We use the AI system in our business", "value": "deployer" },
+            { "key": "importer", "label": "We import the AI system into the EU", "value": "importer" },
+            { "key": "distributor", "label": "We distribute or resell the AI system", "value": "distributor" }
+          ]
+        },
+        {
+          "key": "other_frameworks",
+          "type": "multi",
+          "label": "Which other frameworks or standards matter for this assessment?",
+          "helperText": "Optional. This helps tailor the result beyond the quick EU-facing check.",
+          "required": false,
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ]
+          },
+          "options": [
+            { "key": "nist_ai_rmf", "label": "NIST AI RMF", "value": "nist_ai_rmf" },
+            { "key": "iso_42001", "label": "ISO/IEC 42001", "value": "iso_42001" },
+            { "key": "gdpr", "label": "GDPR and data protection controls", "value": "gdpr" },
+            { "key": "uk_ai_assurance", "label": "UK AI governance or assurance expectations", "value": "uk_ai_assurance" },
+            { "key": "internal_policy", "label": "Internal AI governance policy", "value": "internal_policy" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "risk",
+      "title": "Risk signals",
+      "questions": [
+        {
+          "key": "prohibited_use_cases",
+          "type": "multi",
+          "label": "Does your AI do any of the following?",
+          "helperText": "Select only if the use case clearly applies.",
+          "required": false,
+          "legalReferenceIds": ["art-5"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ]
+          },
+          "options": [
+            { "key": "emotion_recognition_workplace", "label": "Emotion recognition in the workplace", "value": "emotion_recognition_workplace" },
+            { "key": "social_scoring", "label": "Social scoring or equivalent prohibited practice", "value": "social_scoring" },
+            { "key": "manipulative_subliminal", "label": "Manipulative or deceptive AI causing material distortion", "value": "manipulative_subliminal" }
+          ]
+        },
+        {
+          "key": "high_risk_contexts",
+          "type": "multi",
+          "label": "Is your AI used in any of these higher-risk contexts?",
+          "required": false,
+          "legalReferenceIds": ["art-6", "annex-iii"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ]
+          },
+          "options": [
+            { "key": "employment", "label": "Hiring, worker management, or employment decisions", "value": "employment" },
+            { "key": "education", "label": "Education or training decisions", "value": "education" },
+            { "key": "essential_services", "label": "Access to essential services, credit, insurance, or benefits", "value": "essential_services" },
+            { "key": "law_enforcement", "label": "Law enforcement, migration, or similar public authority context", "value": "law_enforcement" }
+          ]
+        },
+        {
+          "key": "transparency_triggers",
+          "type": "multi",
+          "label": "Does your AI generate content or interact directly with people?",
+          "required": false,
+          "legalReferenceIds": ["art-50"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ]
+          },
+          "options": [
+            { "key": "chatbot_interaction", "label": "People interact with it like a chatbot or assistant", "value": "chatbot_interaction" },
+            { "key": "synthetic_content", "label": "It generates or manipulates synthetic content", "value": "synthetic_content" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "readiness",
+      "title": "Readiness",
+      "questions": [
+        {
+          "key": "human_oversight_ready",
+          "type": "boolean",
+          "label": "Do you have clear human oversight for important decisions?",
+          "required": true,
+          "legalReferenceIds": ["art-16", "art-26"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ]
+          }
+        },
+        {
+          "key": "risk_controls_ready",
+          "type": "boolean",
+          "label": "Do you have documented risk controls and monitoring in place?",
+          "required": true,
+          "legalReferenceIds": ["art-16", "art-26"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ]
+          }
+        },
+        {
+          "key": "documentation_ready",
+          "type": "boolean",
+          "label": "Do you already have the core compliance documentation and evidence prepared?",
+          "required": true,
+          "legalReferenceIds": ["art-16", "art-50"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ]
+          }
+        },
+        {
+          "key": "conformity_process_ready",
+          "type": "boolean",
+          "label": "If this is high-risk, are you ready for conformity and registration steps?",
+          "helperText": "If your system is not high-risk, select Yes.",
+          "required": true,
+          "legalReferenceIds": ["art-16", "art-49"],
+          "visibleWhen": {
+            "all": [
+              { "fact": "is_ai_system", "equals": true },
+              { "fact": "used_in_eu", "equals": true }
+            ],
+            "any": [
+              { "fact": "high_risk_contexts", "includes": "employment" },
+              { "fact": "high_risk_contexts", "includes": "education" },
+              { "fact": "high_risk_contexts", "includes": "essential_services" },
+              { "fact": "high_risk_contexts", "includes": "law_enforcement" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

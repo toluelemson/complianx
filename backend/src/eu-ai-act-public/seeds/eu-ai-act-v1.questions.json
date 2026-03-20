@@ -1,0 +1,173 @@
+{
+  "key": "eu-ai-act",
+  "version": "2026.03.v1",
+  "title": "EU AI Act Compliance Checker",
+  "description": "Determine scope, role, classification, obligations, and next documents.",
+  "steps": [
+    {
+      "key": "scope",
+      "title": "Scope and AI threshold",
+      "questions": [
+        {
+          "key": "is_ai_system",
+          "type": "boolean",
+          "label": "Does this functionality qualify as an AI system?",
+          "helperText": "Use the product definition, not marketing language.",
+          "required": true,
+          "legalReferenceIds": ["art-3-ai-system"]
+        },
+        {
+          "key": "eu_nexus",
+          "type": "multi",
+          "label": "Which EU nexus applies?",
+          "helperText": "Select every territorial or market connection that applies.",
+          "required": true,
+          "legalReferenceIds": ["art-2-scope"],
+          "options": [
+            { "key": "market", "label": "Placed on the market in the EU", "value": "eu_market_placement" },
+            { "key": "service", "label": "Put into service in the EU", "value": "eu_putting_into_service" },
+            { "key": "output", "label": "Output is used in the EU", "value": "eu_output_used" },
+            { "key": "established", "label": "Entity is established in the EU", "value": "established_in_eu" },
+            { "key": "gpai", "label": "GPAI model placed on the market in the EU", "value": "gpai_placed_on_market_eu" }
+          ]
+        },
+        {
+          "key": "excluded_research",
+          "type": "boolean",
+          "label": "Is this limited to research, testing, or prototype activity under an exclusion path?",
+          "required": true,
+          "legalReferenceIds": ["art-2-exclusions"]
+        },
+        {
+          "key": "excluded_national_security",
+          "type": "boolean",
+          "label": "Is the use case linked to a national security or equivalent exclusion path?",
+          "required": true,
+          "legalReferenceIds": ["art-2-exclusions"]
+        }
+      ]
+    },
+    {
+      "key": "roles",
+      "title": "Operator role and provider triggers",
+      "questions": [
+        {
+          "key": "entity_roles",
+          "type": "multi",
+          "label": "Which role best describes your organization?",
+          "required": true,
+          "legalReferenceIds": ["art-3-definitions"],
+          "options": [
+            { "key": "provider", "label": "Provider", "value": "provider" },
+            { "key": "deployer", "label": "Deployer", "value": "deployer" },
+            { "key": "distributor", "label": "Distributor", "value": "distributor" },
+            { "key": "importer", "label": "Importer", "value": "importer" },
+            { "key": "manufacturer", "label": "Product manufacturer", "value": "product_manufacturer" },
+            { "key": "authorised_representative", "label": "Authorised representative", "value": "authorised_representative" }
+          ]
+        },
+        {
+          "key": "provider_override_events",
+          "type": "multi",
+          "label": "Have you done any of the following?",
+          "required": true,
+          "legalReferenceIds": ["art-25"],
+          "options": [
+            { "key": "substantial_modification", "label": "Substantially modified the system", "value": "substantial_modification" },
+            { "key": "intended_purpose_changed", "label": "Changed the intended purpose", "value": "intended_purpose_changed" },
+            { "key": "relabelled_as_own", "label": "Placed it on the market under your own name or trademark", "value": "relabelled_as_own" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "classification",
+      "title": "Risk and category triggers",
+      "questions": [
+        {
+          "key": "annex_i_category",
+          "type": "single",
+          "label": "Does the system fall within an Annex I / product safety regime category?",
+          "required": false,
+          "legalReferenceIds": ["art-6", "annex-i"],
+          "options": [
+            { "key": "none", "label": "No Annex I product safety category selected", "value": "none" },
+            { "key": "medical_device", "label": "Medical device or in-vitro diagnostic context", "value": "medical_device" },
+            { "key": "machinery", "label": "Machinery or industrial equipment safety context", "value": "machinery" }
+          ]
+        },
+        {
+          "key": "safety_component",
+          "type": "boolean",
+          "label": "Is the AI system a safety component of a regulated product?",
+          "required": true,
+          "legalReferenceIds": ["art-6", "annex-i"]
+        },
+        {
+          "key": "annex_iii_categories",
+          "type": "multi",
+          "label": "Which Annex III high-risk use cases apply?",
+          "required": false,
+          "legalReferenceIds": ["art-6", "annex-iii"],
+          "options": [
+            { "key": "employment_access", "label": "Employment, worker management, or access to self-employment", "value": "employment_access" },
+            { "key": "education", "label": "Education or vocational training", "value": "education" },
+            { "key": "essential_services", "label": "Access to essential private or public services", "value": "essential_services" },
+            { "key": "law_enforcement", "label": "Law enforcement or migration administration", "value": "law_enforcement" }
+          ]
+        },
+        {
+          "key": "significant_harm_risk",
+          "type": "boolean",
+          "label": "Could errors or misuse create significant risk of harm to health, safety, or fundamental rights?",
+          "required": true,
+          "legalReferenceIds": ["art-6", "annex-iii"]
+        },
+        {
+          "key": "prohibited_use_cases",
+          "type": "multi",
+          "label": "Do any prohibited practice triggers apply?",
+          "required": false,
+          "legalReferenceIds": ["art-5"],
+          "options": [
+            { "key": "emotion_recognition_workplace", "label": "Emotion recognition in the workplace", "value": "emotion_recognition_workplace" },
+            { "key": "social_scoring", "label": "Social scoring by public authorities or equivalent practices", "value": "social_scoring" },
+            { "key": "manipulative_subliminal", "label": "Manipulative or deceptive practice causing material distortion", "value": "manipulative_subliminal" }
+          ]
+        },
+        {
+          "key": "transparency_triggers",
+          "type": "multi",
+          "label": "Do any transparency triggers apply?",
+          "required": false,
+          "legalReferenceIds": ["art-50"],
+          "options": [
+            { "key": "chatbot_interaction", "label": "Users interact directly with an AI system such as a chatbot", "value": "chatbot_interaction" },
+            { "key": "synthetic_content", "label": "The system generates or manipulates synthetic content", "value": "synthetic_content" },
+            { "key": "emotion_or_biometric", "label": "Emotion recognition or biometric categorisation disclosure trigger", "value": "emotion_or_biometric" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "gpai",
+      "title": "GPAI and systemic risk",
+      "questions": [
+        {
+          "key": "gpai_model",
+          "type": "boolean",
+          "label": "Is the assessed product a general-purpose AI model?",
+          "required": true,
+          "legalReferenceIds": ["art-53"]
+        },
+        {
+          "key": "systemic_risk_threshold_met",
+          "type": "boolean",
+          "label": "Does the GPAI model meet the systemic risk threshold in this ruleset?",
+          "required": true,
+          "legalReferenceIds": ["art-51", "art-55"]
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,9 @@ import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 export default function CompanyPage() {
   const { user, activeCompanyId, setActiveCompany } = useAuth();
@@ -110,32 +113,31 @@ export default function CompanyPage() {
   }, [companyQuery.isSuccess, companyQuery.data]);
 
   const renderCreateWorkspace = (message: { title: string; body: string }) => (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+    <Card className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border-slate-200/90 bg-white/90 p-6 text-center shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
+      <CardContent className="flex flex-col items-center gap-4 p-0">
       <p className="text-lg font-semibold text-slate-900">{message.title}</p>
       <p className="text-sm text-slate-500">{message.body}</p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <input
+        <Input
           value={createName}
           onChange={(e) => setCreateName(e.target.value)}
           placeholder="Workspace name (optional)"
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          className="min-w-[18rem]"
         />
-        <button
+        <Button
           type="button"
           onClick={() => createCompanyMutation.mutate(createName)}
           disabled={createCompanyMutation.isPending}
-          className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+          className="bg-slate-950 text-white hover:bg-black"
         >
           {createCompanyMutation.isPending ? 'Creating...' : 'Create workspace'}
-        </button>
+        </Button>
       </div>
-      <Link
-        to="/dashboard"
-        className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-      >
-        Back to dashboard
-      </Link>
-    </div>
+      <Button asChild variant="outline">
+        <Link to="/dashboard">Back to dashboard</Link>
+      </Button>
+      </CardContent>
+    </Card>
   );
 
   if (!activeCompanyId) {
@@ -180,7 +182,8 @@ export default function CompanyPage() {
         <p className="text-sm text-slate-500">Loading company info...</p>
       ) : (
         <>
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+          <Card className="rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
+            <CardContent className="p-6">
             <p className="text-sm text-slate-500">Company ID</p>
             <p className="text-lg font-semibold text-slate-900">
               {company?.id}
@@ -198,19 +201,19 @@ export default function CompanyPage() {
                   renameMutation.mutate(newName.trim());
                 }}
               >
-                <input
+                <Input
                   value={newName}
                   onChange={(event) => setNewName(event.target.value)}
                   placeholder="New company name"
-                  className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="flex-1"
                 />
-                <button
+                <Button
                   type="submit"
                   disabled={renameMutation.isPending}
-                  className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+                  className="bg-slate-950 text-white hover:bg-black"
                 >
                   Rename
-                </button>
+                </Button>
                 </form>
               )}
             {company && (
@@ -222,7 +225,7 @@ export default function CompanyPage() {
                   Leaving will remove your access to the shared workspace. You can join a different company or create a fresh personal workspace afterward.
                 </p>
                 <div className="mt-3 flex items-center gap-3">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => {
                       if (
@@ -235,12 +238,14 @@ export default function CompanyPage() {
                       leaveCompanyMutation.mutate();
                     }}
                     disabled={leaveCompanyMutation.isPending || isSoleAdmin}
-                    className="inline-flex items-center rounded-md border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+                    variant="outline"
+                    size="sm"
+                    className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                   >
                     {leaveCompanyMutation.isPending
                       ? 'Leaving…'
                       : 'Leave company'}
-                  </button>
+                  </Button>
                   {isSoleAdmin && (
                     <p className="text-xs text-rose-500">
                       Assign another admin before leaving.
@@ -249,8 +254,10 @@ export default function CompanyPage() {
                 </div>
               </div>
             )}
-          </div>
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+            </CardContent>
+          </Card>
+          <Card className="mt-6 rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
+            <CardContent className="p-6">
             <p className="text-sm font-semibold text-slate-900">Members</p>
             <div className="mt-4">
               <div className="hidden lg:block">
@@ -347,7 +354,8 @@ export default function CompanyPage() {
                 ))}
               </div>
             </div>
-          </div>
+            </CardContent>
+          </Card>
           {isCompanyAdmin && (
             <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
               <p className="text-sm font-semibold text-slate-900">

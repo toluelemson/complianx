@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import api from '../api/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 type Props = {
   isOpen: boolean;
@@ -55,18 +57,21 @@ export default function BillingModal({ isOpen, onClose }: Props) {
   const isPaidPlan = plan !== 'FREE';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-2">
-      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2 backdrop-blur-sm">
+      <Card className="w-full max-w-2xl rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.45)]">
+        <CardContent className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-lg font-semibold text-slate-900">Billing overview</p>
+              <p className="text-lg font-semibold tracking-[-0.02em] text-slate-900">Billing overview</p>
               <p className="text-sm text-slate-500">
                 Review your current limits and manage your subscription in one place.
               </p>
             </div>
-            <button
+            <Button
               onClick={onClose}
-              className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              variant="outline"
+              size="sm"
+              className="gap-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -82,7 +87,7 @@ export default function BillingModal({ isOpen, onClose }: Props) {
                 />
               </svg>
               Close
-            </button>
+            </Button>
           </div>
         <div className="mt-4 grid gap-4 text-sm md:grid-cols-2">
           <div className="rounded-xl border border-slate-200 p-4">
@@ -133,29 +138,32 @@ export default function BillingModal({ isOpen, onClose }: Props) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {isPaidPlan ? (
-                <button
+                <Button
                   onClick={() => portalMutation.mutate()}
                   disabled={portalMutation.isPending}
-                  className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 disabled:opacity-60"
+                  variant="outline"
+                  size="sm"
                 >
                   {portalMutation.isPending ? 'Opening portal…' : 'Manage subscription'}
-                </button>
+                </Button>
               ) : (
                 <>
-                  <button
+                  <Button
                     onClick={() => checkoutMutation.mutate({ plan: 'PRO' })}
                     disabled={checkoutMutation.isPending}
-                    className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+                    size="sm"
+                    className="bg-slate-950 text-white hover:bg-black"
                   >
                     {checkoutMutation.isPending ? 'Redirecting…' : 'Upgrade to Pro'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => checkoutMutation.mutate({ plan: 'ENTERPRISE' })}
                     disabled={checkoutMutation.isPending}
-                    className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 disabled:opacity-60"
+                    variant="outline"
+                    size="sm"
                   >
                     Talk to sales
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -180,7 +188,8 @@ export default function BillingModal({ isOpen, onClose }: Props) {
             </ul>
           </div>
         </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

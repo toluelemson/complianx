@@ -1,23 +1,36 @@
-<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" fill="none">
   <defs>
-    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a"/>
-      <stop offset="100%" stop-color="#0ea5e9"/>
+    <linearGradient id="ndx-bg" x1="20" y1="12" x2="108" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A0C10" />
+      <stop offset="1" stop-color="#171B22" />
+    </linearGradient>
+    <linearGradient id="ndx-accent" x1="42" y1="34" x2="93" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" />
+      <stop offset="1" stop-color="#DCE3ED" />
     </linearGradient>
   </defs>
-  <rect width="128" height="128" rx="24" fill="url(#gradient)" />
+
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#ndx-bg)" />
+
   <path
-    d="M38 44c0-4.4 3.6-8 8-8h36c4.4 0 8 3.6 8 8v40c0 4.4-3.6 8-8 8H46c-4.4 0-8-3.6-8-8V44z"
-    fill="none"
-    stroke="#f8fafc"
-    stroke-width="8"
+    d="M36 38C36 33.5817 39.5817 30 44 30H72L92 50V86C92 90.4183 88.4183 94 84 94H44C39.5817 94 36 90.4183 36 86V38Z"
+    stroke="url(#ndx-accent)"
+    stroke-width="6"
     stroke-linejoin="round"
   />
+  <path d="M72 30V46C72 48.2091 73.7909 50 76 50H92" stroke="url(#ndx-accent)" stroke-width="6" stroke-linejoin="round" />
+
+  <circle cx="52" cy="58" r="5" fill="#F8FAFC" />
+  <circle cx="66" cy="67" r="5" fill="#CBD5E1" />
+  <circle cx="52" cy="76" r="5" fill="#F8FAFC" />
+  <path d="M56 60.5L62 64.5M62 69.5L56 73.5" stroke="#E2E8F0" stroke-width="4.5" stroke-linecap="round" />
+
   <path
-    d="M52 64h24M52 76h24"
-    stroke="#f8fafc"
-    stroke-width="8"
-    stroke-linecap="round"
+    d="M84 68C84 65.7909 85.7909 64 88 64H96C98.2091 64 100 65.7909 100 68V75.7086C100 82.4526 95.6405 88.4266 89.2216 90.5275L88 90.9274L86.7784 90.5275C80.3595 88.4266 76 82.4526 76 75.7086V68C76 65.7909 77.7909 64 80 64H84Z"
+    fill="#12161D"
+    stroke="#F8FAFC"
+    stroke-width="4.5"
+    stroke-linejoin="round"
   />
-  <circle cx="60" cy="54" r="4" fill="#f8fafc" />
+  <path d="M83 76L87 80L94 72.5" stroke="#E2E8F0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
 </svg>

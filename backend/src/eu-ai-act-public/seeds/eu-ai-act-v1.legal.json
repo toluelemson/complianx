@@ -1,0 +1,77 @@
+{
+  "version": "2026.03.v1",
+  "references": [
+    {
+      "id": "art-2-scope",
+      "label": "Article 2",
+      "title": "Scope",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-2-exclusions",
+      "label": "Article 2",
+      "title": "Exclusions",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-3-ai-system",
+      "label": "Article 3",
+      "title": "Definitions and AI system concept",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-5",
+      "label": "Article 5",
+      "title": "Prohibited AI practices",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-6",
+      "label": "Article 6",
+      "title": "High-risk classification rules",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "annex-i",
+      "label": "Annex I",
+      "title": "Union harmonisation legislation",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "annex-iii",
+      "label": "Annex III",
+      "title": "High-risk use cases",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-25",
+      "label": "Article 25",
+      "title": "Cases where entities become providers",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-50",
+      "label": "Article 50",
+      "title": "Transparency obligations",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-51",
+      "label": "Article 51",
+      "title": "Systemic risk threshold",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-53",
+      "label": "Article 53",
+      "title": "GPAI obligations",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-55",
+      "label": "Article 55",
+      "title": "GPAI with systemic risk obligations",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    }
+  ]
+}

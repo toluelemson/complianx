@@ -4,6 +4,8 @@ import { Navigate } from 'react-router-dom';
 import api from '../api/client';
 import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 
 const ROLE_OPTIONS: Array<'USER' | 'REVIEWER' | 'ADMIN'> = [
   'USER',
@@ -46,7 +48,8 @@ export default function RoleManagerPage() {
       <p className="text-sm text-slate-600">
         Grant reviewer or admin roles to members who handle approvals.
       </p>
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white">
+      <Card className="mt-6 rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
+        <CardContent className="p-0">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
             <tr>
@@ -59,7 +62,7 @@ export default function RoleManagerPage() {
               <tr key={member.id} className="border-b border-slate-100">
                 <td className="px-6 py-4 text-slate-900">{member.email}</td>
                 <td className="px-6 py-4">
-                  <select
+                  <Select
                     value={member.role}
                     onChange={(event) =>
                       mutation.mutate({
@@ -67,7 +70,7 @@ export default function RoleManagerPage() {
                         role: event.target.value,
                       })
                     }
-                    className="rounded-md border border-slate-200 px-3 py-1.5 text-sm"
+                    className="h-9 w-auto rounded-xl px-3 py-1.5 text-sm shadow-none"
                     disabled={mutation.isPending}
                   >
                     {ROLE_OPTIONS.map((role) => (
@@ -75,13 +78,14 @@ export default function RoleManagerPage() {
                         {role}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+        </CardContent>
+      </Card>
     </AppShell>
   );
 }

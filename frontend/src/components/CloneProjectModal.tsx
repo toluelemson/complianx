@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface CloneProjectModalProps {
   isOpen: boolean;
@@ -30,9 +33,10 @@ export function CloneProjectModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-md rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.45)]">
+        <CardContent className="p-6">
+        <h2 className="text-lg font-semibold tracking-[-0.02em] text-slate-900">
           Duplicate “{projectName}”
         </h2>
         <p className="mt-2 text-sm text-slate-500">
@@ -41,29 +45,30 @@ export function CloneProjectModal({
         </p>
         <label className="mt-6 block text-sm font-medium text-slate-700">
           New project name
-          <input
+          <Input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+            className="mt-1"
           />
         </label>
         <div className="mt-6 flex justify-end gap-3 text-sm">
-          <button
+          <Button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-slate-200 px-4 py-2 text-slate-600 hover:bg-slate-50"
+            variant="outline"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onSubmit(name)}
             disabled={!name || isSubmitting}
-            className="rounded-md bg-sky-600 px-4 py-2 font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+            className="bg-slate-950 text-white hover:bg-black"
           >
             {isSubmitting ? 'Cloning...' : 'Create Copy'}
-          </button>
+          </Button>
         </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

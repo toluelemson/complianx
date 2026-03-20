@@ -4,6 +4,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { useState } from 'react';
 import { SiteHeader } from '../components/SiteHeader';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface ResetPasswordForm {
   password: string;
@@ -40,19 +43,18 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-slate-900">Reset password</h1>
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] px-4">
+        <Card className="w-full max-w-md rounded-[1.75rem] border-slate-200/90 bg-white/95 text-center shadow-[0_35px_100px_-40px_rgba(15,23,42,0.35)]">
+          <CardContent className="p-8">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">Reset password</h1>
           <p className="mt-4 text-sm text-slate-500">
             A reset token is missing from the link. Please request a new link.
           </p>
-          <Link
-            to="/forgot-password"
-            className="mt-6 inline-flex rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400"
-          >
-            Request new link
-          </Link>
-        </div>
+          <Button asChild variant="outline" className="mt-6">
+            <Link to="/forgot-password">Request new link</Link>
+          </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -60,9 +62,10 @@ export default function ResetPasswordPage() {
   return (
     <>
       <SiteHeader />
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">Reset your password</h1>
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] px-4">
+      <Card className="w-full max-w-md rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.35)]">
+        <CardContent className="p-8">
+        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">Reset your password</h1>
         <p className="mt-2 text-sm text-slate-500">
           Paste a new password. You'll be able to log in once the token is accepted.
         </p>
@@ -74,15 +77,15 @@ export default function ResetPasswordPage() {
               <label className="block text-sm font-medium text-slate-700">
                 New password
                 <div className="relative mt-1">
-                  <input
+                  <Input
                     type={showPassword ? 'text' : 'password'}
                     {...register('password', { required: true, minLength: 8 })}
-                    className="w-full rounded-md border border-slate-200 px-3 py-2 pr-12 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                    className="pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-3 flex items-center justify-center rounded-full bg-white/10 p-1 text-slate-400 transition hover:text-white"
+                    className="absolute inset-y-0 right-3 flex items-center justify-center rounded-full p-1 text-slate-400 transition hover:text-slate-900"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
@@ -111,19 +114,19 @@ export default function ResetPasswordPage() {
               <label className="block text-sm font-medium text-slate-700">
                 Confirm password
                 <div className="relative mt-1">
-                  <input
+                  <Input
                     type={showConfirmPassword ? 'text' : 'password'}
                     {...register('confirmPassword', {
                       required: true,
                       validate: (value) =>
                         value === passwordValue || 'Passwords do not match',
                     })}
-                    className="w-full rounded-md border border-slate-200 px-3 py-2 pr-12 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                    className="pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-3 flex items-center justify-center rounded-full bg-white/10 p-1 text-slate-400 transition hover:text-white"
+                    className="absolute inset-y-0 right-3 flex items-center justify-center rounded-full p-1 text-slate-400 transition hover:text-slate-900"
                     aria-label={
                       showConfirmPassword ? 'Hide password' : 'Show password'
                     }
@@ -157,21 +160,21 @@ export default function ResetPasswordPage() {
                 </p>
               )}
               {message && <p className="text-sm text-slate-500">{message}</p>}
-              <button
+              <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full rounded-md bg-sky-600 px-4 py-2 font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+                className="w-full bg-slate-950 text-white hover:bg-black"
               >
                 {mutation.isPending ? 'Resetting...' : 'Reset password'}
-              </button>
+              </Button>
             </form>
           )}
           {resetComplete && (
-            <div className="mt-6 space-y-3 rounded-md border border-slate-200 bg-emerald-50 p-4 text-sm text-slate-700">
+            <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-emerald-50 p-4 text-sm text-slate-700">
               <p>Your password is now updated.</p>
               <Link
                 to="/login"
-                className="text-sm font-semibold text-emerald-700 underline"
+                className="text-sm font-semibold text-slate-700 transition-colors hover:text-slate-950"
               >
                 Go to login
               </Link>
@@ -181,12 +184,13 @@ export default function ResetPasswordPage() {
           Need a new link?{' '}
           <Link
             to="/forgot-password"
-            className="font-medium text-sky-600 hover:text-sky-500"
+            className="font-medium text-slate-700 transition-colors hover:text-slate-950"
           >
             Request another reset
           </Link>
         </p>
-      </div>
+        </CardContent>
+      </Card>
     </div>
     </>
   );

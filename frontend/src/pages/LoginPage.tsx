@@ -5,6 +5,9 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { SiteHeader } from '../components/SiteHeader';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface LoginFormValues {
   email: string;
@@ -75,9 +78,10 @@ export default function LoginPage() {
   return (
     <>
       <SiteHeader />
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">Log in</h1>
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] px-4">
+      <Card className="w-full max-w-md rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.35)]">
+        <CardContent className="p-8">
+        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">Log in</h1>
         <p className="mt-2 text-sm text-slate-500">
           Welcome back. Access your AI compliance workspace.
         </p>
@@ -87,24 +91,24 @@ export default function LoginPage() {
         >
           <label className="block text-sm font-medium text-slate-700">
             Email
-            <input
+            <Input
               type="email"
               {...register('email', { required: true })}
-              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="mt-1"
             />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Password
             <div className="relative mt-1">
-              <input
+              <Input
                 type={showPassword ? 'text' : 'password'}
                 {...register('password', { required: true })}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 pr-12 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                className="pr-12"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-3 flex items-center justify-center rounded-full bg-white/10 p-1 text-slate-400 transition hover:text-white"
+                className="absolute inset-y-0 right-3 flex items-center justify-center rounded-full p-1 text-slate-400 transition hover:text-slate-900"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
@@ -134,40 +138,44 @@ export default function LoginPage() {
           {authError === 'Email not verified' && (
             <div className="space-y-2 text-sm text-slate-500">
               <p>We sent a verification link to your inbox. You need to confirm before signing in.</p>
-              <button
+              <Button
                 type="button"
                 onClick={handleResend}
                 disabled={resendStatus === 'pending' || !canResend}
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 disabled:opacity-60"
+                variant="outline"
+                className="w-full"
               >
                 {resendStatus === 'pending'
                   ? 'Resending...'
                   : 'Resend verification email'}
-              </button>
+              </Button>
               {resendMessage && (
                 <p className="text-xs text-slate-500">{resendMessage}</p>
               )}
             </div>
           )}
-          <button
+          <Button
             type="submit"
             disabled={mutation.isPending}
-            className="w-full rounded-md bg-sky-600 px-4 py-2 font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+            className="w-full bg-slate-950 text-white hover:bg-black"
           >
             {mutation.isPending ? 'Signing in...' : 'Sign In'}
-          </button>
+          </Button>
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">
           Need an account?{' '}
           <Link
             to="/signup"
-            className="font-medium text-sky-600 hover:text-sky-500"
+            className="font-medium text-slate-700 transition-colors hover:text-slate-950"
           >
             Sign up
           </Link>
         </p>
         <p className="mt-1 text-center text-sm text-slate-500">
-          <Link to="/" className="font-medium text-sky-600 hover:text-sky-500">
+          <Link
+            to="/"
+            className="font-medium text-slate-700 transition-colors hover:text-slate-950"
+          >
             Back to home
           </Link>
         </p>
@@ -175,12 +183,13 @@ export default function LoginPage() {
           Forgot your password?{' '}
           <Link
             to="/forgot-password"
-            className="font-medium text-sky-600 hover:text-sky-500"
+            className="font-medium text-slate-700 transition-colors hover:text-slate-950"
           >
             Reset it here
           </Link>
         </p>
-      </div>
+        </CardContent>
+      </Card>
     </div>
     </>
   );

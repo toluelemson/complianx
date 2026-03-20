@@ -1,0 +1,58 @@
+{
+  "packKey": "eu-ai-act",
+  "version": "2026.03.v2",
+  "rules": [
+    {
+      "id": "quick-scope",
+      "stage": "scope",
+      "priority": 10,
+      "when": {
+        "all": [
+          { "fact": "is_ai_system", "equals": true },
+          { "fact": "used_in_eu", "equals": true }
+        ]
+      },
+      "reason": "The product appears to be an AI system with EU use or market connection.",
+      "legalReferenceIds": ["art-2-scope", "art-3-ai-system"]
+    },
+    {
+      "id": "quick-prohibited",
+      "stage": "prohibition",
+      "priority": 20,
+      "when": { "any": [{ "fact": "prohibited_use_cases", "lengthGt": 0 }] },
+      "reason": "A prohibited use signal was selected.",
+      "legalReferenceIds": ["art-5"]
+    },
+    {
+      "id": "quick-high-risk",
+      "stage": "high-risk",
+      "priority": 30,
+      "when": { "any": [{ "fact": "high_risk_contexts", "lengthGt": 0 }] },
+      "reason": "A high-risk context was selected.",
+      "legalReferenceIds": ["art-6", "annex-iii"]
+    },
+    {
+      "id": "quick-transparency",
+      "stage": "transparency",
+      "priority": 40,
+      "when": { "any": [{ "fact": "transparency_triggers", "lengthGt": 0 }] },
+      "reason": "A transparency trigger was selected.",
+      "legalReferenceIds": ["art-50"]
+    },
+    {
+      "id": "quick-readiness-gap",
+      "stage": "readiness",
+      "priority": 50,
+      "when": {
+        "any": [
+          { "fact": "human_oversight_ready", "equals": false },
+          { "fact": "risk_controls_ready", "equals": false },
+          { "fact": "documentation_ready", "equals": false },
+          { "fact": "conformity_process_ready", "equals": false }
+        ]
+      },
+      "reason": "One or more basic readiness controls are missing.",
+      "legalReferenceIds": ["art-16", "art-26", "art-49"]
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "packKey": "eu-ai-act",
+  "version": "2026.03.v1",
+  "rules": [
+    {
+      "id": "scope-ai-threshold-fail",
+      "stage": "scope",
+      "priority": 10,
+      "when": { "all": [{ "fact": "is_ai_system", "equals": false }] },
+      "reason": "The assessed functionality is not treated as an AI system in this pack.",
+      "legalReferenceIds": ["art-3-ai-system"]
+    },
+    {
+      "id": "scope-eu-nexus",
+      "stage": "scope",
+      "priority": 20,
+      "when": {
+        "any": [
+          { "fact": "eu_nexus", "includes": "eu_market_placement" },
+          { "fact": "eu_nexus", "includes": "eu_putting_into_service" },
+          { "fact": "eu_nexus", "includes": "eu_output_used" },
+          { "fact": "eu_nexus", "includes": "established_in_eu" },
+          { "fact": "eu_nexus", "includes": "gpai_placed_on_market_eu" }
+        ]
+      },
+      "reason": "A territorial or market nexus to the EU exists.",
+      "legalReferenceIds": ["art-2-scope"]
+    },
+    {
+      "id": "excluded-research",
+      "stage": "exclusion",
+      "priority": 30,
+      "when": { "all": [{ "fact": "excluded_research", "equals": true }] },
+      "reason": "An exclusion path for research or prototype activity was selected.",
+      "legalReferenceIds": ["art-2-exclusions"]
+    },
+    {
+      "id": "provider-by-conduct",
+      "stage": "role",
+      "priority": 40,
+      "when": {
+        "any": [
+          { "fact": "provider_override_events", "includes": "substantial_modification" },
+          { "fact": "provider_override_events", "includes": "intended_purpose_changed" },
+          { "fact": "provider_override_events", "includes": "relabelled_as_own" }
+        ]
+      },
+      "reason": "Actions selected may cause the entity to be treated as provider.",
+      "legalReferenceIds": ["art-25"]
+    },
+    {
+      "id": "prohibited-use-selected",
+      "stage": "prohibition",
+      "priority": 50,
+      "when": { "any": [{ "fact": "prohibited_use_cases", "lengthGt": 0 }] },
+      "reason": "One or more prohibited use case triggers were selected.",
+      "legalReferenceIds": ["art-5"]
+    },
+    {
+      "id": "high-risk-annex-path",
+      "stage": "high_risk",
+      "priority": 60,
+      "when": {
+        "any": [
+          { "fact": "annex_iii_categories", "lengthGt": 0 },
+          { "fact": "annex_i_category", "notEquals": "none" },
+          { "fact": "safety_component", "equals": true }
+        ]
+      },
+      "reason": "Annex I, Annex III, or safety-component triggers were selected.",
+      "legalReferenceIds": ["art-6", "annex-i", "annex-iii"]
+    },
+    {
+      "id": "transparency-trigger-selected",
+      "stage": "transparency",
+      "priority": 70,
+      "when": { "any": [{ "fact": "transparency_triggers", "lengthGt": 0 }] },
+      "reason": "A transparency trigger was selected.",
+      "legalReferenceIds": ["art-50"]
+    },
+    {
+      "id": "gpai-model",
+      "stage": "gpai",
+      "priority": 80,
+      "when": { "all": [{ "fact": "gpai_model", "equals": true }] },
+      "reason": "The product is being treated as a GPAI model.",
+      "legalReferenceIds": ["art-53"]
+    },
+    {
+      "id": "gpai-systemic-risk",
+      "stage": "gpai",
+      "priority": 90,
+      "when": {
+        "all": [
+          { "fact": "gpai_model", "equals": true },
+          { "fact": "systemic_risk_threshold_met", "equals": true }
+        ]
+      },
+      "reason": "The GPAI systemic risk threshold was selected.",
+      "legalReferenceIds": ["art-51", "art-55"]
+    }
+  ]
+}

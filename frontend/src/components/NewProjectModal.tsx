@@ -1,4 +1,8 @@
 import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 export interface NewProjectFormValues {
   name: string;
@@ -26,13 +30,14 @@ export function NewProjectModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-lg rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.45)]">
+        <CardContent className="p-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold tracking-[-0.02em] text-slate-900">
             New AI System
           </h2>
-          <button onClick={onClose} className="text-slate-500">
+          <button onClick={onClose} className="text-slate-500 transition hover:text-slate-900">
             ✕
           </button>
         </div>
@@ -45,48 +50,49 @@ export function NewProjectModal({
         >
           <label className="block text-sm font-medium text-slate-700">
             Project Name
-            <input
+            <Input
               {...register('name', { required: true })}
-              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="mt-1"
             />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Industry
-            <input
+            <Input
               {...register('industry')}
-              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="mt-1"
             />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Risk Level
-            <select
+            <Select
               {...register('riskLevel')}
-              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="mt-1"
             >
               <option value="">Select</option>
               <option value="minimal">Minimal</option>
               <option value="limited">Limited</option>
               <option value="high">High</option>
-            </select>
+            </Select>
           </label>
           <div className="mt-6 flex justify-end gap-3">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-md bg-sky-600 px-4 py-2 font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+              className="bg-slate-950 text-white hover:bg-black"
             >
               {isSubmitting ? 'Creating...' : 'Create Project'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
