@@ -60,13 +60,18 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
               <Link to="/signup?type=company">Get Started</Link>
             </Button>
             <Button
-              type="button"
+              asChild
               variant="outline"
               size="lg"
-              onClick={onClose}
               className="transition-transform duration-300 hover:-translate-y-0.5"
             >
-              Book Demo
+              <a
+                href="https://calendly.com/neuraldocx"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Book Demo
+              </a>
             </Button>
           </div>
         </CardContent>

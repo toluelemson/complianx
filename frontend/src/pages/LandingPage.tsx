@@ -28,7 +28,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white">
-      <Navbar onRequestDemo={() => setTrialModalOpen(true)} />
+      <Navbar />
 
       <div className="relative">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[56rem] bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.09),_transparent_26%),linear-gradient(180deg,_#0a0c10_0%,_#11151b_72%,_#0f131a_100%)]" />
@@ -36,7 +36,7 @@ export default function LandingPage() {
         <div className="pointer-events-none absolute right-[12%] top-20 h-40 w-40 rounded-full bg-slate-500/8 blur-3xl" />
 
         <main className="relative z-10">
-          <Hero onOpenTrial={() => setTrialModalOpen(true)} />
+          <Hero />
           <VideoSection
             onOpenTrial={() => setTrialModalOpen(true)}
             videoSrc={DEMO_VIDEO_SRC}

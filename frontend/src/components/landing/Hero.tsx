@@ -3,11 +3,7 @@ import { Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-interface HeroProps {
-  onOpenTrial: () => void;
-}
-
-export function Hero({ onOpenTrial }: HeroProps) {
+export function Hero() {
   return (
     <section
       id="product"
@@ -39,14 +35,14 @@ export function Hero({ onOpenTrial }: HeroProps) {
             <Button asChild size="lg" className="w-full bg-slate-200 px-7 text-slate-950 transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white sm:w-auto">
               <Link to="/signup?type=company">Get Started</Link>
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={onOpenTrial}
-              className="w-full border-white/15 bg-white/[0.03] px-7 text-white transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white sm:w-auto"
-            >
-              Book Demo
+            <Button asChild variant="outline" size="lg" className="w-full border-white/15 bg-white/[0.03] px-7 text-white transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white sm:w-auto">
+              <a
+                href="https://calendly.com/neuraldocx"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Book Demo
+              </a>
             </Button>
           </div>
         </div>

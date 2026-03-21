@@ -2,17 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-interface NavbarProps {
-  onRequestDemo: () => void;
-}
-
 const NAV_LINKS = [
   { label: 'Product', href: '#product' },
   { label: 'Solutions', href: '#solutions' },
   { label: 'Pricing', href: '#pricing' },
 ];
 
-export function Navbar({ onRequestDemo }: NavbarProps) {
+export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -60,14 +56,14 @@ export function Navbar({ onRequestDemo }: NavbarProps) {
           <Button asChild variant="ghost" size="sm" className="hidden text-slate-200 hover:text-white sm:inline-flex">
             <Link to="/login">Log in</Link>
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRequestDemo}
-            className="hidden border-white/15 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08] hover:text-white sm:inline-flex"
-          >
-            Request Demo
+          <Button asChild variant="outline" size="sm" className="hidden border-white/15 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08] hover:text-white sm:inline-flex">
+            <a
+              href="https://calendly.com/neuraldocx"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Request Demo
+            </a>
           </Button>
           <Button
             type="button"
@@ -126,16 +122,15 @@ export function Navbar({ onRequestDemo }: NavbarProps) {
                 Log in
               </Link>
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                closeMobileMenu();
-                onRequestDemo();
-              }}
-              className="justify-start rounded-2xl border-white/15 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08] hover:text-white"
-            >
-              Request Demo
+            <Button asChild variant="outline" className="justify-start rounded-2xl border-white/15 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08] hover:text-white">
+              <a
+                href="https://calendly.com/neuraldocx"
+                target="_blank"
+                rel="noreferrer"
+                onClick={closeMobileMenu}
+              >
+                Request Demo
+              </a>
             </Button>
           </div>
         </div>
