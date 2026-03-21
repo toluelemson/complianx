@@ -40,7 +40,7 @@ export function SiteHeader() {
             to="/eu-ai-act-checker"
             className="text-sm font-medium text-slate-900 transition-colors hover:text-black"
           >
-            Compliance Questionnaire
+            Compliance check
           </Link>
         </nav>
 
@@ -49,7 +49,7 @@ export function SiteHeader() {
             <Link to="/login">Log in</Link>
           </Button>
           <Button asChild size="sm" className="hidden sm:inline-flex bg-slate-950 text-white hover:bg-black">
-            <Link to="/signup?type=company">Get Started</Link>
+            <Link to="/submit-system">Submit your system</Link>
           </Button>
           <Button
             type="button"
@@ -101,7 +101,7 @@ export function SiteHeader() {
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
             >
-              Compliance Questionnaire
+              Compliance check
             </Link>
             <Link
               to="/login"
@@ -111,11 +111,11 @@ export function SiteHeader() {
               Log in
             </Link>
             <Link
-              to="/signup?type=company"
+              to="/submit-system"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-black"
             >
-              Get Started
+              Submit your system
             </Link>
           </div>
         </div>

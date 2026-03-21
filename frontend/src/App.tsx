@@ -6,6 +6,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ContactPage from './pages/ContactPage';
+import SubmitSystemPage from './pages/SubmitSystemPage';
 import PublicEuAiActCheckerPage from './features/eu-ai-act/pages/PublicEuAiActCheckerPage';
 import PublicEuAiActResultPage from './features/eu-ai-act/pages/PublicEuAiActResultPage';
 import DashboardPage from './pages/DashboardPage';
@@ -28,6 +29,7 @@ function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route path="/submit-system" element={<SubmitSystemPage />} />
       <Route path="/eu-ai-act-checker" element={<PublicEuAiActCheckerPage />} />
       <Route
         path="/eu-ai-act-checker/results/:resultId"

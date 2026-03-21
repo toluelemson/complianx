@@ -173,14 +173,14 @@ export default function PublicEuAiActCheckerPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
               <Badge variant="outline" className="w-fit border-slate-300 bg-white/80 text-slate-700">
-                Questionnaire
+                Pre-quote check
               </Badge>
               <div>
                 <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  AI Compliance Questionnaire
+                  Check your compliance fit first
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                  Answer a few questions to see if your AI looks compliant.
+                  Answer a few questions to see which NeuralDocx service path fits your AI system before you request a quote.
                 </p>
               </div>
             </div>
@@ -208,7 +208,7 @@ export default function PublicEuAiActCheckerPage() {
                 <CardHeader>
                   <CardTitle className="text-xl">Assessment Progress</CardTitle>
                   <CardDescription>
-                    Short audit.
+                    Short pre-quote check.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
@@ -310,7 +310,7 @@ export default function PublicEuAiActCheckerPage() {
                 </Card>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-sm text-slate-500">Submit once when done.</div>
+                  <div className="text-sm text-slate-500">Finish the check, then submit your system for the right quote.</div>
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <Button
                       type="button"
@@ -338,7 +338,7 @@ export default function PublicEuAiActCheckerPage() {
                         disabled={submitting}
                         className="bg-slate-950 text-white hover:bg-black"
                       >
-                        {submitting ? 'Finalizing...' : 'View result'}
+                        {submitting ? 'Finalizing...' : 'See my fit'}
                       </Button>
                     )}
                   </div>
@@ -346,10 +346,10 @@ export default function PublicEuAiActCheckerPage() {
 
                 <div className="text-center text-sm text-slate-500">
                   <Link
-                    to="/contact"
+                    to="/submit-system"
                     className="font-medium text-slate-700 transition-colors hover:text-slate-950"
                   >
-                    Contact NeuralDocx
+                    Skip the check and submit your system
                   </Link>
                 </div>
               </div>

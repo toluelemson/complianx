@@ -48,7 +48,7 @@ export function Navbar() {
             to="/eu-ai-act-checker"
             className="text-sm font-medium text-slate-200 transition hover:text-white"
           >
-            Compliance Questionnaire
+            Compliance check
           </Link>
         </nav>
 
@@ -62,7 +62,7 @@ export function Navbar() {
               target="_blank"
               rel="noreferrer"
             >
-              Request Demo
+              Enterprise demo
             </a>
           </Button>
           <Button
@@ -95,7 +95,7 @@ export function Navbar() {
             </svg>
           </Button>
           <Button asChild size="sm" className="bg-slate-200 text-slate-950 hover:bg-white">
-            <Link to="/signup?type=company">Get Started</Link>
+            <Link to="/submit-system">Submit your system</Link>
           </Button>
         </div>
       </div>
@@ -114,7 +114,7 @@ export function Navbar() {
             ))}
             <Button asChild variant="ghost" className="justify-start rounded-2xl text-slate-200 hover:text-white">
               <Link to="/eu-ai-act-checker" onClick={closeMobileMenu}>
-                Compliance Questionnaire
+                Compliance check
               </Link>
             </Button>
             <Button asChild variant="ghost" className="justify-start rounded-2xl text-slate-200 hover:text-white">
@@ -129,7 +129,7 @@ export function Navbar() {
                 rel="noreferrer"
                 onClick={closeMobileMenu}
               >
-                Request Demo
+                Enterprise demo
               </a>
             </Button>
           </div>

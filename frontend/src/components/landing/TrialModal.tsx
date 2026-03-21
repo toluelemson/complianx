@@ -57,7 +57,7 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
           </div>
           <div className="animate-enter-up animation-delay-300 flex flex-wrap gap-3">
             <Button asChild size="lg" className="bg-slate-900 text-white transition-transform duration-300 hover:-translate-y-0.5 hover:bg-slate-800">
-              <Link to="/signup?type=company">Get Started</Link>
+              <Link to="/submit-system">Submit your system</Link>
             </Button>
             <Button
               asChild
@@ -70,7 +70,7 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
                 target="_blank"
                 rel="noreferrer"
               >
-                Book Demo
+                For enterprise, book a demo
               </a>
             </Button>
           </div>

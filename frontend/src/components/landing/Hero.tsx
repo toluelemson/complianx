@@ -30,10 +30,10 @@ export function Hero() {
               size="lg"
               className="w-full bg-slate-200 px-7 text-slate-950 transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white sm:w-auto"
             >
-              <Link to="/eu-ai-act-checker">Run Compliance Check</Link>
+              <Link to="/submit-system">Submit your system</Link>
             </Button>
-            <Button asChild size="lg" className="w-full bg-slate-200 px-7 text-slate-950 transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white sm:w-auto">
-              <Link to="/signup?type=company">Get Started</Link>
+            <Button asChild variant="outline" size="lg" className="w-full border-white/15 bg-white/[0.03] px-7 text-white transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white sm:w-auto">
+              <Link to="/eu-ai-act-checker">Run compliance check first</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="w-full border-white/15 bg-white/[0.03] px-7 text-white transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white sm:w-auto">
               <a
@@ -41,7 +41,7 @@ export function Hero() {
                 target="_blank"
                 rel="noreferrer"
               >
-                Book Demo
+                For enterprise, book a demo
               </a>
             </Button>
           </div>

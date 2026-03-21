@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import jsPDF from 'jspdf';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowRight,
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  Download,
   FileText,
+  Mail,
   Scale,
   ShieldCheck,
 } from 'lucide-react';
@@ -76,7 +79,8 @@ export default function PublicEuAiActResultPage() {
       (result.next_required_documents?.length ||
         result.missing_evidence?.length ||
         result.high_risk ||
-        result.prohibited),
+        result.prohibited ||
+        result.ambiguity_flags?.length),
   );
   const showLegalDetails = Boolean(
     result &&
@@ -86,6 +90,298 @@ export default function PublicEuAiActResultPage() {
         (resultQuery.data?.legalReferences?.length ?? 0) > 0),
   );
 
+  const handleEmailResult = () => {
+    if (!result) return;
+    const subject = encodeURIComponent(`NeuralDocx audit check result`);
+    const body = encodeURIComponent(buildEmailBody(result, resultQuery.data?.packVersion));
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!result) return;
+    const pdf = new jsPDF({
+      unit: 'pt',
+      format: 'a4',
+      compress: true,
+    });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 48;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    try {
+      const logoDataUrl = await loadImageDataUrl('/neuraldocx-logo.png');
+      pdf.addImage(logoDataUrl, 'PNG', margin, y, 36, 36);
+    } catch {
+      pdf.setFillColor(15, 23, 42);
+      pdf.roundedRect(margin, y, 36, 36, 8, 8, 'F');
+    }
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(15, 23, 42);
+    pdf.setFontSize(11);
+    pdf.text('NeuralDocx', margin + 48, y + 12);
+    pdf.setFontSize(24);
+    pdf.text('Audit Check Result', margin + 48, y + 34);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(`Pack ${resultQuery.data?.packVersion ?? 'current'}`, pageWidth - margin, y + 12, {
+      align: 'right',
+    });
+
+    y += 64;
+
+    const ensureSpace = (height: number) => {
+      if (y + height > pageHeight - margin) {
+        pdf.addPage();
+        y = margin;
+      }
+    };
+
+    const splitLines = (text: string) => pdf.splitTextToSize(text, contentWidth - 32) as string[];
+
+    const drawInfoCard = (title: string, bodyLines: string[], options?: { tone?: 'default' | 'accent' }) => {
+      const lineHeight = 16;
+      const bodyHeight = Math.max(44, bodyLines.length * lineHeight + 18);
+      ensureSpace(bodyHeight + 34);
+      pdf.setDrawColor(226, 232, 240);
+      if (options?.tone === 'accent') {
+        pdf.setFillColor(240, 249, 255);
+      } else {
+        pdf.setFillColor(248, 250, 252);
+      }
+      pdf.roundedRect(margin, y, contentWidth, bodyHeight + 26, 14, 14, 'FD');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(title.toUpperCase(), margin + 16, y + 18);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      pdf.setTextColor(15, 23, 42);
+      let lineY = y + 38;
+      bodyLines.forEach((line) => {
+        pdf.text(line, margin + 16, lineY);
+        lineY += lineHeight;
+      });
+      y += bodyHeight + 42;
+    };
+
+    const drawSectionHeading = (title: string, subtitle?: string) => {
+      const subtitleLines = subtitle ? (pdf.splitTextToSize(subtitle, contentWidth) as string[]) : [];
+      ensureSpace(50 + subtitleLines.length * 14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(title, margin, y);
+      y += 18;
+      if (subtitleLines.length > 0) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 116, 139);
+        subtitleLines.forEach((line) => {
+          pdf.text(line, margin, y);
+          y += 13;
+        });
+      }
+      y += 10;
+    };
+
+    const drawBulletList = (items: string[], mapper?: (item: string) => string) => {
+      const normalized = items.length ? items : ['None flagged in this result.'];
+      normalized.forEach((item) => {
+        const text = mapper ? mapper(item) : item;
+        const lines = pdf.splitTextToSize(text, contentWidth - 28) as string[];
+        ensureSpace(lines.length * 15 + 8);
+        pdf.setFillColor(15, 23, 42);
+        pdf.circle(margin + 4, y - 4, 2, 'F');
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(11);
+        pdf.setTextColor(15, 23, 42);
+        let bulletY = y;
+        lines.forEach((line) => {
+          pdf.text(line, margin + 16, bulletY);
+          bulletY += 15;
+        });
+        y = bulletY + 3;
+      });
+      y += 6;
+    };
+
+    const drawTwoColumnStats = (items: Array<{ label: string; value: string }>) => {
+      const gap = 14;
+      const colWidth = (contentWidth - gap) / 2;
+      const top = y;
+      let tallest = 0;
+
+      items.forEach((item, index) => {
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+        const x = margin + col * (colWidth + gap);
+        const boxY = top + row * 86;
+        const valueLines = pdf.splitTextToSize(item.value, colWidth - 24) as string[];
+        const boxHeight = Math.max(68, valueLines.length * 15 + 28);
+        tallest = Math.max(tallest, boxY - top + boxHeight);
+        ensureSpace(tallest + 8);
+        pdf.setDrawColor(226, 232, 240);
+        pdf.setFillColor(248, 250, 252);
+        pdf.roundedRect(x, boxY, colWidth, boxHeight, 12, 12, 'FD');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(item.label.toUpperCase(), x + 12, boxY + 16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.setTextColor(15, 23, 42);
+        let valueY = boxY + 36;
+        valueLines.forEach((line) => {
+          pdf.text(line, x + 12, valueY);
+          valueY += 15;
+        });
+      });
+
+      y = top + tallest + 22;
+    };
+
+    const verdict = buildVerdict(result);
+    const summaryText = buildClosingSummary(result).replace(/^Summary:\s*/, '');
+    const service = buildServiceRecommendation(result);
+    const statusLabels = [
+      result.in_scope ? 'In scope' : 'Out of scope',
+      result.high_risk ? 'High-risk' : null,
+      result.prohibited ? 'Prohibited' : null,
+      result.transparency_obligations?.length ? 'Transparency obligations' : null,
+      result.gpai ? 'GPAI' : null,
+    ].filter(Boolean) as string[];
+
+    drawInfoCard(
+      'Executive Summary',
+      [
+        `${verdict.label}: ${verdict.title}`,
+        ...splitLines(buildResultExplanation(result)),
+      ],
+      { tone: 'accent' },
+    );
+
+    drawTwoColumnStats([
+      { label: 'Best-fit service', value: service.label },
+      { label: 'Status', value: statusLabels.join(' · ') || 'No special status flags' },
+      { label: 'Open gaps', value: `${result.missing_evidence?.length ?? 0} flagged` },
+      { label: 'Recommended documents', value: `${result.next_required_documents?.length ?? 0} recommended` },
+    ]);
+
+    drawSectionHeading('Summary', 'This is the short reading version of the result for sharing with internal stakeholders.');
+    drawInfoCard('Outcome', splitLines(summaryText));
+
+    const nextSteps = buildTopActions(result);
+    if (nextSteps.length > 0 || service.summary) {
+      drawSectionHeading('Recommended Next Steps', 'Use these actions to move from this result into delivery.');
+      drawBulletList(nextSteps.map((step, index) => `${index + 1}. ${step}`));
+      drawInfoCard('Recommended Engagement', splitLines(service.summary));
+    }
+
+    if ((result.missing_evidence?.length ?? 0) > 0 || (result.next_required_documents?.length ?? 0) > 0) {
+      drawSectionHeading('Documentation Readiness', 'These are the gaps and outputs that matter most for moving forward.');
+      if ((result.missing_evidence?.length ?? 0) > 0) {
+        drawInfoCard('Missing Evidence', splitLines('The following items are still missing or not clearly supported by your answers.'));
+        drawBulletList(result.missing_evidence!);
+      }
+      if ((result.next_required_documents?.length ?? 0) > 0) {
+        drawInfoCard('Recommended Documents', splitLines('These are the documents NeuralDocx would typically prepare next based on this result.'));
+        drawBulletList(result.next_required_documents!, (key) => DOCUMENT_LABELS[key] ?? key);
+      }
+    }
+
+    if ((result.reasoning_trace?.length ?? 0) > 0 || (result.obligations?.length ?? 0) > 0) {
+      drawSectionHeading('Reasoning and Obligations', 'This section shows the basis for the result in a more detailed format.');
+      if ((result.reasoning_trace?.length ?? 0) > 0) {
+        drawInfoCard(
+          'How This Result Was Reached',
+          result.reasoning_trace!.flatMap((item) =>
+            splitLines(`${item.step}. ${item.summary} (${item.code})`),
+          ),
+        );
+      }
+      if ((result.obligations?.length ?? 0) > 0) {
+        drawInfoCard(
+          'Relevant Obligations',
+          result.obligations!.flatMap((item) =>
+            splitLines(`${item.role ?? 'Assessment'}: ${item.title ?? ''}`),
+          ),
+        );
+      }
+    }
+
+    if ((result.other_frameworks?.length ?? 0) > 0 || (result.legal_references?.length ?? 0) > 0) {
+      drawSectionHeading('Framework Context', 'Additional frameworks and references selected in this check.');
+      if ((result.other_frameworks?.length ?? 0) > 0) {
+        drawInfoCard(
+          'Other Frameworks Selected',
+          result.other_frameworks!.flatMap((key) =>
+            splitLines(FRAMEWORK_LABELS[key] ?? key),
+          ),
+        );
+      }
+      if ((result.legal_references?.length ?? 0) > 0) {
+        drawInfoCard('Legal References', result.legal_references!.flatMap((entry) => splitLines(entry)));
+      }
+    }
+
+    drawSectionHeading('Continue with NeuralDocx', 'If you want us to turn this result into actual documents, use the path below.');
+    drawInfoCard(
+      'Call to Action',
+      [
+        `Recommended next move: ${service.enterprise ? 'Book an enterprise demo' : 'Submit your system for a quote'}.`,
+        ...splitLines(
+          service.enterprise
+            ? 'Use the enterprise path for higher-touch review, complex regulated environments, or unclear edge cases.'
+            : 'Submit your AI system details and we will scope the right package, delivery window, and quote.'
+        ),
+        'neuraldocx.com/submit-system',
+        'calendly.com/neuraldocx',
+      ],
+      { tone: 'accent' },
+    );
+
+    ensureSpace(110);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 24;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 116, 139);
+    const disclaimerLines = pdf.splitTextToSize(
+      'This summary is provided by NeuralDocx to support documentation and compliance preparation. It is not legal advice.',
+      contentWidth,
+    ) as string[];
+    disclaimerLines.forEach((line) => {
+      pdf.text(line, margin, y);
+      y += 13;
+    });
+    y += 12;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(15, 23, 42);
+    pdf.text('Prepared by NeuralDocx', margin, y);
+    y += 16;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text('AI compliance documentation service', margin, y);
+    y += 14;
+    pdf.text(
+      new Date().toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+      margin,
+      y,
+    );
+
+    pdf.save(`neuraldocx-audit-check-${resultId ?? 'result'}.pdf`);
+  };
+
   return (
     <>
       <SiteHeader />
@@ -94,14 +390,14 @@ export default function PublicEuAiActResultPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
               <Badge variant="outline" className="w-fit border-slate-300 bg-white/80 text-slate-700">
-                Questionnaire Result
+                Pre-quote result
               </Badge>
               <div>
                 <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  AI Compliance Result
+                  Your compliance fit result
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                  A clear answer based on the information you provided.
+                  A clear answer, the likely service path, and the best next step based on your answers.
                 </p>
               </div>
             </div>
@@ -132,6 +428,20 @@ export default function PublicEuAiActResultPage() {
                       <CardDescription className="mt-3 max-w-3xl text-sm leading-7">
                         {buildVerdict(result).description}
                       </CardDescription>
+                      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                        <Button
+                          type="button"
+                          onClick={handleDownloadPdf}
+                          className="bg-slate-950 text-white hover:bg-black"
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download PDF
+                        </Button>
+                        <Button type="button" variant="outline" onClick={handleEmailResult}>
+                          <Mail className="mr-2 h-4 w-4" />
+                          Email this result
+                        </Button>
+                      </div>
                     </div>
                     <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                       <div className="flex items-center gap-2">
@@ -179,8 +489,14 @@ export default function PublicEuAiActResultPage() {
                     {result.transparency_obligations?.length ? <Badge variant="outline">Transparency Obligations</Badge> : null}
                     </div>
                   ) : null}
-                  {showOperatorRoles || showDocuments || showEvidenceGaps ? (
-                    <div className={`grid gap-4 ${showOperatorRoles && showDocuments && showEvidenceGaps ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+                  {showOperatorRoles || showDocuments || showEvidenceGaps || !compactResult ? (
+                    <div className={`grid gap-4 ${showOperatorRoles && showDocuments && showEvidenceGaps ? 'md:grid-cols-4' : 'md:grid-cols-2 xl:grid-cols-4'}`}>
+                      {!compactResult ? (
+                        <ResultStat
+                          label="Best-Fit Service"
+                          value={buildServiceRecommendation(result).label}
+                        />
+                      ) : null}
                       {showOperatorRoles ? (
                         <ResultStat
                           label="Operator Roles"
@@ -258,9 +574,9 @@ export default function PublicEuAiActResultPage() {
                 {showNeuralDocxNextStep ? (
                   <Card className="border-slate-200/90 bg-white/95">
                   <CardHeader>
-                    <CardTitle className="text-2xl">Need Help Fixing This?</CardTitle>
+                    <CardTitle className="text-2xl">Move to the Right Service</CardTitle>
                     <CardDescription>
-                      NeuralDocx can help turn this result into documents, evidence, and follow-up actions.
+                      Use this result to request the right package and delivery path.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -269,21 +585,29 @@ export default function PublicEuAiActResultPage() {
                         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-slate-900" />
                         <div>
                           <p className="text-sm font-semibold text-slate-900">
-                            Turn this result into a working compliance plan
+                            {buildServiceRecommendation(result).summary}
                           </p>
                         </div>
                       </div>
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <Button asChild className="bg-slate-950 text-white hover:bg-black">
-                        <Link to="/contact">
-                          Talk to NeuralDocx
+                        <Link to="/submit-system">
+                          Submit your system
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button asChild variant="outline">
-                        <Link to="/eu-ai-act-checker">Run the questionnaire again</Link>
-                      </Button>
+                      {buildServiceRecommendation(result).enterprise ? (
+                        <Button asChild variant="outline">
+                          <a href="https://calendly.com/neuraldocx" target="_blank" rel="noreferrer">
+                            Book enterprise demo
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button asChild variant="outline">
+                          <Link to="/eu-ai-act-checker">Run the check again</Link>
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                   </Card>
@@ -432,13 +756,96 @@ function ResultStat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function buildServiceRecommendation(result: PublicResultResponse['result']) {
+  if (result.prohibited || result.high_risk || (result.ambiguity_flags?.length ?? 0) > 0) {
+    return {
+      label: 'Enterprise',
+      summary:
+        'This result needs a higher-touch review, so the best next step is an enterprise scoping call before documents are quoted.',
+      enterprise: true,
+    };
+  }
+
+  if ((result.missing_evidence?.length ?? 0) > 0 || (result.next_required_documents?.length ?? 0) >= 3) {
+    return {
+      label: 'Professional',
+      summary:
+        'This looks like a Professional engagement: enough complexity to need structured documentation, risk analysis, and governance materials.',
+      enterprise: false,
+    };
+  }
+
+  return {
+    label: 'Starter',
+    summary:
+      'This looks like a Starter engagement: a faster documentation pass with a clean compliance baseline and next-step report.',
+    enterprise: false,
+  };
+}
+
+function buildEmailBody(result: PublicResultResponse['result'], packVersion?: string) {
+  const lines = [
+    'NeuralDocx audit check result',
+    '',
+    `Verdict: ${buildVerdict(result).label}`,
+    `Summary: ${buildClosingSummary(result).replace(/^Summary:\s*/, '')}`,
+    '',
+    'What this means:',
+    buildResultExplanation(result),
+  ];
+
+  const nextSteps = buildTopActions(result);
+  if (nextSteps.length > 0) {
+    lines.push('', 'Next steps:');
+    nextSteps.forEach((step, index) => lines.push(`${index + 1}. ${step}`));
+  }
+
+  if ((result.missing_evidence?.length ?? 0) > 0) {
+    lines.push('', 'Open gaps:');
+    result.missing_evidence!.forEach((entry) => lines.push(`- ${entry}`));
+  }
+
+  if ((result.next_required_documents?.length ?? 0) > 0) {
+    lines.push('', 'Recommended documents:');
+    result.next_required_documents!.forEach((key) =>
+      lines.push(`- ${DOCUMENT_LABELS[key] ?? key}`),
+    );
+  }
+
+  lines.push(
+    '',
+    `Pack: ${packVersion ?? 'current'}`,
+    '',
+    'Prepared by NeuralDocx',
+    'https://neuraldocx.com',
+  );
+
+  return lines.join('\n');
+}
+async function loadImageDataUrl(src: string) {
+  const response = await fetch(src);
+  const blob = await response.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Unable to read image data'));
+      }
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('Unable to read image data'));
+    reader.readAsDataURL(blob);
+  });
+}
+
 function buildVerdict(result: PublicResultResponse['result']) {
   if (result.result_kind === 'not_applicable') {
     return {
       label: 'Not Applicable',
       title: 'This checker does not apply here',
       description:
-        'Based on your answers, this does not appear to be an AI system for the purpose of this questionnaire.',
+        'Based on your answers, this does not appear to be an AI system for the purpose of this check.',
       action: 'You do not need to continue this check unless the product changes.',
       badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
     };
@@ -497,14 +904,14 @@ function buildTopActions(result: PublicResultResponse['result']) {
   if (result.result_kind === 'not_applicable') {
     return [
       'Confirm that this product is correctly classified.',
-      'Run this questionnaire again if the product later becomes an AI system.',
+      'Run this check again if the product later becomes an AI system.',
     ];
   }
 
   if (result.result_kind === 'out_of_scope') {
     return [
       'Monitor whether the system is later used in the EU or placed on the EU market.',
-      'Run the questionnaire again if your geography or customer base changes.',
+      'Run this check again if your geography or customer base changes.',
     ];
   }
 
@@ -533,13 +940,13 @@ function buildTopActions(result: PublicResultResponse['result']) {
     return [
       'Review the flagged ambiguity with legal or compliance counsel.',
       'Clarify any unclear answers or assumptions.',
-      'Run the questionnaire again after the unclear points are resolved.',
+      'Run this check again after the unclear points are resolved.',
     ];
   }
 
   return [
     'Keep your documentation and evidence current.',
-    'Run the questionnaire again if the model, purpose, or deployment context changes.',
+    'Run this check again if the model, purpose, or deployment context changes.',
     'Keep the recommended documents ready for review or audit.',
   ];
 }

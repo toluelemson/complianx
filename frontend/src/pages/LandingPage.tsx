@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Hero } from '@/components/landing/Hero';
+import { FaqSection } from '@/components/landing/FaqSection';
 import { Navbar } from '@/components/landing/Navbar';
 import { PricingSection } from '@/components/landing/PricingSection';
+import { CTASection } from '@/components/landing/CTASection';
 import { TrialModal } from '@/components/landing/TrialModal';
 import { VideoSection } from '@/components/landing/VideoSection';
 
@@ -42,6 +44,8 @@ export default function LandingPage() {
             videoSrc={DEMO_VIDEO_SRC}
           />
           <PricingSection />
+          <FaqSection />
+          <CTASection />
         </main>
       </div>
 

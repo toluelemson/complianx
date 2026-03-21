@@ -12,6 +12,7 @@ type PricingPlan = {
   billing?: string;
   cta: string;
   href: string;
+  external?: boolean;
   featured?: boolean;
   sections: {
     title: string;
@@ -27,7 +28,7 @@ const PRICING_PLANS: PricingPlan[] = [
     suffix: 'per engagement',
     billing: 'Turnaround: 2-4 days',
     cta: 'Get Starter Audit',
-    href: '/contact',
+    href: '/submit-system',
     sections: [
       {
         title: 'Included',
@@ -46,7 +47,7 @@ const PRICING_PLANS: PricingPlan[] = [
     suffix: 'per engagement',
     billing: 'Most common engagement',
     cta: 'Talk About Professional',
-    href: '/contact',
+    href: '/submit-system',
     featured: true,
     sections: [
       {
@@ -67,7 +68,8 @@ const PRICING_PLANS: PricingPlan[] = [
     suffix: 'custom scope',
     billing: 'Talk to sales',
     cta: 'Book Enterprise Review',
-    href: '/contact',
+    href: 'https://calendly.com/neuraldocx',
+    external: true,
     sections: [
       {
         title: 'Included',
@@ -186,7 +188,13 @@ export function PricingSection() {
                         : 'bg-slate-200 text-slate-950 hover:bg-white'
                     }`}
                   >
-                    <Link to={plan.href}>{plan.cta}</Link>
+                    {plan.external ? (
+                      <a href={plan.href} target="_blank" rel="noreferrer">
+                        {plan.cta}
+                      </a>
+                    ) : (
+                      <Link to={plan.href}>{plan.cta}</Link>
+                    )}
                   </Button>
                 </div>
 

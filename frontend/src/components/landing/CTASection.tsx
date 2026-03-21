@@ -2,11 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-interface CTASectionProps {
-  onOpenTrial: () => void;
-}
-
-export function CTASection({ onOpenTrial }: CTASectionProps) {
+export function CTASection() {
   return (
     <section className="bg-slate-50 px-5 pb-20 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
@@ -26,16 +22,21 @@ export function CTASection({ onOpenTrial }: CTASectionProps) {
             </div>
             <div className="flex flex-wrap gap-3">
               <Button asChild size="lg" className="bg-sky-600 text-white hover:bg-sky-500">
-                <Link to="/signup?type=company">Get Started</Link>
+                <Link to="/submit-system">Submit your system</Link>
               </Button>
               <Button
-                type="button"
+                asChild
                 variant="outline"
                 size="lg"
-                onClick={onOpenTrial}
                 className="border-white/15 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white"
               >
-                Book Demo
+                <a
+                  href="https://calendly.com/neuraldocx"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  For enterprise, book a demo
+                </a>
               </Button>
             </div>
           </CardContent>
