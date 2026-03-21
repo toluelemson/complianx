@@ -29,6 +29,13 @@ export function Hero({ onOpenTrial }: HeroProps) {
           </p>
 
           <div className="animate-enter-up animation-delay-400 mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
+            <Button
+              asChild
+              size="lg"
+              className="w-full bg-slate-200 px-7 text-slate-950 transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white sm:w-auto"
+            >
+              <Link to="/eu-ai-act-checker">Run Compliance Check</Link>
+            </Button>
             <Button asChild size="lg" className="w-full bg-slate-200 px-7 text-slate-950 transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white sm:w-auto">
               <Link to="/signup?type=company">Get Started</Link>
             </Button>
@@ -41,15 +48,6 @@ export function Hero({ onOpenTrial }: HeroProps) {
             >
               Book Demo
             </Button>
-          </div>
-          <div className="animate-enter-up animation-delay-500 mt-5 text-sm text-slate-400">
-            Need a quick compliance check first?{' '}
-            <Link
-              to="/eu-ai-act-checker"
-              className="font-medium text-slate-200 transition-colors hover:text-white"
-            >
-              Try the public questionnaire
-            </Link>
           </div>
         </div>
       </div>

@@ -5,7 +5,7 @@ interface VideoSectionProps {
 
 export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
   return (
-    <section id="solutions" className="w-full pb-20">
+    <section id="solutions" className="hidden w-full pb-20 md:block">
       <div className="animate-enter-up w-full border-y border-white/10 bg-white/[0.03] shadow-[0_25px_80px_-35px_rgba(15,23,42,0.8)] backdrop-blur-xl">
         <div className="relative overflow-hidden bg-[#0f141a]">
           <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.12),_transparent_32%),linear-gradient(180deg,_rgba(15,20,26,0.24)_0%,_rgba(15,20,26,0.72)_100%)]" />
