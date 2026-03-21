@@ -25,6 +25,8 @@ import TemplateLibraryModal from '../components/project/TemplateLibraryModal';
 import { ReviewApprovalPanel } from '../components/project/ReviewApprovalPanel';
 import { WizardSidebar } from '../components/project/WizardSidebar';
 
+const monetizationEnabled = import.meta.env.VITE_MONETIZATION_ENABLED !== 'false';
+
 type SectionComment = {
   id: string;
   body: string;
@@ -547,17 +549,20 @@ export default function ProjectPage() {
     queryFn: () => api.get('/billing/usage').then((r) => r.data),
   });
   const docLimit =
-    planQuery.data?.limits?.docs ?? Number.MAX_SAFE_INTEGER;
+    !monetizationEnabled
+      ? Number.MAX_SAFE_INTEGER
+      : planQuery.data?.limits?.docs ?? Number.MAX_SAFE_INTEGER;
   const docsUsed = usageQuery.data?.docsGenerated ?? 0;
   const docsRemaining =
     docLimit === Number.MAX_SAFE_INTEGER
       ? Number.MAX_SAFE_INTEGER
       : Math.max(0, docLimit - docsUsed);
   const currentPlan = planQuery.data?.plan ?? 'FREE';
-  const isPaidPlan = currentPlan !== 'FREE';
-  const showReviewPaywall = !isPaidPlan;
+  const isPaidPlan = !monetizationEnabled || currentPlan !== 'FREE';
+  const showReviewPaywall = monetizationEnabled && !isPaidPlan;
 
   useEffect(() => {
+    if (!monetizationEnabled) return;
     if (!planQuery.data || !usageQuery.data) return;
     if (docLimit === Number.MAX_SAFE_INTEGER) return;
     if (docsRemaining <= 0) return;
@@ -589,12 +594,13 @@ export default function ProjectPage() {
       toast.error('Select at least one framework before generating');
       return;
     }
-    if (docLimit !== Number.MAX_SAFE_INTEGER && docsRemaining <= 0) {
+    if (monetizationEnabled && docLimit !== Number.MAX_SAFE_INTEGER && docsRemaining <= 0) {
       window.dispatchEvent(new Event('paywall'));
       toast.error('You have reached your document limit. Upgrade to generate more.');
       return;
     }
     if (
+      monetizationEnabled &&
       docLimit !== Number.MAX_SAFE_INTEGER &&
       selectedDocumentTypes.length > docsRemaining
     ) {
@@ -1190,7 +1196,7 @@ export default function ProjectPage() {
       toast.error('Only owners can send for review');
       return;
     }
-    if (!isPaidPlan) {
+    if (monetizationEnabled && !isPaidPlan) {
       window.dispatchEvent(new Event('paywall'));
       toast.error('Upgrade to request reviews and approvals.');
       return;
@@ -1215,7 +1221,7 @@ export default function ProjectPage() {
       toast.error('Only assigned reviewers or approvers can approve');
       return;
     }
-    if (!isPaidPlan) {
+    if (monetizationEnabled && !isPaidPlan) {
       window.dispatchEvent(new Event('paywall'));
       toast.error('Upgrade to approve projects.');
       return;
@@ -1244,7 +1250,7 @@ export default function ProjectPage() {
       toast.error('Only assigned reviewers or approvers can request changes');
       return;
     }
-    if (!isPaidPlan) {
+    if (monetizationEnabled && !isPaidPlan) {
       window.dispatchEvent(new Event('paywall'));
       toast.error('Upgrade to request changes and run approvals.');
       return;

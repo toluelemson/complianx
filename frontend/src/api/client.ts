@@ -3,6 +3,7 @@ import axios from 'axios';
 const DEFAULT_API_BASE_URL = 'http://localhost:3000';
 const envBaseURL = import.meta.env.VITE_API_URL;
 const baseURL = envBaseURL ?? DEFAULT_API_BASE_URL;
+const monetizationEnabled = import.meta.env.VITE_MONETIZATION_ENABLED !== 'false';
 
 console.log(
   `[api/client] Using API base URL (${envBaseURL ? 'VITE_API_URL' : 'fallback'}):`,
@@ -36,6 +37,9 @@ export default api;
 api.interceptors.response.use(
   (res) => res,
   (error) => {
+    if (!monetizationEnabled) {
+      return Promise.reject(error);
+    }
     const data = error?.response?.data;
     if (data && (data.code === 'PAYWALL' || data?.message?.code === 'PAYWALL')) {
       try {

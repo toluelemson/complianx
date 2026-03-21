@@ -7,7 +7,18 @@ type UsageType = 'docgen' | 'trust' | 'review';
 export class MonetizationService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private isEnabled() {
+    return process.env.MONETIZATION_ENABLED !== 'false';
+  }
+
   getLimits(plan: string | null | undefined) {
+    if (!this.isEnabled()) {
+      return {
+        docs: Number.MAX_SAFE_INTEGER,
+        trust: Number.MAX_SAFE_INTEGER,
+        reviews: Number.MAX_SAFE_INTEGER,
+      };
+    }
     const freeDocs = parseInt(process.env.FREE_DOCS_PER_MONTH || '3', 10);
     const freeTrust = parseInt(process.env.FREE_ANALYSES_PER_MONTH || '10', 10);
     const freeReviews = parseInt(process.env.FREE_REVIEWS_PER_MONTH || '25', 10);
@@ -61,6 +72,9 @@ export class MonetizationService {
   }
 
   async checkAndConsumeForProject(projectId: string, type: UsageType, amount = 1) {
+    if (!this.isEnabled()) {
+      return;
+    }
     const { id: companyId, plan } = await this.getCompanyForProject(projectId);
     const normalizedPlan = (plan || 'FREE').toUpperCase();
     if (type === 'review' && normalizedPlan === 'FREE') {
