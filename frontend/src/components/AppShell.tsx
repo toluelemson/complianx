@@ -211,7 +211,7 @@ export function AppShell({ title, children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_24%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
             <Link
               to="/"
@@ -313,7 +313,7 @@ export function AppShell({ title, children }: AppShellProps) {
         </div>
         {mobileMenuOpen && (
           <div className="border-t border-slate-200/80 bg-white/95 backdrop-blur-xl lg:hidden">
-            <Card className="mx-auto max-w-6xl space-y-4 rounded-none border-0 shadow-none">
+            <Card className="mx-auto max-w-7xl space-y-4 rounded-none border-0 shadow-none">
               <CardContent className="space-y-4 px-4 py-4 sm:px-6">
               <div className="space-y-4">{renderMobileNav()}</div>
               <div className="flex flex-col gap-2">
@@ -372,10 +372,10 @@ export function AppShell({ title, children }: AppShellProps) {
           </div>
         )}
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
         <BillingModal isOpen={billingOpen} onClose={() => setBillingOpen(false)} />
         {title && (
-          <div className="mb-6 rounded-[1.5rem] border border-slate-200/90 bg-white/90 px-6 py-5 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)] backdrop-blur">
+          <div className="mb-6 rounded-[1.75rem] border border-slate-200/90 bg-white/92 px-6 py-5 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.25)] backdrop-blur">
             <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">{title}</h1>
           </div>
         )}

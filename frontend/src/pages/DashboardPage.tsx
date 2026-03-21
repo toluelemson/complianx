@@ -123,13 +123,13 @@ export default function DashboardPage() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setModalOpen(true)}
-            className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500"
+            className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-black"
           >
             New AI System
           </button>
           <Link
             to="/company"
-            className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Manage organization
           </Link>
@@ -138,7 +138,7 @@ export default function DashboardPage() {
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <button
           onClick={() => setModalOpen(true)}
-          className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-left text-sm font-semibold text-slate-700 hover:border-sky-200 hover:text-sky-700"
+          className="rounded-[1.5rem] border border-dashed border-slate-200 bg-white/92 p-4 text-left text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)] transition hover:border-slate-300 hover:text-slate-900"
         >
           + Create a new AI system
           <p className="mt-1 text-xs font-normal text-slate-500">
@@ -147,7 +147,7 @@ export default function DashboardPage() {
         </button>
         <Link
           to="/company"
-          className="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 hover:border-sky-200 hover:text-sky-700"
+          className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)] transition hover:border-slate-300 hover:text-slate-900"
         >
           Review team access
           <p className="mt-1 text-xs font-normal text-slate-500">
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event('paywall'))}
-          className="rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm font-semibold text-slate-700 hover:border-sky-200 hover:text-sky-700"
+          className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 text-left text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)] transition hover:border-slate-300 hover:text-slate-900"
         >
           Update billing plan
           <p className="mt-1 text-xs font-normal text-slate-500">
@@ -166,7 +166,7 @@ export default function DashboardPage() {
         </button>
       </div>
       <div className="mt-8 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+        <div className="rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
           <p className="text-sm font-semibold text-slate-700">
             Portfolio readiness
           </p>
@@ -183,7 +183,7 @@ export default function DashboardPage() {
             />
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+        <div className="rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700">
               Recent activity
@@ -222,7 +222,7 @@ export default function DashboardPage() {
         </div>
       </div>
       {assignedProjects.length ? (
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+        <div className="mt-6 rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700">Assigned reviews</p>
             <span className="text-xs text-slate-400">
@@ -252,7 +252,7 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : null}
-      <div className="mt-8 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
+      <div className="mt-8 hidden overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/92 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)] md:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
@@ -340,7 +340,7 @@ export default function DashboardPage() {
             const readiness = readinessByProject.get(project.id) ?? 0;
             const readinessBadge = readinessBadgeClass(readiness);
             return (
-              <div key={project.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div key={project.id} className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)]">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-base font-semibold text-slate-900">{project.name}</p>
@@ -387,7 +387,7 @@ export default function DashboardPage() {
             );
           })
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+          <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-white/92 p-6 text-center text-sm text-slate-500 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)]">
             {projectsQuery.isLoading
               ? 'Loading projects...'
               : 'No projects yet. Create one to get started.'}
