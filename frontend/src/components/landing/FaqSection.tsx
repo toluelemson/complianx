@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { CircleHelp, ChevronDown } from 'lucide-react';
 
 const FAQ_ITEMS = [
   {
@@ -88,6 +88,12 @@ export function FaqSection() {
     <section className="bg-[#f8fafc] px-5 py-28 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-3xl">
         <div className="text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.14)]">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-600">
+              <CircleHelp className="h-3.5 w-3.5" />
+            </span>
+            <span>FAQ</span>
+          </div>
           <h2 className="animate-enter-up text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl md:text-6xl">
             Frequently Asked Questions
           </h2>

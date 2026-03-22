@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Zap } from 'lucide-react';
+import { BadgeEuro, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -143,15 +143,16 @@ export function PricingSection() {
             inView ? 'animate-enter-up' : 'translate-y-6 opacity-0'
           }`}
         >
-          <h2 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-            Service plans for every stage of AI compliance
-          </h2>
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-slate-200">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-300">
-              <Zap className="h-3.5 w-3.5" />
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/15 text-amber-300">
+              <BadgeEuro className="h-3.5 w-3.5" />
             </span>
-            <span>Faster first delivery</span>
+            <span>PRICING</span>
           </div>
+          <h2 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+            Choose the right plan for you
+          </h2>
+
         </div>
 
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
