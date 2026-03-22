@@ -16,12 +16,10 @@ export function Hero() {
             <span>Built for regulated AI teams</span>
           </Badge>
           <h1 className="animate-enter-up animation-delay-200 mt-6 max-w-5xl text-4xl font-semibold tracking-tight text-white [font-family:'SF_Pro_Display','SF_Pro_Text','__geist_e6b681',Inter,system-ui,sans-serif] sm:text-6xl lg:text-[4rem] lg:leading-[0.98]">
-            AI Compliance Documentation, Prepared in 48 Hours
+            Stop spending hours writing AI documentation
           </h1>
           <p className="animate-enter-up animation-delay-300 mx-auto mt-6 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
-            NeuralDocx helps regulated AI teams prepare audit-ready
-            documentation, governance records, and risk evidence with first
-            delivery in as little as 48 hours.
+            Fill a form about your AI and get a compliance-ready document in 48 hours.
           </p>
 
           <div className="animate-enter-up animation-delay-400 mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
