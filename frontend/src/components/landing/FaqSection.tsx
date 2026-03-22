@@ -85,7 +85,7 @@ export function FaqSection() {
   const visibleItems = showAll ? FAQ_ITEMS : FAQ_ITEMS.slice(0, 5);
 
   return (
-    <section className="bg-[#f8fafc] px-5 py-28 sm:px-8 lg:px-10">
+    <section data-nav-theme="light" className="bg-[#f8fafc] px-5 py-28 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-3xl">
         <div className="text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.14)]">

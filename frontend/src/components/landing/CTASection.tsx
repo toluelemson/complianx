@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export function CTASection() {
   return (
-    <section className="bg-slate-50 px-5 pb-20 text-slate-950 sm:px-8 lg:px-10">
+    <section data-nav-theme="light" className="bg-slate-50 px-5 pb-20 text-slate-950 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
         <Card className="rounded-[2rem] border-[#0f172a] bg-[#0f172a] text-white shadow-[0_30px_80px_-45px_rgba(15,23,42,0.6)]">
           <CardContent className="flex flex-col gap-8 p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">

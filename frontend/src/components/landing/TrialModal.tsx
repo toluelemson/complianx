@@ -50,13 +50,20 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
         <CardHeader className="border-b border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#eef3ff_100%)] p-5 pb-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="max-w-lg">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#2D2E8F]/10 bg-[#2D2E8F]/6 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#5c6f98]">
+              <div className="inline-flex items-center gap-3.5 rounded-[1.1rem] border border-[#2D2E8F]/10 bg-[#2D2E8F]/6 px-3.5 py-2.5 text-left text-[#5c6f98] shadow-[0_18px_40px_-32px_rgba(45,46,143,0.35)]">
                 <img
                   src="/neuraldocx-logo.svg"
                   alt="NeuralDocx"
-                  className="h-4 w-4 rounded-sm"
+                  className="h-12 w-12 rounded-[1rem]"
                 />
-                NeuralDocx
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#6d7ea5]">
+                    NeuralDocx
+                  </p>
+                  <p className="text-sm font-semibold tracking-tight text-slate-900">
+                    AI Governance Studio
+                  </p>
+                </div>
               </div>
               <CardTitle className="mt-4 text-3xl leading-[0.98] tracking-tight text-slate-950 sm:text-[2.6rem]">
                 Start with NeuralDocx

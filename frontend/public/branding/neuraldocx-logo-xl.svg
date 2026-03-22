@@ -1,0 +1,69 @@
+<svg
+  viewBox="0 0 512 512"
+  xmlns="http://www.w3.org/2000/svg"
+  fill="none"
+>
+  <defs>
+    <linearGradient id="ndx-shell-xl" x1="56" y1="40" x2="448" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111F" />
+      <stop offset="0.52" stop-color="#13233A" />
+      <stop offset="1" stop-color="#0D1729" />
+    </linearGradient>
+    <linearGradient id="ndx-core-xl" x1="124" y1="104" x2="396" y2="396" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FBFF" />
+      <stop offset="1" stop-color="#DBE7F7" />
+    </linearGradient>
+    <linearGradient id="ndx-signal-xl" x1="132" y1="344" x2="396" y2="164" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8" />
+      <stop offset="0.5" stop-color="#818CF8" />
+      <stop offset="1" stop-color="#22C55E" />
+    </linearGradient>
+    <linearGradient id="ndx-rail-xl" x1="144" y1="368" x2="380" y2="152" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8AB4FF" stop-opacity="0.2" />
+      <stop offset="1" stop-color="#E2EEFF" stop-opacity="0.85" />
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="24" width="464" height="464" rx="120" fill="url(#ndx-shell-xl)" />
+  <rect x="48" y="48" width="416" height="416" rx="96" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="8" />
+
+  <path
+    d="M132 144C132 130.745 142.745 120 156 120H282L380 218V348C380 361.255 369.255 372 356 372H156C142.745 372 132 361.255 132 348V144Z"
+    fill="url(#ndx-core-xl)"
+  />
+  <path d="M282 120V194C282 202.837 289.163 210 298 210H380" fill="#C8D8EC" />
+
+  <rect x="176" y="168" width="84" height="20" rx="10" fill="#A2B4C9" />
+
+  <path
+    d="M176 228H216L238 206L260 228H282L306 204L330 228H356"
+    stroke="url(#ndx-rail-xl)"
+    stroke-width="24"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M176 228H216L238 206L260 228H282L306 204L330 228H356"
+    stroke="url(#ndx-signal-xl)"
+    stroke-width="12.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <circle cx="238" cy="206" r="14" fill="#0F172A" />
+  <circle cx="238" cy="206" r="8" fill="#38BDF8" />
+  <circle cx="306" cy="204" r="14" fill="#0F172A" />
+  <circle cx="306" cy="204" r="8" fill="#818CF8" />
+  <circle cx="356" cy="228" r="14" fill="#0F172A" />
+  <circle cx="356" cy="228" r="8" fill="#22C55E" />
+
+  <rect x="176" y="268" width="96" height="20" rx="10" fill="#C0CEDC" />
+  <rect x="176" y="308" width="64" height="20" rx="10" fill="#D3DEEA" />
+
+  <path
+    d="M338 290C338 277.85 347.85 268 360 268H382C394.15 268 404 277.85 404 290V316.465C404 338.176 389.948 357.406 369.229 364.19L360 367.211L350.771 364.19C330.052 357.406 316 338.176 316 316.465V290C316 277.85 325.85 268 338 268Z"
+    fill="#0F172A"
+    fill-opacity="0.92"
+  />
+  <path d="M342 316L356 330L382 302" stroke="#F8FAFC" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
