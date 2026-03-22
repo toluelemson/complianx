@@ -154,16 +154,15 @@ export default function DashboardPage() {
             Invite reviewers or adjust member permissions.
           </p>
         </Link>
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new Event('paywall'))}
-          className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 text-left text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)] transition hover:border-slate-300 hover:text-slate-900"
+        <Link
+          to="/demo/eu-ai-act-report"
+          className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)] transition hover:border-slate-300 hover:text-slate-900"
         >
-          Update billing plan
+          Open demo tool
           <p className="mt-1 text-xs font-normal text-slate-500">
-            Open the billing modal to manage your subscription.
+            Launch the editable EU AI Act report demo for live calls.
           </p>
-        </button>
+        </Link>
       </div>
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         <div className="rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">

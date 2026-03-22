@@ -42,6 +42,14 @@ export function SiteHeader() {
           >
             Compliance check
           </Link>
+          <a
+            href="https://calendly.com/neuraldocx"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-slate-900 transition-colors hover:text-black"
+          >
+            Live demo
+          </a>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -103,6 +111,15 @@ export function SiteHeader() {
             >
               Compliance check
             </Link>
+            <a
+              href="https://calendly.com/neuraldocx"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+            >
+              Live demo
+            </a>
             <Link
               to="/login"
               onClick={() => setMobileMenuOpen(false)}

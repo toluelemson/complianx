@@ -56,7 +56,7 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
             ))}
           </div>
           <div className="animate-enter-up animation-delay-300 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="bg-slate-900 text-white transition-transform duration-300 hover:-translate-y-0.5 hover:bg-slate-800">
+            <Button asChild size="lg" className="bg-white text-black transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#F3F6FF]">
               <Link to="/submit-system">Submit your system</Link>
             </Button>
             <Button

@@ -98,6 +98,15 @@ export type TrackableStepSummary = {
   status: string;
 };
 
+type GenerationReadiness = {
+  score: number;
+  status: 'ready' | 'partial' | 'insufficient';
+  generationMode: 'full' | 'draft' | 'gap_only';
+  missingCriticalFields: string[];
+  weakSections: string[];
+  summary: string;
+};
+
 function hasFieldValue(value: unknown) {
   if (value === null || value === undefined) {
     return false;
@@ -201,6 +210,16 @@ export default function ProjectPage() {
     enabled: Boolean(projectId && activeCompanyId),
     queryFn: () =>
       api.get(`/projects/${projectId}/documents`).then((res) => res.data),
+  });
+  const readinessQuery = useQuery<GenerationReadiness>({
+    queryKey: ['generationReadiness', projectId, activeCompanyId],
+    enabled: Boolean(
+      projectId &&
+        activeCompanyId &&
+        projectQuery.data?.viewerRole === 'OWNER',
+    ),
+    queryFn: () =>
+      api.get(`/projects/${projectId}/generate/readiness`).then((res) => res.data),
   });
   const templatesQuery = useQuery({
     queryKey: ['templates', activeStepId],
@@ -559,7 +578,6 @@ export default function ProjectPage() {
       : Math.max(0, docLimit - docsUsed);
   const currentPlan = planQuery.data?.plan ?? 'FREE';
   const isPaidPlan = !monetizationEnabled || currentPlan !== 'FREE';
-  const showReviewPaywall = monetizationEnabled && !isPaidPlan;
 
   useEffect(() => {
     if (!monetizationEnabled) return;
@@ -592,6 +610,10 @@ export default function ProjectPage() {
     }
     if (!selectedDocumentTypes.length) {
       toast.error('Select at least one framework before generating');
+      return;
+    }
+    if (readinessQuery.data?.status === 'insufficient') {
+      toast.error('Add the missing project information before generating documentation.');
       return;
     }
     if (monetizationEnabled && docLimit !== Number.MAX_SAFE_INTEGER && docsRemaining <= 0) {
@@ -777,7 +799,14 @@ export default function ProjectPage() {
       },
     );
     if (!response.ok) {
-      throw new Error('Request failed');
+      let message = 'Unable to download document';
+      try {
+        const data = await response.json();
+        message = data?.message?.message ?? data?.message ?? message;
+      } catch {
+        // Ignore JSON parsing failures and keep fallback message.
+      }
+      throw new Error(message);
     }
     return response.blob();
   };
@@ -797,7 +826,9 @@ export default function ProjectPage() {
       toast.success('Download started');
     } catch (error) {
       console.error('Unable to download document', error);
-      toast.error('Unable to download document');
+      toast.error(
+        error instanceof Error ? error.message : 'Unable to download document',
+      );
     } finally {
       setDownloadingId(null);
     }
@@ -816,7 +847,7 @@ export default function ProjectPage() {
       setPreviewUrl(url);
     } catch (error) {
       console.error('Preview error', error);
-      toast.error('Unable to load preview');
+      toast.error(error instanceof Error ? error.message : 'Unable to load preview');
       setPreviewDoc(null);
     } finally {
       setPreviewLoading(false);
@@ -2390,12 +2421,59 @@ export default function ProjectPage() {
                     })}
                   </div>
                 </div>
+                {readinessQuery.data ? (
+                  <div
+                    className={`rounded-2xl border p-4 ${
+                      readinessQuery.data.status === 'ready'
+                        ? 'border-emerald-200 bg-emerald-50'
+                        : readinessQuery.data.status === 'partial'
+                        ? 'border-amber-200 bg-amber-50'
+                        : 'border-rose-200 bg-rose-50'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Documentation readiness: {readinessQuery.data.score}%
+                        </p>
+                        <p className="mt-1 text-sm text-slate-700">
+                          {readinessQuery.data.summary}
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-current/10 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+                        {readinessQuery.data.status}
+                      </span>
+                    </div>
+                    {readinessQuery.data.missingCriticalFields.length ? (
+                      <p className="mt-3 text-xs text-slate-600">
+                        Missing critical fields:{' '}
+                        {readinessQuery.data.missingCriticalFields.join(', ')}
+                      </p>
+                    ) : null}
+                    {readinessQuery.data.weakSections.length ? (
+                      <p className="mt-2 text-xs text-slate-600">
+                        Weak sections: {readinessQuery.data.weakSections.join(', ')}
+                      </p>
+                    ) : null}
+                    {readinessQuery.data.status === 'partial' ? (
+                      <p className="mt-2 text-xs font-medium text-amber-700">
+                        Generation is allowed, but the output will be treated as a draft with a readiness notice.
+                      </p>
+                    ) : null}
+                    {readinessQuery.data.status === 'insufficient' ? (
+                      <p className="mt-2 text-xs font-medium text-rose-700">
+                        Full document generation is blocked until the missing critical fields are filled in.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 <button
                   onClick={handleGenerateClick}
                   disabled={
                     !isOwner ||
                     generateMutation.isPending ||
-                    !selectedDocumentTypes.length
+                    !selectedDocumentTypes.length ||
+                    readinessQuery.data?.status === 'insufficient'
                   }
                   className="rounded-md bg-emerald-600 px-5 py-3 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
                 >
@@ -2411,8 +2489,10 @@ export default function ProjectPage() {
                 )}
                 {generateMutation.isError && (
                   <p className="text-sm text-rose-600">
-                    Unable to generate documents. Ensure each section has been
-                    saved and try again.
+                    {(
+                      generateMutation.error as any
+                    )?.response?.data?.message?.message ??
+                      'Unable to generate documents. Ensure each section has been saved and try again.'}
                   </p>
                 )}
                 {planQuery.data && usageQuery.data && docLimit !== Number.MAX_SAFE_INTEGER && (

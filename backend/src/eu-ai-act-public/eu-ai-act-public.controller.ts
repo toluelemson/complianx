@@ -12,6 +12,7 @@ import { CreatePublicSessionDto } from './dto/create-public-session.dto';
 import { SavePublicAnswerDto } from './dto/save-public-answer.dto';
 import { FinalizePublicSessionDto } from './dto/finalize-public-session.dto';
 import { QuickAssessDto } from './dto/quick-assess.dto';
+import { GenerateDemoReportDto } from './dto/generate-demo-report.dto';
 
 @Controller('public/eu-ai-act')
 export class EuAiActPublicController {
@@ -25,6 +26,11 @@ export class EuAiActPublicController {
   @Post('assess')
   quickAssess(@Body() dto: QuickAssessDto) {
     return this.euAiActPublicService.quickAssess(dto);
+  }
+
+  @Post('demo-report')
+  generateDemoReport(@Body() dto: GenerateDemoReportDto) {
+    return this.euAiActPublicService.generateDemoReport(dto);
   }
 
   @Get('sessions/:sessionId')

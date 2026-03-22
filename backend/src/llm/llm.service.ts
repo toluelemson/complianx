@@ -9,6 +9,55 @@ type GenerationMode =
   | 'section_helper'
   | 'nist_rmf';
 
+type TechnicalOverviewSection = {
+  executiveSummary: string;
+  scope: string[];
+  methodology: string[];
+  limitations: string[];
+  objective: string;
+  coreFunctionality: string;
+  inputDataSources: string[];
+  outputDecisions: string[];
+  affectedStakeholders: string[];
+  componentSummary: {
+    inputs: string;
+    processing: string;
+    outputs: string;
+    stakeholders: string;
+  };
+};
+
+type TechnicalClassificationSection = {
+  riskLevel: string;
+  useCaseCategory: string;
+  potentialHarm: string;
+  regulatoryMapping: string;
+  justification: string;
+};
+
+type TechnicalBulletSection = {
+  items: string[];
+};
+
+type TechnicalClosingSection = {
+  conclusion: string;
+  appendices: string[];
+};
+
+type TechnicalDocumentationBundle = {
+  dataGovernance: string[];
+  modelDevelopment: string[];
+  riskManagement: string[];
+  humanOversight: string[];
+  transparency: string[];
+  technicalRobustness: string[];
+  monitoring: string[];
+  complianceAudit: string[];
+  ethics: string[];
+  conclusion: string;
+  appendices: string[];
+};
+
 @Injectable()
 export class LlmService {
   private readonly client: AxiosInstance | null;
@@ -43,26 +92,145 @@ export class LlmService {
       this.logger.warn(`LLM disabled; returning fallback text for ${mode}`);
       return 'LLM suggestions are disabled in this environment.';
     }
-    const prompt = this.buildPrompt(mode, mergedContent);
     try {
-      const response = await this.client.post('/v1/chat/completions', {
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an AI compliance expert that creates thorough yet concise documentation.',
-          },
-          { role: 'user', content: prompt },
-        ],
-      });
-      return (
-        response.data?.choices?.[0]?.message?.content ?? 'No content generated.'
+      if (mode === 'technical') {
+        return await this.generateStructuredTechnicalReport(mergedContent);
+      }
+      const prompt = this.buildPrompt(mode, mergedContent);
+      return await this.requestText(
+        'You are an AI compliance expert that creates thorough yet concise documentation.',
+        prompt,
       );
     } catch (error) {
       this.logger.error(`LLM generation failed for ${mode}`, error as any);
       throw error;
     }
+  }
+
+  async generateStructuredTechnicalReport(
+    mergedContent: Record<string, any>,
+  ): Promise<string> {
+    const systemPrompt = this.technicalSystemPrompt();
+    const [overview, classification, dataGovernance, modelDevelopment] =
+      await Promise.all([
+        this.requestJson<TechnicalOverviewSection>(
+          systemPrompt,
+          this.buildOverviewPrompt(mergedContent),
+        ),
+        this.requestJson<TechnicalClassificationSection>(
+          systemPrompt,
+          this.buildClassificationPrompt(mergedContent),
+        ),
+        this.requestJson<TechnicalBulletSection>(
+          systemPrompt,
+          this.buildSectionPrompt(
+            mergedContent,
+            'Data Governance',
+            'Describe data sources, lineage, quality controls, privacy safeguards, retention, access controls, documentation evidence, and governance decisions relevant to EU AI Act compliance.',
+          ),
+        ),
+        this.requestJson<TechnicalBulletSection>(
+          systemPrompt,
+          this.buildSectionPrompt(
+            mergedContent,
+            'Model Development',
+            'Describe model design choices, training and validation workflow, feature engineering, performance evidence, versioning, release controls, testing discipline, and documentation artifacts that support an audit-ready technical file.',
+          ),
+        ),
+      ]);
+
+    const [
+      riskManagement,
+      humanOversight,
+      transparency,
+      technicalRobustness,
+      monitoring,
+      complianceAudit,
+      ethics,
+      closing,
+    ] = await Promise.all([
+      this.requestJson<TechnicalBulletSection>(
+        systemPrompt,
+        this.buildSectionPrompt(
+          mergedContent,
+          'Risk Management',
+          'Describe identified risks, risk treatment measures, residual-risk considerations, escalation logic, review cadence, control ownership, and the evidence needed to show a functioning risk management system.',
+        ),
+      ),
+      this.requestJson<TechnicalBulletSection>(
+        systemPrompt,
+        this.buildSectionPrompt(
+          mergedContent,
+          'Human Oversight',
+          'Describe oversight checkpoints, human review triggers, override rights, escalation procedures, role ownership, operator guidance, and documentation that demonstrates meaningful human oversight.',
+        ),
+      ),
+      this.requestJson<TechnicalBulletSection>(
+        systemPrompt,
+        this.buildSectionPrompt(
+          mergedContent,
+          'Transparency',
+          'Describe disclosures, user-facing explanations, internal transparency records, model limitations communication, stakeholder information flows, and explainability practices relevant to the system.',
+        ),
+      ),
+      this.requestJson<TechnicalBulletSection>(
+        systemPrompt,
+        this.buildSectionPrompt(
+          mergedContent,
+          'Technical Robustness',
+          'Describe accuracy, robustness, resilience, fallback behavior, cybersecurity, failure handling, testing thresholds, and control evidence that support dependable operation.',
+        ),
+      ),
+      this.requestJson<TechnicalBulletSection>(
+        systemPrompt,
+        this.buildSectionPrompt(
+          mergedContent,
+          'Monitoring',
+          'Describe post-deployment monitoring, drift detection, incident management, periodic review, performance surveillance, retraining triggers, and recordkeeping required to keep the system under control.',
+        ),
+      ),
+      this.requestJson<TechnicalBulletSection>(
+        systemPrompt,
+        this.buildSectionPrompt(
+          mergedContent,
+          'Compliance & Audit',
+          'Describe technical documentation readiness, conformity-readiness steps, approval logs, audit trail expectations, control evidence, governance records, board or committee reporting, and regulatory support materials.',
+        ),
+      ),
+      this.requestJson<TechnicalBulletSection>(
+        systemPrompt,
+        this.buildSectionPrompt(
+          mergedContent,
+          'Ethics',
+          'Describe fairness considerations, stakeholder impact, bias assessment, proportionality, responsible-use expectations, challenge mechanisms, and governance decisions supporting ethical deployment.',
+        ),
+      ),
+      this.requestJson<TechnicalClosingSection>(
+        systemPrompt,
+        this.buildClosingPrompt(mergedContent),
+      ),
+    ]);
+
+    const documentation = {
+      dataGovernance: dataGovernance.items,
+      modelDevelopment: modelDevelopment.items,
+      riskManagement: riskManagement.items,
+      humanOversight: humanOversight.items,
+      transparency: transparency.items,
+      technicalRobustness: technicalRobustness.items,
+      monitoring: monitoring.items,
+      complianceAudit: complianceAudit.items,
+      ethics: ethics.items,
+      conclusion: closing.conclusion,
+      appendices: closing.appendices,
+    };
+
+    return this.assembleTechnicalReportMarkdown(
+      mergedContent,
+      overview,
+      classification,
+      documentation,
+    );
   }
 
   private buildPrompt(
@@ -255,4 +423,368 @@ Now generate the full report.`;
         return `Generate an AI risk assessment describing risks, severity, likelihood, and mitigations in markdown table form. Focus on the risk information contained here:\n${json}`;
     }
   }
+
+  private technicalSystemPrompt() {
+    return 'You are a Senior AI Governance & Regulatory Compliance Consultant at a Big 4 firm. Follow an internal workflow of PLAN, ANALYZE, EXECUTE, REVIEW, REFINE, and FINAL OUTPUT, but return only the final structured output. Write like a human expert. Be specific, audit-defensible, and strictly grounded in the provided project JSON. The deliverable should feel like a substantial consulting-grade EU AI Act technical file rather than a short memo. If a fact is missing, return "Not provided" rather than inventing details.';
+  }
+
+  private buildOverviewPrompt(mergedContent: Record<string, any>) {
+    return `Using only the JSON below, produce the first report sections as strict JSON.
+
+Return exactly this shape:
+{
+  "executiveSummary": "max 200 words",
+  "scope": ["..."],
+  "methodology": ["..."],
+  "limitations": ["..."],
+  "objective": "...",
+  "coreFunctionality": "...",
+  "inputDataSources": ["..."],
+  "outputDecisions": ["..."],
+  "affectedStakeholders": ["..."],
+  "componentSummary": {
+    "inputs": "...",
+    "processing": "...",
+    "outputs": "...",
+    "stakeholders": "..."
+  }
+}
+
+Rules:
+- Return valid JSON only
+- No markdown
+- The content should support a long-form technical report, not a one-page summary
+- executiveSummary should be approximately 220-320 words
+- Provide 5-8 items each for scope, methodology, and limitations where support exists
+- inputDataSources, outputDecisions, and affectedStakeholders should each contain at least 4-8 specific items where support exists
+- Keep each bullet business-focused and audit-ready
+- Use "Not provided" for missing facts
+
+PROJECT DATA JSON:
+${JSON.stringify(mergedContent, null, 2)}`;
+  }
+
+  private buildClassificationPrompt(mergedContent: Record<string, any>) {
+    return `Using only the JSON below, assess the EU AI Act risk position and return strict JSON.
+
+Return exactly this shape:
+{
+  "riskLevel": "Low | High | Prohibited | Not provided",
+  "useCaseCategory": "...",
+  "potentialHarm": "...",
+  "regulatoryMapping": "...",
+  "justification": "short executive justification"
+}
+
+Rules:
+- Return valid JSON only
+- No markdown
+- Use cautious language when information is incomplete
+- justification should be a substantive 250-450 word regulatory rationale suitable for a consulting report
+- make the classification useful for regulators, internal audit, and model risk reviewers
+- Use "Not provided" if the data is insufficient
+
+PROJECT DATA JSON:
+${JSON.stringify(mergedContent, null, 2)}`;
+  }
+
+  private buildSectionPrompt(
+    mergedContent: Record<string, any>,
+    sectionTitle: string,
+    focus: string,
+  ) {
+    return `Using only the structured input below, generate the "${sectionTitle}" section of a full EU AI Act technical documentation package as strict JSON.
+
+Return exactly this shape:
+{
+  "items": ["..."]
+}
+
+Rules:
+- Return valid JSON only
+- No markdown
+- This must support a substantial 30-40 page technical documentation package, not a short assessment
+- Return 8-14 dense, audit-ready bullets where the data supports that level of detail
+- Each bullet should typically be 20-60 words, concrete, and implementation-oriented
+- Cover policy, process, controls, evidence, ownership, lifecycle, and audit-readiness where relevant
+- Use "Not provided" where necessary
+- Write in a formal consulting style suitable for regulators, internal audit, and board-level stakeholders
+- Avoid generic AI explanations
+- Focus specifically on: ${focus}
+
+PROJECT DATA JSON:
+${JSON.stringify(mergedContent, null, 2)}`;
+  }
+
+  private buildClosingPrompt(mergedContent: Record<string, any>) {
+    return `Using only the structured input below, produce the conclusion and appendices for a full EU AI Act technical documentation package as strict JSON.
+
+Return exactly this shape:
+{
+  "conclusion": "...",
+  "appendices": ["..."]
+}
+
+Rules:
+- Return valid JSON only
+- No markdown
+- conclusion should be a substantive 180-320 word close covering maturity, urgency, residual exposure, and recommended next action
+- appendices should contain 10-16 concrete appendix entries or schedules where the data supports them
+- Keep the content audit-ready and consulting-grade
+- Use "Not provided" where necessary
+
+PROJECT DATA JSON:
+${JSON.stringify(mergedContent, null, 2)}`;
+  }
+
+  private async requestText(system: string, user: string): Promise<string> {
+    const response = await this.client!.post('/v1/chat/completions', {
+      model: this.model,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    });
+    return response.data?.choices?.[0]?.message?.content ?? 'No content generated.';
+  }
+
+  private async requestJson<T>(system: string, user: string): Promise<T> {
+    const content = await this.requestText(system, user);
+    return this.parseJsonResponse<T>(content);
+  }
+
+  private parseJsonResponse<T>(content: string): T {
+    const cleaned = content.trim();
+    const fencedMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const jsonCandidate = fencedMatch?.[1]?.trim() ?? cleaned;
+    try {
+      return JSON.parse(jsonCandidate) as T;
+    } catch (error) {
+      this.logger.error('Failed to parse LLM JSON response', error as any);
+      this.logger.error(`Raw LLM response: ${content}`);
+      throw error;
+    }
+  }
+
+  private assembleTechnicalReportMarkdown(
+    mergedContent: Record<string, any>,
+    overview: TechnicalOverviewSection,
+    classification: TechnicalClassificationSection,
+    documentation: TechnicalDocumentationBundle,
+  ): string {
+    const companyName = this.pickValue(
+      mergedContent,
+      ['company.name', 'companyName', 'company.name.value', 'organization.name'],
+      'Not provided',
+    );
+    const systemName = this.pickValue(
+      mergedContent,
+      ['system_name', 'system.name', 'project.name', 'aiSystemName'],
+      'Not provided',
+    );
+    const reportDate = new Date().toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const lines: string[] = [
+      '# 1. Executive Summary',
+      '',
+      overview.executiveSummary || 'Not provided',
+      '',
+      '# 2. System Overview',
+      '',
+      `- **Company:** ${companyName}`,
+      `- **AI System:** ${systemName}`,
+      `- **Date:** ${reportDate}`,
+      `- **Objective:** ${overview.objective || 'Not provided'}`,
+      `- **Core Functionality:** ${overview.coreFunctionality || 'Not provided'}`,
+      `- **Input Data Sources:** ${this.joinOrFallback(overview.inputDataSources)}`,
+      `- **Output Decisions:** ${this.joinOrFallback(overview.outputDecisions)}`,
+      `- **Affected Stakeholders:** ${this.joinOrFallback(overview.affectedStakeholders)}`,
+      '',
+      '| Component | Description |',
+      '|----------|------------|',
+      `| Inputs | ${overview.componentSummary?.inputs || 'Not provided'} |`,
+      `| Processing | ${overview.componentSummary?.processing || 'Not provided'} |`,
+      `| Outputs | ${overview.componentSummary?.outputs || 'Not provided'} |`,
+      `| Stakeholders | ${overview.componentSummary?.stakeholders || 'Not provided'} |`,
+      '',
+      '## Scope of Assessment',
+      ...this.toBullets(overview.scope),
+      '',
+      '## Methodology',
+      ...this.toBullets(overview.methodology),
+      '',
+      '## Limitations',
+      ...this.toBullets(overview.limitations),
+      '',
+      '# 3. AI Classification',
+      '',
+      '| Category | Assessment |',
+      '|----------|-----------|',
+      `| Risk Level | ${classification.riskLevel || 'Not provided'} |`,
+      `| Use Case Category | ${classification.useCaseCategory || 'Not provided'} |`,
+      `| Potential Harm | ${classification.potentialHarm || 'Not provided'} |`,
+      `| Regulatory Mapping | ${classification.regulatoryMapping || 'Not provided'} |`,
+      '',
+      classification.justification || 'Not provided',
+      '',
+      '# 4. Data Governance',
+      '',
+      '## Governance Framework',
+      '',
+      ...this.buildDetailedSection(
+        documentation.dataGovernance,
+        'Governance Framework',
+        'Data source controls, ownership, and documentation evidence relevant to EU AI Act expectations.',
+      ),
+      '# 5. Model Development',
+      '',
+      '## Development Lifecycle',
+      '',
+      ...this.buildDetailedSection(
+        documentation.modelDevelopment,
+        'Development Lifecycle',
+        'Design, training, validation, release management, and supporting model-development evidence.',
+      ),
+      '# 6. Risk Management',
+      '',
+      '## Identified Risk Controls',
+      '',
+      ...this.buildDetailedSection(
+        documentation.riskManagement,
+        'Identified Risk Controls',
+        'Risk identification, treatment measures, ownership, escalation, and residual-risk handling.',
+      ),
+      '# 7. Human Oversight',
+      '',
+      '## Oversight Design',
+      '',
+      ...this.buildDetailedSection(
+        documentation.humanOversight,
+        'Oversight Design',
+        'Human review triggers, override authority, escalation logic, and operational oversight design.',
+      ),
+      '# 8. Transparency',
+      '',
+      '## Information Provided To Stakeholders',
+      '',
+      ...this.buildDetailedSection(
+        documentation.transparency,
+        'Information Provided To Stakeholders',
+        'Disclosures, explainability measures, internal communication, and stakeholder-facing information practices.',
+      ),
+      '# 9. Technical Robustness',
+      '',
+      '## Reliability, Resilience, And Security',
+      '',
+      ...this.buildDetailedSection(
+        documentation.technicalRobustness,
+        'Reliability, Resilience, And Security',
+        'Accuracy, robustness, cybersecurity, failure handling, and reliability assurance measures.',
+      ),
+      '# 10. Monitoring',
+      '',
+      '## Post-Deployment Monitoring',
+      '',
+      ...this.buildDetailedSection(
+        documentation.monitoring,
+        'Post-Deployment Monitoring',
+        'Ongoing performance review, drift detection, incident handling, and control maintenance.',
+      ),
+      '# 11. Compliance & Audit',
+      '',
+      '## Control Evidence And Assurance',
+      '',
+      ...this.buildDetailedSection(
+        documentation.complianceAudit,
+        'Control Evidence And Assurance',
+        'Technical file readiness, audit trail evidence, approval records, and compliance support material.',
+      ),
+      '# 12. Ethics',
+      '',
+      '## Ethical Use And Governance Considerations',
+      '',
+      ...this.buildDetailedSection(
+        documentation.ethics,
+        'Ethical Use And Governance Considerations',
+        'Fairness, stakeholder impact, challenge mechanisms, and responsible-use governance considerations.',
+      ),
+      '',
+      '# 13. Conclusion',
+      '',
+      documentation.conclusion || 'Not provided',
+      '',
+      '# Appendices',
+      '',
+      '## Supporting Schedules',
+      '',
+      ...this.toBullets(documentation.appendices),
+    ];
+
+    return lines.join('\n');
+  }
+
+  private pickValue(
+    source: Record<string, any>,
+    paths: string[],
+    fallback: string,
+  ) {
+    for (const path of paths) {
+      const value = path.split('.').reduce<any>((acc, key) => acc?.[key], source);
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+    return fallback;
+  }
+
+  private joinOrFallback(values: string[] | undefined) {
+    if (!Array.isArray(values) || values.length === 0) {
+      return 'Not provided';
+    }
+    return values.join('; ');
+  }
+
+  private toBullets(values: string[] | undefined) {
+    if (!Array.isArray(values) || values.length === 0) {
+      return ['- Not provided'];
+    }
+    return values.map((value) => `- ${value || 'Not provided'}`);
+  }
+
+  private buildDetailedSection(
+    values: string[] | undefined,
+    summaryArea: string,
+    summaryFocus: string,
+  ) {
+    const items = Array.isArray(values) && values.length > 0 ? values : ['Not provided'];
+    const summaryRows = items.slice(0, 4).map((value, index) => {
+      const normalized = (value || 'Not provided').replace(/\|/g, '\\|').trim();
+      return `| ${index + 1} | ${summaryArea} | ${this.limitText(normalized, 140)} |`;
+    });
+
+    return [
+      '| Ref | Focus Area | Summary Observation |',
+      '|-----|------------|---------------------|',
+      ...summaryRows,
+      '',
+      `**Section emphasis:** ${summaryFocus}`,
+      '',
+      '### Detailed Findings',
+      '',
+      ...items.map((value) => `- ${value || 'Not provided'}`),
+      '',
+    ];
+  }
+
+  private limitText(value: string, max: number) {
+    if (value.length <= max) {
+      return value;
+    }
+    return `${value.slice(0, max - 1).trimEnd()}...`;
+  }
+
 }

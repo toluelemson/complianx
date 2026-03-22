@@ -30,3 +30,29 @@ export async function getPublicResult(resultId: string) {
   );
   return data;
 }
+
+export async function generateDemoReport(payload: {
+  systemName: string;
+  companyName: string;
+  industry: string;
+  useCase: string;
+  inputData: string;
+  outputDecision: string;
+  stakeholders: string;
+  operatorRole: string;
+  geography: string;
+  highRiskContext: string;
+  oversightStatus: string;
+  controlsStatus: string;
+  documentationStatus: string;
+  conformityStatus: string;
+  notes?: string;
+}) {
+  const { data } = await api.post<{
+    title: string;
+    markdown: string;
+    previewHtml: string;
+    summary: string;
+  }>('/public/eu-ai-act/demo-report', payload);
+  return data;
+}

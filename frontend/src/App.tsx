@@ -7,6 +7,8 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ContactPage from './pages/ContactPage';
 import SubmitSystemPage from './pages/SubmitSystemPage';
+import LoanApprovalDemoPage from './pages/LoanApprovalDemoPage';
+import EuAiActGeneratorDemoPage from './pages/EuAiActGeneratorDemoPage';
 import PublicEuAiActCheckerPage from './features/eu-ai-act/pages/PublicEuAiActCheckerPage';
 import PublicEuAiActResultPage from './features/eu-ai-act/pages/PublicEuAiActResultPage';
 import DashboardPage from './pages/DashboardPage';
@@ -30,6 +32,15 @@ function App() {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/submit-system" element={<SubmitSystemPage />} />
+      <Route path="/demo/loan-approval-ai" element={<LoanApprovalDemoPage />} />
+      <Route
+        path="/demo/eu-ai-act-report"
+        element={
+          <ProtectedRoute>
+            <EuAiActGeneratorDemoPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/eu-ai-act-checker" element={<PublicEuAiActCheckerPage />} />
       <Route
         path="/eu-ai-act-checker/results/:resultId"

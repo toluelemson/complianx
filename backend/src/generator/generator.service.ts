@@ -9,6 +9,7 @@ import { join } from 'path';
 import { Document } from '@prisma/client';
 import { renderDocumentHtml } from './templates';
 import { mergeSections } from './utils';
+import { ReadinessService } from './readiness.service';
 
 type GenerationMode = Parameters<LlmService['generate']>[0];
 
@@ -49,7 +50,21 @@ export class GeneratorService {
     private readonly documentsService: DocumentsService,
     private readonly pdfService: PdfService,
     private readonly monetization: MonetizationService,
+    private readonly readinessService: ReadinessService,
   ) {}
+
+  async getReadiness(projectId: string, userId: string) {
+    await this.projectsService.assertOwnership(projectId, userId);
+    const sections = await (this.prisma as any).section.findMany({
+      where: { projectId },
+      include: {
+        artifacts: {
+          select: { id: true },
+        },
+      } as any,
+    });
+    return this.readinessService.assess(sections);
+  }
 
   async generate(
     projectId: string,
@@ -81,6 +96,15 @@ export class GeneratorService {
     if (!sections.length) {
       throw new BadRequestException('Please complete at least one section.');
     }
+    const readiness = this.readinessService.assess(sections);
+    if (readiness.status === 'insufficient') {
+      throw new BadRequestException({
+        message:
+          'There is not enough structured project information to generate defensible documentation yet.',
+        code: 'READINESS_BLOCKED',
+        readiness,
+      });
+    }
     const merged = mergeSections(sections);
     const appendixMarkdown = this.buildEvidenceAppendix(sections);
     const orderedTypes = Object.keys(DOCUMENT_SPECS);
@@ -108,10 +132,14 @@ export class GeneratorService {
       });
 
       const markdown = await this.llmService.generate(spec.mode, merged);
+      const readinessNotice =
+        readiness.status === 'partial'
+          ? this.buildReadinessNotice(readiness)
+          : '';
       const changesSummary = previous
         ? this.buildChangesSince(previous.createdAt, sections)
         : '';
-      const assembled = [changesSummary, markdown, appendixMarkdown]
+      const assembled = [readinessNotice, changesSummary, markdown, appendixMarkdown]
         .filter(Boolean)
         .join('\n\n');
       const finalMarkdown = assembled;
@@ -175,6 +203,34 @@ export class GeneratorService {
       });
       lines.push('');
     });
+    return lines.join('\n');
+  }
+
+  private buildReadinessNotice(readiness: {
+    score: number;
+    summary: string;
+    missingCriticalFields: string[];
+    weakSections: string[];
+  }) {
+    const lines = [
+      '## Readiness Notice',
+      '',
+      `- **Readiness score:** ${readiness.score}%`,
+      `- **Summary:** ${readiness.summary}`,
+      `- **Missing critical fields:** ${
+        readiness.missingCriticalFields.length
+          ? readiness.missingCriticalFields.join('; ')
+          : 'None flagged'
+      }`,
+      `- **Weak sections:** ${
+        readiness.weakSections.length ? readiness.weakSections.join('; ') : 'None flagged'
+      }`,
+      '',
+      '> This document should be treated as a draft until the missing inputs and evidence are completed.',
+      '',
+      '---',
+      '',
+    ];
     return lines.join('\n');
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -120,14 +120,14 @@ export function PricingSection() {
             inView ? 'animate-enter-up' : 'translate-y-6 opacity-0'
           }`}
         >
-          <p className="text-sm font-semibold text-slate-400">
-            Built for service-first delivery
-          </p>
           <h2 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-            Pricing for paid AI compliance work.
+            Choose the right plan for you 
           </h2>
-          <div className="mt-6 inline-flex rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-slate-200">
-            Speed To Revenue
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-slate-200">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-300">
+              <Zap className="h-3.5 w-3.5" />
+            </span>
+            <span>Speed To Compliance</span>
           </div>
         </div>
 
@@ -137,21 +137,29 @@ export function PricingSection() {
               key={plan.name}
               className={`h-full rounded-[2rem] shadow-none transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] ${
                 plan.featured
-                  ? 'animate-float-soft border-slate-200 bg-white text-slate-950'
+                  ? 'animate-float-soft border-[#3B82F6]/30 text-white'
                   : 'border-white/10 bg-white/[0.03] text-white'
               } ${inView ? 'animate-enter-scale' : 'translate-y-6 opacity-0'}`}
-              style={
-                inView
+              style={{
+                ...(inView
                   ? { animationDelay: `${0.1 + index * 0.08}s` }
-                  : undefined
-              }
+                  : {}),
+                ...(plan.featured ? { backgroundColor: '#07296A' } : {}),
+              }}
             >
               <CardContent className="flex h-full flex-col p-7">
                 <div>
-                  <h3 className="text-2xl font-semibold">{plan.name}</h3>
+                  <div className="flex items-start justify-between gap-4">
+                    <h3 className="text-2xl font-semibold">{plan.name}</h3>
+                    {plan.featured ? (
+                      <div className="inline-flex shrink-0 items-center rounded-full border border-[#6366F1]/35 bg-[#2D2E8F] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white">
+                        Most Popular
+                      </div>
+                    ) : null}
+                  </div>
                   <p
                     className={`mt-2 text-sm ${
-                      plan.featured ? 'text-slate-600' : 'text-slate-400'
+                      plan.featured ? 'text-blue-100/85' : 'text-slate-400'
                     }`}
                   >
                     {plan.tagline}
@@ -163,7 +171,7 @@ export function PricingSection() {
                     </div>
                     <p
                       className={`mt-2 text-sm ${
-                        plan.featured ? 'text-slate-600' : 'text-slate-400'
+                        plan.featured ? 'text-blue-100/85' : 'text-slate-400'
                       }`}
                     >
                       {plan.suffix}
@@ -171,7 +179,7 @@ export function PricingSection() {
                     {plan.billing ? (
                       <p
                         className={`mt-1 text-sm ${
-                          plan.featured ? 'text-slate-500' : 'text-slate-500'
+                          plan.featured ? 'text-blue-200/70' : 'text-slate-500'
                         }`}
                       >
                         {plan.billing}
@@ -184,7 +192,7 @@ export function PricingSection() {
                     size="lg"
                     className={`mt-6 w-full transition duration-300 hover:scale-[1.01] ${
                       plan.featured
-                        ? 'bg-slate-950 text-white hover:bg-black'
+                        ? 'bg-white text-[#07296A] hover:bg-blue-50'
                         : 'bg-slate-200 text-slate-950 hover:bg-white'
                     }`}
                   >
@@ -219,12 +227,12 @@ export function PricingSection() {
                           >
                             <Check
                               className={`mt-0.5 h-4 w-4 shrink-0 ${
-                                plan.featured ? 'text-slate-700' : 'text-slate-300'
+                                plan.featured ? 'text-cyan-200' : 'text-slate-300'
                               }`}
                             />
                             <span
                               className={`text-sm leading-6 ${
-                                plan.featured ? 'text-slate-700' : 'text-slate-300'
+                                plan.featured ? 'text-blue-50' : 'text-slate-300'
                               }`}
                             >
                               {item}

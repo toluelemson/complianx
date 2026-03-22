@@ -72,6 +72,7 @@ export function AppShell({ title, children }: AppShellProps) {
   const navSections = useMemo(() => {
     const primary = [
       { label: 'Dashboard', to: '/dashboard', show: true },
+      { label: 'Demo Tool', to: '/demo/eu-ai-act-report', show: true },
       { label: 'Company', to: '/company', show: Boolean(user) },
       { label: 'Profile', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
@@ -212,7 +213,7 @@ export function AppShell({ title, children }: AppShellProps) {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_24%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-          <div className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div className="flex items-center justify-between gap-3 py-4">
             <Link
               to="/"
               className="flex items-center gap-3 text-lg font-semibold tracking-[-0.02em] text-slate-900"
@@ -260,7 +261,14 @@ export function AppShell({ title, children }: AppShellProps) {
                 </svg>
               </Button>
             </div>
-            <div className="hidden flex-1 items-center justify-end gap-4 lg:flex">
+          </div>
+          <div className="hidden items-center justify-between gap-6 border-t border-slate-200/70 py-3 lg:flex">
+            <nav className="min-w-0 overflow-x-auto">
+              <div className="flex min-w-max items-center gap-6">
+                {renderDesktopNav()}
+              </div>
+            </nav>
+            <div className="flex shrink-0 items-center gap-3">
               <Button asChild variant="outline" size="sm">
                 <Link to="/">Home</Link>
               </Button>
@@ -296,7 +304,6 @@ export function AppShell({ title, children }: AppShellProps) {
                 Billing
               </Button>
               {renderNotificationsTrigger()}
-              {renderDesktopNav()}
               <Button
                 onClick={() => {
                   logout();

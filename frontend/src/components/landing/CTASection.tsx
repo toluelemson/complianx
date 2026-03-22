@@ -21,7 +21,7 @@ export function CTASection() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" className="bg-sky-600 text-white hover:bg-sky-500">
+              <Button asChild size="lg" className="bg-white text-black hover:bg-[#F3F6FF]">
                 <Link to="/submit-system">Submit your system</Link>
               </Button>
               <Button

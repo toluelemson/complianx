@@ -9,8 +9,7 @@ import { CTASection } from '@/components/landing/CTASection';
 import { TrialModal } from '@/components/landing/TrialModal';
 import { VideoSection } from '@/components/landing/VideoSection';
 
-const DEMO_VIDEO_SRC =
-  'https://cdn.pixabay.com/video/2019/05/05/23325-334689174_medium.mp4';
+const DEMO_VIDEO_SRC = '/neuraldocx-hero.webm';
 
 export default function LandingPage() {
   const { token, initializing } = useAuth();

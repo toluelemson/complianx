@@ -50,6 +50,14 @@ export function Navbar() {
           >
             Compliance check
           </Link>
+          <a
+            href="https://calendly.com/neuraldocx"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-slate-200 transition hover:text-white"
+          >
+            Live demo
+          </a>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -94,7 +102,7 @@ export function Navbar() {
               )}
             </svg>
           </Button>
-          <Button asChild size="sm" className="bg-slate-200 text-slate-950 hover:bg-white">
+          <Button asChild size="sm" className="bg-white text-black hover:bg-[#F3F6FF]">
             <Link to="/submit-system">Submit your system</Link>
           </Button>
         </div>
@@ -116,6 +124,16 @@ export function Navbar() {
               <Link to="/eu-ai-act-checker" onClick={closeMobileMenu}>
                 Compliance check
               </Link>
+            </Button>
+            <Button asChild variant="ghost" className="justify-start rounded-2xl text-slate-200 hover:text-white">
+              <a
+                href="https://calendly.com/neuraldocx"
+                target="_blank"
+                rel="noreferrer"
+                onClick={closeMobileMenu}
+              >
+                Live demo
+              </a>
             </Button>
             <Button asChild variant="ghost" className="justify-start rounded-2xl text-slate-200 hover:text-white">
               <Link to="/login" onClick={closeMobileMenu}>

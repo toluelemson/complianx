@@ -6,10 +6,11 @@ import { LlmModule } from '../llm/llm.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { PdfModule } from '../pdf/pdf.module';
 import { MonetizationService } from '../monetization/monetization.service';
+import { ReadinessService } from './readiness.service';
 
 @Module({
   imports: [ProjectsModule, LlmModule, DocumentsModule, PdfModule],
   controllers: [GeneratorController],
-  providers: [GeneratorService, MonetizationService],
+  providers: [GeneratorService, MonetizationService, ReadinessService],
 })
 export class GeneratorModule {}

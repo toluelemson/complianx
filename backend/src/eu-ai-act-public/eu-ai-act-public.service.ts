@@ -10,13 +10,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePublicSessionDto } from './dto/create-public-session.dto';
 import { SavePublicAnswerDto } from './dto/save-public-answer.dto';
 import { QuickAssessDto } from './dto/quick-assess.dto';
+import { GenerateDemoReportDto } from './dto/generate-demo-report.dto';
+import { LlmService } from '../llm/llm.service';
+import { renderDocumentHtml } from '../generator/templates';
 
 @Injectable()
 export class EuAiActPublicService {
   private readonly defaultPackKey = 'eu-ai-act';
   private readonly defaultSessionDays = 7;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly llmService: LlmService,
+  ) {}
 
   async createSession(dto: CreatePublicSessionDto) {
     const pack = await this.resolvePackVersion(dto.packVersion);
@@ -122,6 +128,56 @@ export class EuAiActPublicService {
       status: PublicSessionStatus.COMPLETED,
       summary: this.buildSummary(resultPayload),
       redirectUrl: `/eu-ai-act-checker/results/${result.publicId}`,
+    };
+  }
+
+  async generateDemoReport(dto: GenerateDemoReportDto) {
+    const mergedContent = {
+      company: {
+        name: dto.companyName,
+        industry: dto.industry,
+        geography: dto.geography,
+      },
+      ai_system: {
+        name: dto.systemName,
+        use_case: dto.useCase,
+        operator_role: dto.operatorRole,
+        affected_stakeholders: this.splitList(dto.stakeholders),
+      },
+      inputs: {
+        data_sources: this.splitList(dto.inputData),
+      },
+      outputs: {
+        decisions: this.splitList(dto.outputDecision),
+      },
+      governance: {
+        human_oversight_status: dto.oversightStatus,
+        risk_controls_status: dto.controlsStatus,
+        documentation_status: dto.documentationStatus,
+        conformity_status: dto.conformityStatus,
+      },
+      eu_ai_act_signals: {
+        high_risk_contexts: [dto.highRiskContext],
+        prohibited_signals: [],
+        transparency_triggers: [],
+      },
+      demo_context: {
+        purpose: 'Live sales demo for EU AI Act report generation',
+        notes: dto.notes?.trim() || 'Not provided',
+      },
+    };
+
+    const markdown = await this.llmService.generate('technical', mergedContent);
+    const previewHtml = renderDocumentHtml(
+      'EU AI Act Compliance Report',
+      markdown,
+    );
+
+    return {
+      title: 'AI System Compliance Report - EU AI Act',
+      markdown,
+      previewHtml,
+      summary: `Generated demo report for ${dto.systemName} at ${dto.companyName}.`,
     };
   }
 
@@ -608,5 +664,12 @@ export class EuAiActPublicService {
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private splitList(value: string) {
+    return value
+      .split(/\n|,/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
   }
 }
