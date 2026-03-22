@@ -28,9 +28,6 @@ export function Navbar() {
             <p className="text-base font-semibold tracking-tight text-white">
               NeuralDocx
             </p>
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-              AI compliance
-            </p>
           </div>
         </Link>
 
