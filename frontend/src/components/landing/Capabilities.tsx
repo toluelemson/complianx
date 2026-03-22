@@ -1,12 +1,12 @@
 import { Card, CardContent } from '@/components/ui/card';
 
 const CAPABILITIES = [
-  'Documentation Generator',
-  'Risk Register Builder',
-  'Technical File Assistant',
-  'Policy & Control Mapper',
-  'Evidence Repository',
-  'Review Workflow Support',
+  'Submit your AI system',
+  'Scope the documentation need',
+  'Review risk and governance inputs',
+  'Receive a first draft in 48 hours',
+  'Refine for audit or diligence use',
+  'Maintain records as systems evolve',
 ];
 
 export function Capabilities() {
@@ -18,10 +18,10 @@ export function Capabilities() {
       <div className="mx-auto max-w-7xl">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-400">
-            Capabilities
+            Workflow
           </p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-            The right tools for AI governance teams
+            A service workflow built for regulated AI teams
           </h2>
         </div>
 

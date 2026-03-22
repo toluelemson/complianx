@@ -3,28 +3,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const FEATURES = [
   {
-    badge: 'Core',
-    title: 'Generate Audit-Ready AI Documentation',
+    badge: 'Delivery',
+    title: 'Receive a first documentation pack in 48 hours',
     description:
-      'Automatically produce structured technical files, governance records, risk documentation, and compliance evidence for internal reviews and external audits.',
+      'Submit your AI system once, then receive a scoped first draft with technical documentation, governance records, and review-ready evidence.',
   },
   {
-    badge: 'Governance',
-    title: 'Track Risks, Controls, and Human Oversight',
+    badge: 'Review',
+    title: 'Built for real risk, control, and oversight work',
     description:
-      'Map AI risks to controls, document mitigation steps, and maintain traceable records for accountability, oversight, and policy alignment.',
+      'NeuralDocx structures risk findings, control mapping, and governance inputs so your team has materials that support audit and internal review.',
   },
   {
-    badge: 'Automation',
-    title: 'Keep Compliance Records Up to Date',
+    badge: 'Workflow',
+    title: 'A clear service workflow from intake to delivery',
     description:
-      'Reduce manual work by continuously updating documentation as your AI systems, processes, and controls evolve.',
+      'Move through submission, scope review, documentation prep, and handoff without chasing fragmented templates, files, and advisors.',
   },
   {
-    badge: 'Evidence',
-    title: 'Centralize Compliance Evidence',
+    badge: 'Trust',
+    title: 'Documentation that is ready to share',
     description:
-      'Store model details, approvals, evaluations, system changes, and supporting artifacts in one organized compliance workspace.',
+      'Use polished outputs for customer diligence, audit prep, governance meetings, and procurement conversations that need credible evidence fast.',
   },
 ];
 

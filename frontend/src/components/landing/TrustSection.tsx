@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const TRUST_BADGES = [
-  'EU AI Act Readiness',
-  'Audit-Ready Documentation',
-  'Governance Workflows',
-  'Risk & Control Mapping',
-  'Human Oversight Support',
-  'Secure Document Handling',
+  'EU AI Act aligned delivery',
+  'Audit and diligence support',
+  'Risk and control mapping',
+  'Governance-ready records',
+  'Human review in the loop',
+  'Secure document handling',
 ];
 
 const ENTERPRISE_LOGOS = ['Aster Bank', 'NorthGrid', 'Velonix', 'CrestLedger', 'Aureline'];
@@ -20,10 +20,10 @@ export function TrustSection() {
       <div className="mx-auto max-w-7xl">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-400">
-            High-trust environments
+            Who it is for
           </p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-            Built for high-trust, regulated environments
+            Built for teams that need credible documentation fast
           </h2>
         </div>
 
@@ -39,7 +39,7 @@ export function TrustSection() {
 
         <div className="mt-10 rounded-[2rem] border border-slate-200 bg-white px-6 py-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
-            Enterprise teams
+            Typical users
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {ENTERPRISE_LOGOS.map((logo) => (

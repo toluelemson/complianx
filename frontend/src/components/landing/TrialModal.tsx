@@ -66,9 +66,6 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]">
-                  Service-first
-                </div>
-                <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]">
                   48hr first draft
                 </div>
               </div>
@@ -124,7 +121,7 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
                 asChild
                 variant="outline"
                 size="lg"
-                className="w-full border-slate-300 bg-white text-slate-900 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.18)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-950 lg:flex-1"
+                className="w-full border-[#0E172A] bg-[#0E172A] text-white shadow-[0_18px_40px_-28px_rgba(15,23,42,0.22)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#0B1324] hover:text-white lg:flex-1"
               >
                 <a
                   href="https://calendly.com/neuraldocx"

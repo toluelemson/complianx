@@ -10,14 +10,14 @@ export function CTASection() {
           <CardContent className="flex flex-col gap-8 p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-300/75">
-                Start with structure
+                Service-first delivery
               </p>
               <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                Make AI compliance documentation faster, clearer, and audit-ready
+                Get your first compliance documentation pack without building it yourself
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-300">
-                NeuralDocx helps your team move from scattered files and manual
-                effort to a structured compliance workflow.
+                Submit your system, align scope, and receive audit-ready materials
+                with first delivery in as little as 48 hours.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
