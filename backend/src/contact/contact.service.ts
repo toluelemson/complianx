@@ -13,7 +13,7 @@ export class ContactService {
   constructor(private readonly emailService: EmailService) {}
 
   async sendContactRequest(dto: ContactDto) {
-    const recipient = SUPPORT_EMAIL ?? 'support@neuraldocx.com';
+    const recipient = SUPPORT_EMAIL ?? 'neuraldocx@gmail.com';
     const subject = `NeuralDocx demo request from ${dto.name}`;
     const body = `
 Name: ${dto.name}
