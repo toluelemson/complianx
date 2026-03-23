@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardCheck,
@@ -42,34 +43,37 @@ const FEATURE_LIST = [
 ];
 
 export function TrialModal({ isOpen, onClose }: TrialModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="animate-enter-fade fixed inset-0 z-50 flex items-center justify-center bg-[#020406]/72 px-4 backdrop-blur-sm">
-      <Card className="animate-enter-scale w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#f7f8fc] shadow-[0_45px_120px_-48px_rgba(15,23,42,0.65)]">
+    <div
+      className="animate-enter-fade fixed inset-0 z-50 flex items-center justify-center bg-[#020406]/72 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <Card onClick={(e) => e.stopPropagation()} className="animate-enter-scale w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#f7f8fc] shadow-[0_45px_120px_-48px_rgba(15,23,42,0.65)]">
         <CardHeader className="border-b border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#eef3ff_100%)] p-5 pb-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="max-w-lg">
-              <div className="inline-flex items-center gap-3.5 rounded-[1.1rem] border border-[#2D2E8F]/10 bg-[#2D2E8F]/6 px-3.5 py-2.5 text-left text-[#5c6f98] shadow-[0_18px_40px_-32px_rgba(45,46,143,0.35)]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#2D2E8F]/10 bg-[#2D2E8F]/6 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#5c6f98]">
                 <img
                   src="/neuraldocx-logo.svg"
                   alt="NeuralDocx"
-                  className="h-12 w-12 rounded-[1rem]"
+                  className="h-4 w-4 rounded-sm"
                 />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#6d7ea5]">
-                    NeuralDocx
-                  </p>
-                  <p className="text-sm font-semibold tracking-tight text-slate-900">
-                    AI Governance Studio
-                  </p>
-                </div>
+                NeuralDocx
               </div>
               <CardTitle className="mt-4 text-3xl leading-[0.98] tracking-tight text-slate-950 sm:text-[2.6rem]">
                 Start with NeuralDocx
               </CardTitle>
               <p className="mt-3 max-w-md text-sm leading-6 text-slate-600 sm:text-base">
-                Service-first AI compliance documentation with first delivery in as little as 48 hours.
+                AI compliance documentation with first delivery in as little as 48 hours.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]">
@@ -128,7 +132,7 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
                 asChild
                 variant="outline"
                 size="lg"
-                className="w-full border-[#0E172A] bg-[#0E172A] text-white shadow-[0_18px_40px_-28px_rgba(15,23,42,0.22)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#0B1324] hover:text-white lg:flex-1"
+                className="w-full border-slate-300 bg-white text-slate-900 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.18)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-950 lg:flex-1"
               >
                 <a
                   href="https://calendly.com/neuraldocx"
