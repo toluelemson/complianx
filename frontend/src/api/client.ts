@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-const DEFAULT_API_BASE_URL = 'http://localhost:3000';
-const envBaseURL = import.meta.env.VITE_API_URL;
-const baseURL = envBaseURL ?? DEFAULT_API_BASE_URL;
+const DEFAULT_API_BASE_URL = '/api';
+const envBaseURL = import.meta.env.VITE_API_URL?.trim();
+const baseURL = envBaseURL && envBaseURL.length > 0
+  ? envBaseURL.replace(/\/$/, '')
+  : DEFAULT_API_BASE_URL;
 const monetizationEnabled = import.meta.env.VITE_MONETIZATION_ENABLED !== 'false';
 
 console.log(

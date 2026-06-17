@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import * as bodyParser from 'body-parser';
 
@@ -10,6 +10,9 @@ async function bootstrap() {
   });
 
   app.use('/billing/webhook', bodyParser.raw({ type: '*/*' }));
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: 'billing/webhook', method: RequestMethod.POST }],
+  });
 
   // 🔥 1) Handle all OPTIONS requests manually
   app.use((req: any, res: any, next: () => void) => {
