@@ -16,7 +16,7 @@ import { AnalyzeFairnessDto } from '../dto/trust/analyze-fairness.dto';
 import { AnalyzeRobustnessDto } from '../dto/trust/analyze-robustness.dto';
 import { AnalyzeDriftDto } from '../dto/trust/analyze-drift.dto';
 import { AnalyzeFairnessSegmentsDto } from '../dto/trust/analyze-fairness-segments.dto';
-import { CompanyContextService } from '../../../../company/company-context.service';
+import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller()

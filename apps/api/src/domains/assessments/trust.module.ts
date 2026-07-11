@@ -4,7 +4,7 @@ import { TrustController } from './presentation/controllers/trust.controller';
 import { PrismaModule } from '../../platform/database/prisma.module';
 import { ProjectsModule } from '../../projects/projects.module';
 import { MonetizationService } from '../../monetization/monetization.service';
-import { CompanyModule } from '../../company/company.module';
+import { CompanyModule } from '../organizations/company.module';
 
 @Module({
   imports: [PrismaModule, ProjectsModule, CompanyModule],

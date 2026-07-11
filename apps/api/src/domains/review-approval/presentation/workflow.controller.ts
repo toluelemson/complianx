@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../auth/jwt-auth.guard';
-import { CompanyContextService } from '../../../company/company-context.service';
+import { CompanyContextService } from '../../organizations/application/membership/company-context.service';
 import { SubmitProjectForReviewUseCase } from '../application/submit-project-for-review.use-case';
 import { StartProjectReviewUseCase } from '../application/start-project-review.use-case';
 import { RequestProjectChangesUseCase } from '../application/request-project-changes.use-case';

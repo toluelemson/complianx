@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../../../../auth/jwt-auth.guard';
 import { CreateCommentDto } from '../dto/sections/create-comment.dto';
 import { SuggestSectionDto } from '../dto/sections/suggest-section.dto';
 import { UpdateSectionStatusDto } from '../dto/sections/update-section-status.dto';
-import { CompanyContextService } from '../../../../company/company-context.service';
+import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('projects/:projectId/sections')

@@ -15,7 +15,7 @@ import { UpdateRoleDto } from '../dto/users/update-role.dto';
 import { UpdateProfileDto } from '../dto/users/update-profile.dto';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import { EmailService } from '../../../../platform/email/email.service';
-import { CompanyContextService } from '../../../../company/company-context.service';
+import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')

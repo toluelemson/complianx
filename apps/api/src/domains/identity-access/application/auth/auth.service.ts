@@ -11,7 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { Role, User, UserCompany } from '@prisma/client';
 import { PrismaService } from '../../../../platform/database/prisma.service';
-import { InvitationsService } from '../../../../invitations/invitations.service';
+import { InvitationsService } from '../../../organizations/application/invitations/invitations.service';
 import { EmailService } from '../../../../platform/email/email.service';
 import { randomBytes } from 'crypto';
 

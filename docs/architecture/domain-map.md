@@ -3,7 +3,7 @@
 | Target domain | Current capabilities |
 | --- | --- |
 | Identity and access | auth, users — migrated to `apps/api/src/domains/identity-access` |
-| Organizations | company, invitations, membership |
+| Organizations | company, invitations, membership — migrated to `apps/api/src/domains/organizations` |
 | AI systems | projects; Prisma `Project` remains unchanged |
 | Assessments | sections, trust, suggestions — migrated to `apps/api/src/domains/assessments` |
 | Regulatory frameworks | compliance templates |

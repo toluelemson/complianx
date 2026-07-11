@@ -5,7 +5,7 @@ import { ProjectsModule } from '../../projects/projects.module';
 import { LlmModule } from '../../platform/ai/llm.module';
 import { EmailService } from '../../platform/email/email.service';
 import { NotificationsModule } from '../../notifications/notifications.module';
-import { CompanyModule } from '../../company/company.module';
+import { CompanyModule } from '../organizations/company.module';
 import { MonetizationService } from '../../monetization/monetization.service';
 import { ReviewApprovalModule } from '../review-approval/review-approval.module';
 

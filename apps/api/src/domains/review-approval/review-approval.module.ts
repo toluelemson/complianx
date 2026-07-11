@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { NotificationsModule } from '../../notifications/notifications.module';
-import { CompanyModule } from '../../company/company.module';
+import { CompanyModule } from '../organizations/company.module';
 import { EmailService } from '../../platform/email/email.service';
 import { WorkflowController } from './presentation/workflow.controller';
 import { WorkflowPolicyService } from './domain/workflow-policy.service';

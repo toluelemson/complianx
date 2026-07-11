@@ -9,8 +9,7 @@ import { PdfModule } from './pdf/pdf.module';
 import { TemplatesModule } from './templates/templates.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { AutoSaveModule } from './auto-save/auto-save.module';
-import { CompanyModule } from './company/company.module';
-import { InvitationsModule } from './invitations/invitations.module';
+import { OrganizationsModule } from './domains/organizations/organizations.module';
 import { EvidenceModule } from './domains/evidence/evidence.module';
 import { AssessmentsModule } from './domains/assessments/assessments.module';
 import { BillingController } from './billing/billing.controller';
@@ -37,8 +36,7 @@ import { ReviewApprovalModule } from './review-approval/review-approval.module';
     TemplatesModule,
     RemindersModule,
     AutoSaveModule,
-    CompanyModule,
-    InvitationsModule,
+    OrganizationsModule,
     NotificationsModule,
     ContactModule,
     AnalyticsModule,

@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../../../../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ReviewArtifactDto } from '../dto/artifacts/review-artifact.dto';
-import { CompanyContextService } from '../../../../company/company-context.service';
+import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
