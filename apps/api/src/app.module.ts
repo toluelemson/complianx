@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { IdentityAccessModule } from './domains/identity-access/identity-access.module';
-import { ProjectsModule } from './projects/projects.module';
+import { AiSystemsModule } from './domains/ai-systems/ai-systems.module';
 import { ReportingModule } from './domains/reporting/reporting.module';
 import { LlmModule } from './llm/llm.module';
 import { PdfModule } from './pdf/pdf.module';
@@ -27,7 +27,7 @@ import { ReviewApprovalModule } from './review-approval/review-approval.module';
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     IdentityAccessModule,
-    ProjectsModule,
+    AiSystemsModule,
     AssessmentsModule,
     EvidenceModule,
     ReportingModule,

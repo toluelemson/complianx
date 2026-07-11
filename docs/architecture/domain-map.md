@@ -4,7 +4,7 @@
 | --- | --- |
 | Identity and access | auth, users — migrated to `apps/api/src/domains/identity-access` |
 | Organizations | company, invitations, membership — migrated to `apps/api/src/domains/organizations` |
-| AI systems | projects; Prisma `Project` remains unchanged |
+| AI systems | projects — migrated to `apps/api/src/domains/ai-systems`; Prisma `Project` remains unchanged |
 | Assessments | sections, trust, suggestions — migrated to `apps/api/src/domains/assessments` |
 | Regulatory frameworks | compliance templates |
 | Evidence | documents, artifacts, uploads — migrated to `apps/api/src/domains/evidence` |

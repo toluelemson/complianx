@@ -1,7 +1,1 @@
-import { IsOptional, IsString } from 'class-validator';
-
-export class CloneProjectDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
-}
+export * from '../../domains/ai-systems/presentation/dto/clone-project.dto';

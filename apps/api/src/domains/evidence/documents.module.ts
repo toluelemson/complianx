@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DocumentsService } from './application/documents/documents.service';
 import { DocumentsController } from './presentation/controllers/documents.controller';
-import { ProjectsModule } from '../../projects/projects.module';
+import { AiSystemsModule } from '../ai-systems/ai-systems.module';
 import { CompanyModule } from '../organizations/company.module';
 import { LlmModule } from '../../platform/ai/llm.module';
 import { PdfModule } from '../../platform/pdf/pdf.module';
@@ -10,7 +10,7 @@ import { ReportingFoundationModule } from '../reporting/reporting-foundation.mod
 
 @Module({
   imports: [
-    ProjectsModule,
+    AiSystemsModule,
     CompanyModule,
     LlmModule,
     PdfModule,

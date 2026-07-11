@@ -1,14 +1,1 @@
-import { IsOptional, IsString } from 'class-validator';
-
-export class RequestReviewDto {
-  @IsString()
-  reviewerId!: string;
-
-  @IsOptional()
-  @IsString()
-  message?: string;
-
-  @IsOptional()
-  @IsString()
-  approverId?: string;
-}
+export * from '../../domains/ai-systems/presentation/dto/request-review.dto';

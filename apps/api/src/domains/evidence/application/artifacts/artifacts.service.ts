@@ -7,7 +7,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { PrismaService } from '../../../../platform/database/prisma.service';
-import { ProjectsService } from '../../../../projects/projects.service';
+import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
 import { extname } from 'path';
 import { randomBytes, createHash } from 'crypto';
 import {

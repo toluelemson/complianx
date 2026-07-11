@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SectionsController } from './presentation/controllers/sections.controller';
 import { SectionsService } from './application/sections/sections.service';
-import { ProjectsModule } from '../../projects/projects.module';
+import { AiSystemsModule } from '../ai-systems/ai-systems.module';
 import { LlmModule } from '../../platform/ai/llm.module';
 import { EmailService } from '../../platform/email/email.service';
 import { NotificationsModule } from '../../notifications/notifications.module';
@@ -11,7 +11,7 @@ import { ReviewApprovalModule } from '../review-approval/review-approval.module'
 
 @Module({
   imports: [
-    ProjectsModule,
+    AiSystemsModule,
     LlmModule,
     NotificationsModule,
     CompanyModule,
