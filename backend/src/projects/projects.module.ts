@@ -4,9 +4,10 @@ import { ProjectsService } from './projects.service';
 import { EmailService } from '../notifications/email.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CompanyModule } from '../company/company.module';
+import { ReviewApprovalModule } from '../review-approval/review-approval.module';
 
 @Module({
-  imports: [NotificationsModule, CompanyModule],
+  imports: [NotificationsModule, CompanyModule, ReviewApprovalModule],
   controllers: [ProjectsController],
   providers: [ProjectsService, EmailService],
   exports: [ProjectsService],

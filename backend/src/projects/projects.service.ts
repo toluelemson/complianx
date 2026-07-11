@@ -9,6 +9,13 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { Prisma, Project } from '@prisma/client';
 import { EmailService } from '../notifications/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { WorkflowQueryService } from '../review-approval/application/workflow-query.service';
+import { SubmitProjectForReviewUseCase } from '../review-approval/application/submit-project-for-review.use-case';
+import { StartProjectReviewUseCase } from '../review-approval/application/start-project-review.use-case';
+import { RequestProjectChangesUseCase } from '../review-approval/application/request-project-changes.use-case';
+import { ResubmitProjectUseCase } from '../review-approval/application/resubmit-project.use-case';
+import { ApproveProjectUseCase } from '../review-approval/application/approve-project.use-case';
+import { ProjectWorkflowStatus } from '../review-approval/domain/workflow-status';
 
 @Injectable()
 export class ProjectsService {
@@ -16,6 +23,12 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly notifications: NotificationsService,
+    private readonly workflowQueries: WorkflowQueryService,
+    private readonly submitProjectForReview: SubmitProjectForReviewUseCase,
+    private readonly startProjectReview: StartProjectReviewUseCase,
+    private readonly requestProjectChanges: RequestProjectChangesUseCase,
+    private readonly resubmitProject: ResubmitProjectUseCase,
+    private readonly approveProject: ApproveProjectUseCase,
   ) {}
 
   // Shared includes for full project retrieval
@@ -57,6 +70,120 @@ export class ProjectsService {
     },
     owner: { select: { id: true, email: true } },
   };
+
+  private async applyLegacyProjectStatusTransition(params: {
+    projectId: string;
+    actorId: string;
+    status: string;
+    note?: string;
+    signature?: string;
+  }) {
+    const workflow = await this.workflowQueries.getProjectWorkflow(
+      params.projectId,
+      params.actorId,
+    );
+
+    if (params.status === 'DRAFT') {
+      if (workflow.workflowStatus !== ProjectWorkflowStatus.READY_FOR_REVIEW) {
+        throw new BadRequestException('Only submitted projects can be moved back to draft');
+      }
+      await (this.prisma as any).project.update({
+        where: { id: params.projectId },
+        data: {
+          status: 'DRAFT',
+          workflowStatus: 'DRAFT',
+          workflowVersion: { increment: 1 },
+        },
+      });
+      await (this.prisma as any).projectStatusEvent.create({
+        data: {
+          projectId: params.projectId,
+          status: 'DRAFT',
+          note: `[workflow:DRAFT]${params.note ? ` ${params.note}` : ''}`,
+          signature: params.signature?.trim(),
+          actorId: params.actorId,
+        },
+      });
+      return;
+    }
+
+    if (params.status === 'IN_REVIEW') {
+      if (workflow.workflowStatus === ProjectWorkflowStatus.DRAFT) {
+        await this.submitProjectForReview.execute({
+          projectId: params.projectId,
+          actorId: params.actorId,
+          expectedVersion: workflow.workflowVersion,
+          note: params.note,
+        });
+        const refreshed = await this.workflowQueries.getProjectWorkflow(
+          params.projectId,
+          params.actorId,
+        );
+        await this.startProjectReview.execute({
+          projectId: params.projectId,
+          actorId:
+            refreshed.reviewerId && refreshed.reviewerId !== params.actorId
+              ? refreshed.reviewerId
+              : params.actorId,
+          expectedVersion: refreshed.workflowVersion,
+          note: params.note,
+        });
+        return;
+      }
+      if (workflow.workflowStatus === ProjectWorkflowStatus.CHANGES_REQUESTED) {
+        await this.resubmitProject.execute({
+          projectId: params.projectId,
+          actorId: params.actorId,
+          expectedVersion: workflow.workflowVersion,
+          note: params.note,
+        });
+        const refreshed = await this.workflowQueries.getProjectWorkflow(
+          params.projectId,
+          params.actorId,
+        );
+        await this.startProjectReview.execute({
+          projectId: params.projectId,
+          actorId:
+            refreshed.reviewerId && refreshed.reviewerId !== params.actorId
+              ? refreshed.reviewerId
+              : params.actorId,
+          expectedVersion: refreshed.workflowVersion,
+          note: params.note,
+        });
+        return;
+      }
+      await this.startProjectReview.execute({
+        projectId: params.projectId,
+        actorId: params.actorId,
+        expectedVersion: workflow.workflowVersion,
+        note: params.note,
+      });
+      return;
+    }
+
+    if (params.status === 'CHANGES_REQUESTED') {
+      await this.requestProjectChanges.execute({
+        projectId: params.projectId,
+        actorId: params.actorId,
+        expectedVersion: workflow.workflowVersion,
+        note: params.note ?? '',
+      });
+      return;
+    }
+
+    if (params.status === 'APPROVED') {
+      await this.approveProject.execute({
+        projectId: params.projectId,
+        actorId: params.actorId,
+        expectedVersion: workflow.workflowVersion,
+        note: params.note,
+        signature: params.signature,
+      });
+      return;
+    }
+
+    throw new BadRequestException(`Unsupported project status transition: ${params.status}`);
+  }
 
   private async resolveAccess(
     projectId: string,
@@ -283,97 +410,18 @@ export class ProjectsService {
     note?: string,
     signature?: string,
   ) {
-    const actor = (await this.prisma.user.findUnique({
-      where: { id: userId },
-    })) as any;
-    if (!actor) {
-      throw new NotFoundException('User not found');
-    }
-    const access = await this.resolveAccess(projectId, userId, companyId, {
+    await this.resolveAccess(projectId, userId, companyId, {
       allowOwner: true,
       allowReviewer: true,
       allowApprover: true,
     });
-    const workspaceId = access.project.companyId ?? companyId;
-    const currentStatus = access.project.status;
-    const membershipRole = access.membershipRole ?? actor.role;
-    const isReviewerRole =
-      access.accessRole === 'APPROVER' ||
-      membershipRole === 'REVIEWER' ||
-      membershipRole === 'ADMIN';
-    const isAssigned =
-      access.accessRole === 'REVIEWER' || access.accessRole === 'APPROVER';
-
-    if (status === 'APPROVED') {
-      if (!isAssigned && access.accessRole !== 'OWNER') {
-        throw new ForbiddenException('Only assigned reviewers can approve');
-      }
-      if (!isReviewerRole) {
-        throw new ForbiddenException('Reviewer role required to approve');
-      }
-      if (!signature?.trim()) {
-        throw new BadRequestException('Signature is required to approve');
-      }
-    }
-    if (status === 'CHANGES_REQUESTED' && !isAssigned && access.accessRole !== 'OWNER') {
-      throw new ForbiddenException('Only assigned reviewers can request changes');
-    }
-    if (status === 'APPROVED') {
-      if (currentStatus === 'DRAFT') {
-        throw new BadRequestException('Send for review before approving');
-      }
-      if (currentStatus === 'CHANGES_REQUESTED') {
-        throw new BadRequestException('Owner must resubmit after changes before approval');
-      }
-    }
-    if (status === 'CHANGES_REQUESTED' && currentStatus === 'DRAFT') {
-      throw new BadRequestException('Send for review before requesting changes');
-    }
-
-    await this.prisma.$transaction(async (tx) => {
-      await (tx as any).project.update({
-        where: { id: projectId },
-        data: { status: status as any },
-      });
-      await (tx as any).projectStatusEvent.create({
-        data: ({
-          projectId,
-          status: status as any,
-          note,
-          signature: signature?.trim(),
-          actorId: userId,
-        } as any),
-      });
+    await this.applyLegacyProjectStatusTransition({
+      projectId,
+      actorId: userId,
+      status,
+      note,
+      signature,
     });
-
-    // Notify owner about reviewer decisions
-    if (
-      (status === 'APPROVED' || status === 'CHANGES_REQUESTED') &&
-      access.project.ownerId !== userId
-    ) {
-      const owner = await this.prisma.user.findUnique({
-        where: { id: access.project.ownerId },
-        select: { id: true, email: true },
-      });
-      if (owner) {
-        const title =
-          status === 'APPROVED'
-            ? `Project approved: ${access.project.name}`
-            : `Changes requested: ${access.project.name}`;
-        const bodyText =
-          status === 'APPROVED'
-            ? 'A reviewer approved your project.'
-            : note?.trim() || 'A reviewer requested changes.';
-        await this.notifications.create({
-          userId: owner.id,
-          title,
-          body: bodyText,
-          type: 'review',
-          meta: { projectId, companyId: workspaceId },
-        });
-      }
-    }
-
     return this.getProjectForUser(projectId, userId, companyId);
   }
 
@@ -475,26 +523,24 @@ export class ProjectsService {
       .filter(Boolean)
       .join('\n');
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.project.update({
-        where: { id: projectId },
-        data: ({
-          status: 'IN_REVIEW',
-          reviewerId: reviewerMembership.user.id,
-          approverId: approver?.id ?? undefined,
-          companyId: workspaceId,
-        } as any),
-      });
-      await tx.projectStatusEvent.create({
-        data: {
-          projectId,
-          status: 'IN_REVIEW',
-          note: `Requested review from ${reviewerMembership.user.email}${approver ? `; approver ${approver.email}` : ''}${
-            message?.trim() ? ` — ${message.trim()}` : ''
-          }`,
-          actorId: userId,
-        },
-      });
+    const workflow = await this.workflowQueries.getProjectWorkflow(projectId, userId);
+    const workflowNote = `Requested review from ${reviewerMembership.user.email}${
+      approver ? `; approver ${approver.email}` : ''
+    }${message?.trim() ? ` — ${message.trim()}` : ''}`;
+    await this.submitProjectForReview.execute({
+      projectId,
+      actorId: userId,
+      expectedVersion: workflow.workflowVersion,
+      reviewerId: reviewerMembership.user.id,
+      approverId: approver?.id,
+      note: workflowNote,
+    });
+    const submitted = await this.workflowQueries.getProjectWorkflow(projectId, userId);
+    await this.startProjectReview.execute({
+      projectId,
+      actorId: reviewerMembership.user.id,
+      expectedVersion: submitted.workflowVersion,
+      note: 'Legacy request-review endpoint auto-started review',
     });
 
     await this.emailService.sendReminder(
@@ -502,14 +548,6 @@ export class ProjectsService {
       subject,
       body,
     );
-    await this.notifications.create({
-      userId: reviewerMembership.user.id,
-      title: `Review requested: ${access.project.name}`,
-      body: message?.trim() || 'A project requires your review.',
-      type: 'review',
-      meta: { projectId, companyId: workspaceId },
-    });
-
     if (approver) {
       const asub = `FYI: ${access.project.name} sent for review`;
       const abody = [`You were set as approver for "${access.project.name}".`, `\nLink: ${link}`]

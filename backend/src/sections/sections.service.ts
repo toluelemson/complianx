@@ -15,6 +15,13 @@ import { EmailService } from '../notifications/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateSectionStatusDto } from './dto/update-section-status.dto';
 import { MonetizationService } from '../monetization/monetization.service';
+import { WorkflowQueryService } from '../review-approval/application/workflow-query.service';
+import { CompleteSectionUseCase } from '../review-approval/application/complete-section.use-case';
+import { SubmitSectionForReviewUseCase } from '../review-approval/application/submit-section-for-review.use-case';
+import { RequestSectionChangesUseCase } from '../review-approval/application/request-section-changes.use-case';
+import { ApproveSectionUseCase } from '../review-approval/application/approve-section.use-case';
+import { ReopenProjectAfterSectionEditUseCase } from '../review-approval/application/reopen-project-after-section-edit.use-case';
+import { SectionWorkflowStatus } from '../review-approval/domain/workflow-status';
 
 @Injectable()
 export class SectionsService {
@@ -25,7 +32,93 @@ export class SectionsService {
     private readonly emailService: EmailService,
     private readonly notifications: NotificationsService,
     private readonly monetization: MonetizationService,
+    private readonly workflowQueries: WorkflowQueryService,
+    private readonly completeSectionUseCase: CompleteSectionUseCase,
+    private readonly submitSectionForReviewUseCase: SubmitSectionForReviewUseCase,
+    private readonly requestSectionChangesUseCase: RequestSectionChangesUseCase,
+    private readonly approveSectionUseCase: ApproveSectionUseCase,
+    private readonly reopenProjectAfterSectionEditUseCase: ReopenProjectAfterSectionEditUseCase,
   ) {}
+
+  private async applyLegacySectionStatusTransition(params: {
+    sectionId: string;
+    actorId: string;
+    status: string;
+    note?: string;
+    signature?: string;
+  }) {
+    const workflow = await this.workflowQueries.getSectionWorkflow(
+      params.sectionId,
+      params.actorId,
+    );
+
+    if (params.status === 'DRAFT') {
+      await (this.prisma as any).section.update({
+        where: { id: params.sectionId },
+        data: {
+          status: 'DRAFT',
+          workflowStatus: 'DRAFT',
+        },
+      });
+      await (this.prisma as any).sectionStatusEvent.create({
+        data: {
+          sectionId: params.sectionId,
+          status: 'DRAFT',
+          note: `[workflow:DRAFT]${params.note ? ` ${params.note}` : ''}`,
+          signature: params.signature?.trim(),
+          actorId: params.actorId,
+        },
+      });
+      return;
+    }
+
+    if (params.status === 'IN_REVIEW') {
+      if (
+        workflow.workflowStatus === SectionWorkflowStatus.DRAFT ||
+        workflow.workflowStatus === SectionWorkflowStatus.CHANGES_REQUESTED
+      ) {
+        await this.completeSectionUseCase.execute({
+          sectionId: params.sectionId,
+          actorId: params.actorId,
+          note: params.note,
+        });
+        await this.submitSectionForReviewUseCase.execute({
+          sectionId: params.sectionId,
+          actorId: params.actorId,
+          note: params.note,
+        });
+        return;
+      }
+
+      await this.submitSectionForReviewUseCase.execute({
+        sectionId: params.sectionId,
+        actorId: params.actorId,
+        note: params.note,
+      });
+      return;
+    }
+
+    if (params.status === 'CHANGES_REQUESTED') {
+      await this.requestSectionChangesUseCase.execute({
+        sectionId: params.sectionId,
+        actorId: params.actorId,
+        note: params.note ?? '',
+      });
+      return;
+    }
+
+    if (params.status === 'APPROVED') {
+      await this.approveSectionUseCase.execute({
+        sectionId: params.sectionId,
+        actorId: params.actorId,
+        note: params.note,
+        signature: params.signature,
+      });
+      return;
+    }
+
+    throw new BadRequestException(`Unsupported section status transition: ${params.status}`);
+  }
 
   async list(projectId: string, userId: string, companyId: string) {
     await this.projectsService.assertAccess(projectId, userId, companyId, {
@@ -104,28 +197,27 @@ export class SectionsService {
       },
     };
     if (existing) {
-      return this.prisma.$transaction(async (tx) => {
+      const updated = await this.prisma.$transaction(async (tx) => {
         const updated = await (tx as any).section.update({
           where: { id: existing.id },
-          data: { content: dto.content, lastEditorId: userId, status: 'DRAFT' as any },
+          data: {
+            content: dto.content,
+            lastEditorId: userId,
+            status: 'DRAFT' as any,
+            workflowStatus: 'DRAFT' as any,
+          },
           include: baseInclude,
         });
-        if (project && (project.status === 'APPROVED' || project.status === 'IN_REVIEW')) {
-          await (tx as any).project.update({
-            where: { id: projectId },
-            data: { status: 'CHANGES_REQUESTED' as any },
-          });
-          await (tx as any).projectStatusEvent.create({
-            data: ({
-              projectId,
-              status: 'CHANGES_REQUESTED' as any,
-              note: 'Section edited; re-review required',
-              actorId: userId,
-            } as any),
-          });
-        }
         return updated;
       });
+      if (project && (project.status === 'APPROVED' || project.status === 'IN_REVIEW')) {
+        await this.reopenProjectAfterSectionEditUseCase.execute({
+          projectId,
+          actorId: userId,
+          note: 'Section edited; re-review required',
+        });
+      }
+      return updated;
     }
     const createInclude: any = baseInclude;
     return (this.prisma as any).section.create({
@@ -156,10 +248,15 @@ export class SectionsService {
       where: { id: projectId },
       select: { status: true },
     });
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const updated = await (tx as any).section.update({
         where: { id: sectionId },
-        data: { content: dto.content, lastEditorId: userId, status: 'DRAFT' as any },
+        data: {
+          content: dto.content,
+          lastEditorId: userId,
+          status: 'DRAFT' as any,
+          workflowStatus: 'DRAFT' as any,
+        },
         include: {
           lastEditor: { select: { id: true, email: true } },
           comments: {
@@ -189,22 +286,16 @@ export class SectionsService {
           },
         },
       });
-      if (project && (project.status === 'APPROVED' || project.status === 'IN_REVIEW')) {
-        await (tx as any).project.update({
-          where: { id: projectId },
-          data: { status: 'CHANGES_REQUESTED' as any },
-        });
-        await (tx as any).projectStatusEvent.create({
-          data: ({
-            projectId,
-            status: 'CHANGES_REQUESTED' as any,
-            note: 'Section edited; re-review required',
-            actorId: userId,
-          } as any),
-        });
-      }
       return updated;
     });
+    if (project && (project.status === 'APPROVED' || project.status === 'IN_REVIEW')) {
+      await this.reopenProjectAfterSectionEditUseCase.execute({
+        projectId,
+        actorId: userId,
+        note: 'Section edited; re-review required',
+      });
+    }
+    return updated;
   }
 
   async addComment(
@@ -383,12 +474,6 @@ export class SectionsService {
     companyId: string,
     dto: UpdateSectionStatusDto,
   ) {
-    const actor = (await this.prisma.user.findUnique({
-      where: { id: userId },
-    })) as any;
-    if (!actor) {
-      throw new NotFoundException('User not found');
-    }
     const access = await this.projectsService.assertAccess(
       projectId,
       userId,
@@ -402,47 +487,16 @@ export class SectionsService {
     if (!section || section.projectId !== projectId) {
       throw new NotFoundException('Section not found');
     }
-    const membershipRole = access.membershipRole ?? actor.role;
-    const isReviewerRole =
-      membershipRole === 'REVIEWER' || membershipRole === 'ADMIN';
-    if (dto.status === 'APPROVED' && !isReviewerRole) {
-      throw new ForbiddenException('Only reviewers can approve sections');
-    }
-    if (dto.status === 'APPROVED' && !dto.signature?.trim()) {
-      throw new BadRequestException('Signature is required to approve');
-    }
     // Enforce plan-based review limits on approval / change requests
     if (dto.status === 'APPROVED' || dto.status === 'CHANGES_REQUESTED') {
       await this.monetization.checkAndConsumeForProject(projectId, 'review', 1);
     }
-    await this.prisma.$transaction(async (tx) => {
-      await (tx as any).section.update({
-        where: { id: sectionId },
-        data: { status: dto.status },
-      });
-      await (tx as any).sectionStatusEvent.create({
-        data: ({
-          sectionId,
-          status: dto.status,
-          note: dto.note,
-          signature: dto.signature?.trim(),
-          actorId: userId,
-        } as any),
-      });
-      if (dto.status === 'CHANGES_REQUESTED') {
-        await (tx as any).project.update({
-          where: { id: projectId },
-          data: { status: 'CHANGES_REQUESTED' as any },
-        });
-        await (tx as any).projectStatusEvent.create({
-          data: ({
-            projectId,
-            status: 'CHANGES_REQUESTED' as any,
-            note: dto.note ?? 'Section changes requested',
-            actorId: userId,
-          } as any),
-        });
-      }
+    await this.applyLegacySectionStatusTransition({
+      sectionId,
+      actorId: userId,
+      status: dto.status,
+      note: dto.note,
+      signature: dto.signature,
     });
     // Auto-notify approver if all sections are approved
     const sections = await this.prisma.section.findMany({
@@ -478,34 +532,9 @@ export class SectionsService {
           data: {
             projectId,
             status: 'IN_REVIEW',
-            note: 'All sections approved; approver notified',
+            note: '[workflow:IN_REVIEW] All sections approved; approver notified',
             actorId: userId,
           },
-        });
-      }
-    }
-    if (
-      (dto.status === 'APPROVED' || dto.status === 'CHANGES_REQUESTED') &&
-      access.project.ownerId !== userId
-    ) {
-      const owner = await this.prisma.user.findUnique({
-        where: { id: access.project.ownerId },
-        select: { id: true, email: true },
-      });
-      if (owner) {
-        await this.notifications.create({
-          userId: owner.id,
-          title:
-            dto.status === 'APPROVED'
-              ? `Section approved: ${section.name}`
-              : `Changes requested: ${section.name}`,
-          body:
-            dto.note?.trim() ||
-            (dto.status === 'APPROVED'
-              ? 'A reviewer approved a section.'
-              : 'A reviewer requested changes.'),
-          type: 'review',
-          meta: { projectId, sectionId, companyId: workspaceId },
         });
       }
     }
