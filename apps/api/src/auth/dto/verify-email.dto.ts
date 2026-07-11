@@ -1,6 +1,1 @@
-import { IsString } from 'class-validator';
-
-export class VerifyEmailDto {
-  @IsString()
-  token: string;
-}
+export * from '../../domains/identity-access/presentation/dto/auth/verify-email.dto';

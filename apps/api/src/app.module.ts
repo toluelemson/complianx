@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
+import { IdentityAccessModule } from './domains/identity-access/identity-access.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ReportingModule } from './domains/reporting/reporting.module';
 import { LlmModule } from './llm/llm.module';
@@ -28,8 +27,7 @@ import { ReviewApprovalModule } from './review-approval/review-approval.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
-    UsersModule,
-    AuthModule,
+    IdentityAccessModule,
     ProjectsModule,
     AssessmentsModule,
     EvidenceModule,

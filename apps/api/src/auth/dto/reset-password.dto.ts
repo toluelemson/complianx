@@ -1,10 +1,1 @@
-import { IsString, MinLength } from 'class-validator';
-
-export class ResetPasswordDto {
-  @IsString()
-  token: string;
-
-  @IsString()
-  @MinLength(8)
-  password: string;
-}
+export * from '../../domains/identity-access/presentation/dto/auth/reset-password.dto';

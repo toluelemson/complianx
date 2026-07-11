@@ -1,9 +1,1 @@
-import { IsEmail, IsString } from 'class-validator';
-
-export class LoginDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  password: string;
-}
+export * from '../../domains/identity-access/presentation/dto/auth/login.dto';

@@ -1,7 +1,1 @@
-import { Role } from '@prisma/client';
-import { IsEnum } from 'class-validator';
-
-export class UpdateRoleDto {
-  @IsEnum(Role)
-  role: Role;
-}
+export * from '../../domains/identity-access/presentation/dto/users/update-role.dto';

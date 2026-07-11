@@ -1,6 +1,1 @@
-import { IsEmail } from 'class-validator';
-
-export class ResendVerificationDto {
-  @IsEmail()
-  email: string;
-}
+export * from '../../domains/identity-access/presentation/dto/auth/resend-verification.dto';

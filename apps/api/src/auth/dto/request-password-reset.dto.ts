@@ -1,6 +1,1 @@
-import { IsEmail } from 'class-validator';
-
-export class RequestPasswordResetDto {
-  @IsEmail()
-  email: string;
-}
+export * from '../../domains/identity-access/presentation/dto/auth/request-password-reset.dto';
