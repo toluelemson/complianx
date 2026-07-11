@@ -17,7 +17,7 @@ infrastructure      deployment and operational assets
 docs                architecture, decisions, security, and operations
 ```
 
-Review approval and assessments now live under `apps/api/src/domains`. Other business modules remain at compatibility paths and migrate incrementally. Low-risk technical adapters live under `apps/api/src/platform`.
+Review approval, assessments, and evidence now live under `apps/api/src/domains`. Other business modules remain at compatibility paths and migrate incrementally. Low-risk technical adapters live under `apps/api/src/platform`.
 
 ## Prerequisites
 

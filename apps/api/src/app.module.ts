@@ -4,7 +4,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
-import { DocumentsModule } from './documents/documents.module';
 import { GeneratorModule } from './generator/generator.module';
 import { LlmModule } from './llm/llm.module';
 import { PdfModule } from './pdf/pdf.module';
@@ -13,7 +12,7 @@ import { RemindersModule } from './reminders/reminders.module';
 import { AutoSaveModule } from './auto-save/auto-save.module';
 import { CompanyModule } from './company/company.module';
 import { InvitationsModule } from './invitations/invitations.module';
-import { ArtifactsModule } from './artifacts/artifacts.module';
+import { EvidenceModule } from './domains/evidence/evidence.module';
 import { AssessmentsModule } from './domains/assessments/assessments.module';
 import { BillingController } from './billing/billing.controller';
 import { BillingWebhookController } from './billing/billing.webhook.controller';
@@ -33,7 +32,7 @@ import { ReviewApprovalModule } from './review-approval/review-approval.module';
     AuthModule,
     ProjectsModule,
     AssessmentsModule,
-    DocumentsModule,
+    EvidenceModule,
     GeneratorModule,
     LlmModule,
     PdfModule,
@@ -42,7 +41,6 @@ import { ReviewApprovalModule } from './review-approval/review-approval.module';
     AutoSaveModule,
     CompanyModule,
     InvitationsModule,
-    ArtifactsModule,
     NotificationsModule,
     ContactModule,
     AnalyticsModule,

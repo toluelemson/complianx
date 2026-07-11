@@ -7,7 +7,7 @@
 | AI systems | projects; Prisma `Project` remains unchanged |
 | Assessments | sections, trust, suggestions — migrated to `apps/api/src/domains/assessments` |
 | Regulatory frameworks | compliance templates |
-| Evidence | documents, artifacts, uploads |
+| Evidence | documents, artifacts, uploads — migrated to `apps/api/src/domains/evidence` |
 | Review and approval | project/section statuses, reviewers, approvers |
 | Reporting | generators, reports, exports |
 | Notifications | notifications and reminders |
