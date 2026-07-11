@@ -244,7 +244,11 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <span className="text-xs font-semibold text-slate-500">
-                  {(project.status ?? 'IN_REVIEW').replace('_', ' ')}
+                  {(
+                    project.workflowStatus ??
+                    project.status ??
+                    'IN_REVIEW'
+                  ).replaceAll('_', ' ')}
                 </span>
               </Link>
             ))}

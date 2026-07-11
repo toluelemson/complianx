@@ -56,6 +56,8 @@ model Project {
   industry   String?
   riskLevel  String?
   status     ProjectStatus @default(DRAFT)
+  workflowStatus ProjectWorkflowStatus @default(DRAFT)
+  workflowVersion Int @default(0)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   ownerId    String
@@ -87,6 +89,7 @@ model Section {
   lastEditor   User?    @relation("SectionLastEditor", fields: [lastEditorId], references: [id])
   comments     SectionComment[]
   status       SectionStatus @default(DRAFT)
+  workflowStatus SectionWorkflowStatus @default(DRAFT)
   statusEvents SectionStatusEvent[]
   autosave    SectionAutosave?
   suggestionFeedback SuggestionFeedback[]
@@ -239,8 +242,28 @@ enum ProjectStatus {
   APPROVED
 }
 
+enum ProjectWorkflowStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  IN_REVIEW
+  CHANGES_REQUESTED
+  RESUBMITTED
+  APPROVED
+  ARCHIVED
+  REJECTED
+  CANCELLED
+}
+
 enum SectionStatus {
   DRAFT
+  IN_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+}
+
+enum SectionWorkflowStatus {
+  DRAFT
+  COMPLETE
   IN_REVIEW
   CHANGES_REQUESTED
   APPROVED

@@ -23,6 +23,7 @@ interface ReviewApprovalPanelProps {
   projectStatusLabel: string;
   projectStatusDisplay?: string;
   onSendForReview: () => void;
+  sendForReviewLabel?: string;
   onApprove: () => void;
   onRequestChanges: () => void;
   reviewerId: string | null;
@@ -35,16 +36,23 @@ interface ReviewApprovalPanelProps {
   availableReviewers: Reviewer[];
   canAssignSelf: boolean;
   canSendForReview?: boolean;
+  sendForReviewDisabled?: boolean;
   canApprove?: boolean;
   canRequestChanges?: boolean;
+  disableAssignmentFields?: boolean;
   userId?: string;
 }
 
 const PROJECT_STATUS_STYLES: Record<string, string> = {
   DRAFT: 'border-amber-200 bg-amber-50 text-amber-900',
+  READY_FOR_REVIEW: 'border-indigo-200 bg-indigo-50 text-indigo-900',
   IN_REVIEW: 'border-sky-200 bg-sky-50 text-sky-900',
+  RESUBMITTED: 'border-cyan-200 bg-cyan-50 text-cyan-900',
   APPROVED: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  ARCHIVED: 'border-slate-300 bg-slate-100 text-slate-800',
   CHANGES_REQUESTED: 'border-rose-200 bg-rose-50 text-rose-900',
+  REJECTED: 'border-rose-300 bg-rose-100 text-rose-900',
+  CANCELLED: 'border-slate-300 bg-slate-100 text-slate-800',
 };
 
 export function ReviewApprovalPanel({
@@ -52,6 +60,7 @@ export function ReviewApprovalPanel({
   projectStatusLabel,
   projectStatusDisplay,
   onSendForReview,
+  sendForReviewLabel = 'Send for review',
   onApprove,
   onRequestChanges,
   reviewerId,
@@ -64,23 +73,24 @@ export function ReviewApprovalPanel({
   availableReviewers,
   canAssignSelf,
   canSendForReview = true,
+  sendForReviewDisabled,
   canApprove = true,
   canRequestChanges = true,
+  disableAssignmentFields = false,
   userId,
 }: ReviewApprovalPanelProps) {
   const totalMissing = trackableSteps.reduce((sum, step) => sum + step.missing, 0);
   const readySteps = trackableSteps.filter((step) => step.missing === 0).length;
   const reviewBlocked =
-    !canSendForReview ||
-    projectStatusLabel === 'IN_REVIEW' ||
-    projectStatusLabel === 'APPROVED' ||
-    !reviewerId ||
-    totalMissing > 0;
+    sendForReviewDisabled ??
+    (!canSendForReview ||
+      projectStatusLabel === 'IN_REVIEW' ||
+      projectStatusLabel === 'APPROVED' ||
+      !reviewerId ||
+      totalMissing > 0);
   const approveBlocked = !canApprove || projectStatusLabel !== 'IN_REVIEW';
   const requestChangesBlocked =
-    !canRequestChanges ||
-    projectStatusLabel === 'DRAFT' ||
-    projectStatusLabel === 'CHANGES_REQUESTED';
+    !canRequestChanges || projectStatusLabel !== 'IN_REVIEW';
   const projectStatusClass =
     PROJECT_STATUS_STYLES[projectStatusLabel] ??
     'border-slate-200 bg-slate-100 text-slate-800';
@@ -156,7 +166,7 @@ export function ReviewApprovalPanel({
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
             <AssignmentField
               label="Reviewer"
-              disabled={!canSendForReview}
+              disabled={disableAssignmentFields || !canSendForReview}
               value={reviewerId ?? ''}
               options={availableReviewers.map((reviewer) => ({
                 value: reviewer.id,
@@ -176,7 +186,7 @@ export function ReviewApprovalPanel({
             <AssignmentField
               label="Approver"
               hint="Optional"
-              disabled={!canSendForReview}
+              disabled={disableAssignmentFields || !canSendForReview}
               value={approverId ?? ''}
               options={reviewers.map((reviewer) => ({
                 value: reviewer.id,
@@ -234,7 +244,7 @@ export function ReviewApprovalPanel({
               onClick={onSendForReview}
               disabled={reviewBlocked}
             >
-              Send for review
+              {sendForReviewLabel}
             </Button>
             <Button
               type="button"
