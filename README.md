@@ -17,7 +17,7 @@ infrastructure      deployment and operational assets
 docs                architecture, decisions, security, and operations
 ```
 
-Business modules remain at compatibility paths in this first architecture stage. Low-risk technical adapters have moved under `apps/api/src/platform`; future domain migrations target `apps/api/src/domains` incrementally.
+Review approval and assessments now live under `apps/api/src/domains`. Other business modules remain at compatibility paths and migrate incrementally. Low-risk technical adapters live under `apps/api/src/platform`.
 
 ## Prerequisites
 

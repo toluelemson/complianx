@@ -5,7 +5,7 @@
 | Identity and access | auth, users |
 | Organizations | company, invitations, membership |
 | AI systems | projects; Prisma `Project` remains unchanged |
-| Assessments | sections, trust, suggestions |
+| Assessments | sections, trust, suggestions — migrated to `apps/api/src/domains/assessments` |
 | Regulatory frameworks | compliance templates |
 | Evidence | documents, artifacts, uploads |
 | Review and approval | project/section statuses, reviewers, approvers |
@@ -13,4 +13,4 @@
 | Notifications | notifications and reminders |
 | Subscriptions | billing, plans, usage, monetization |
 
-Stage one creates these target boundaries without moving every business module. The existing review-approval module already demonstrates layered organization.
+Review approval and assessments now use explicit domain boundaries. Remaining business modules continue at compatibility paths and migrate incrementally.

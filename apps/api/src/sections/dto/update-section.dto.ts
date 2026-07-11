@@ -1,6 +1,1 @@
-import { IsObject } from 'class-validator';
-
-export class UpdateSectionDto {
-  @IsObject()
-  content: Record<string, any>;
-}
+export * from '../../domains/assessments/presentation/dto/sections/update-section.dto';

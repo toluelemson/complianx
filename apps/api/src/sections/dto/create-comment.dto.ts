@@ -1,7 +1,1 @@
-import { IsString, MinLength } from 'class-validator';
-
-export class CreateCommentDto {
-  @IsString()
-  @MinLength(1)
-  body: string;
-}
+export * from '../../domains/assessments/presentation/dto/sections/create-comment.dto';

@@ -1,9 +1,1 @@
-import { IsObject, IsString } from 'class-validator';
-
-export class CreateSectionDto {
-  @IsString()
-  name: string;
-
-  @IsObject()
-  content: Record<string, any>;
-}
+export * from '../../domains/assessments/presentation/dto/sections/create-section.dto';
