@@ -84,6 +84,28 @@ export type SectionWithMeta = {
   artifacts?: SectionArtifactItem[];
 };
 
+type ProjectWorkflowStatus =
+  | 'DRAFT'
+  | 'READY_FOR_REVIEW'
+  | 'IN_REVIEW'
+  | 'CHANGES_REQUESTED'
+  | 'RESUBMITTED'
+  | 'APPROVED'
+  | 'ARCHIVED'
+  | 'REJECTED'
+  | 'CANCELLED';
+
+type ProjectDetail = {
+  id: string;
+  companyId?: string | null;
+  reviewerId?: string | null;
+  approverId?: string | null;
+  status?: 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
+  workflowStatus?: ProjectWorkflowStatus;
+  workflowVersion?: number;
+  viewerRole?: 'OWNER' | 'REVIEWER' | 'APPROVER' | 'MEMBER';
+};
+
 export type DocumentItem = {
   id: string;
   type: string;
@@ -192,7 +214,7 @@ export default function ProjectPage() {
     sidebarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const projectQuery = useQuery({
+  const projectQuery = useQuery<ProjectDetail>({
     queryKey: projectQueryKey,
     enabled: Boolean(projectId && activeCompanyId),
     queryFn: () => api.get(`/projects/${projectId}`).then((res) => res.data),
@@ -240,9 +262,13 @@ export default function ProjectPage() {
   });
   const viewerRole = projectQuery.data?.viewerRole ?? 'OWNER';
   const isOwner = viewerRole === 'OWNER';
-  const isAssignedReviewer = viewerRole === 'REVIEWER' || viewerRole === 'APPROVER';
-  const canApprove = isAssignedReviewer;
-  const canReviewEvidence = isAssignedReviewer;
+  const isAdmin = user?.role === 'ADMIN';
+  const isAssignedReviewer = viewerRole === 'REVIEWER';
+  const isAssignedApprover = viewerRole === 'APPROVER';
+  const canApproveProject = isAssignedApprover || isAdmin;
+  const canRequestProjectChanges = isAssignedReviewer || isAdmin;
+  const canStartProjectReview = isAssignedReviewer || isAdmin;
+  const canReviewEvidence = isAssignedReviewer || isAssignedApprover || isAdmin;
   const canAssignSelf =
     isOwner && (user?.role === 'REVIEWER' || user?.role === 'ADMIN');
   const reviewersQuery = useQuery({
@@ -325,15 +351,23 @@ export default function ProjectPage() {
 
   const currentSection = sectionByName.get(activeStepId);
   useEffect(() => {
+    if (projectQuery.data?.reviewerId) {
+      setSelectedReviewerId(projectQuery.data.reviewerId);
+      return;
+    }
     if (availableReviewers.length) {
       setSelectedReviewerId((prev) => prev ?? availableReviewers[0].id);
     }
-  }, [availableReviewers]);
+  }, [availableReviewers, projectQuery.data?.reviewerId]);
   useEffect(() => {
+    if (projectQuery.data?.approverId) {
+      setSelectedApproverId(projectQuery.data.approverId);
+      return;
+    }
     if (reviewersQuery.data?.length) {
       setSelectedApproverId((prev) => prev ?? reviewersQuery.data[0].id);
     }
-  }, [reviewersQuery.data]);
+  }, [reviewersQuery.data, projectQuery.data?.approverId]);
 
   useEffect(() => {
     if (currentSection && activeStep.fields.length) {
@@ -1189,47 +1223,71 @@ export default function ProjectPage() {
     });
   };
 
-  const projectStatusMutation = useMutation({
+  const projectWorkflowMutation = useMutation({
     mutationFn: (payload: {
-      status: StatusEvent['status'];
-      note?: string;
-      signature?: string;
+      endpoint: string;
+      body?: Record<string, unknown>;
+      successMessage: string;
     }) =>
-      api
-        .post(`/projects/${projectId}/status`, payload)
-        .then((res) => res.data),
+      api.post(payload.endpoint, payload.body ?? {}).then((res) => ({
+        data: res.data,
+        successMessage: payload.successMessage,
+      })),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectQueryKey });
-      toast.success('Project status updated');
+      toast.success('Project workflow updated');
     },
-    onError: () => toast.error('Unable to update project status'),
+    onError: () => toast.error('Unable to update project workflow'),
   });
 
-  const requestReviewMutation = useMutation({
-    mutationFn: (payload: {
-      reviewerId: string;
-      approverId?: string | null;
-      message?: string;
-    }) =>
-      api
-        .post(`/projects/${projectId}/request-review`, payload)
-        .then((res) => res.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectQueryKey });
-      toast.success('Review request sent');
-      setReviewMessage('');
-    },
-    onError: () => toast.error('Unable to send review request'),
-  });
+  const workflowStatus = (projectQuery.data?.workflowStatus ??
+    projectQuery.data?.status ??
+    'DRAFT') as ProjectWorkflowStatus;
+  const workflowVersion = projectQuery.data?.workflowVersion;
 
   const sendProjectForReview = () => {
-    if (!isOwner) {
-      toast.error('Only owners can send for review');
-      return;
-    }
     if (monetizationEnabled && !isPaidPlan) {
       window.dispatchEvent(new Event('paywall'));
       toast.error('Upgrade to request reviews and approvals.');
+      return;
+    }
+    if (workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED') {
+      if (!canStartProjectReview) {
+        toast.error('Only assigned reviewers can start the review');
+        return;
+      }
+      projectWorkflowMutation.mutate({
+        endpoint: `/projects/${projectId}/workflow/start-review`,
+        body: {
+          note: reviewMessage.trim() || undefined,
+          expectedVersion: workflowVersion,
+        },
+        successMessage: 'Review started',
+      });
+      return;
+    }
+    if (workflowStatus === 'CHANGES_REQUESTED') {
+      if (!isOwner) {
+        toast.error('Only owners can resubmit projects');
+        return;
+      }
+      if (!allFieldsComplete) {
+        toast.error('Complete every required field before resubmitting');
+        return;
+      }
+      projectWorkflowMutation.mutate({
+        endpoint: `/projects/${projectId}/workflow/resubmit`,
+        body: {
+          note: reviewMessage.trim() || undefined,
+          expectedVersion: workflowVersion,
+        },
+        successMessage: 'Project resubmitted',
+      });
+      setReviewMessage('');
+      return;
+    }
+    if (!isOwner) {
+      toast.error('Only owners can send for review');
       return;
     }
     if (!allFieldsComplete) {
@@ -1240,16 +1298,22 @@ export default function ProjectPage() {
       toast.error('Select a reviewer for this request');
       return;
     }
-    requestReviewMutation.mutate({
-      reviewerId: selectedReviewerId,
-      approverId: selectedApproverId ?? undefined,
-      message: reviewMessage.trim() || undefined,
+    projectWorkflowMutation.mutate({
+      endpoint: `/projects/${projectId}/workflow/submit`,
+      body: {
+        reviewerId: selectedReviewerId,
+        approverId: selectedApproverId ?? undefined,
+        note: reviewMessage.trim() || undefined,
+        expectedVersion: workflowVersion,
+      },
+      successMessage: 'Project submitted for review',
     });
+    setReviewMessage('');
   };
 
   const approveProject = () => {
-    if (!canApprove) {
-      toast.error('Only assigned reviewers or approvers can approve');
+    if (!canApproveProject) {
+      toast.error('Only assigned approvers can approve');
       return;
     }
     if (monetizationEnabled && !isPaidPlan) {
@@ -1257,7 +1321,7 @@ export default function ProjectPage() {
       toast.error('Upgrade to approve projects.');
       return;
     }
-    if (projectStatusLabel !== 'IN_REVIEW') {
+    if (workflowStatus !== 'IN_REVIEW') {
       toast.error('Project must be in review before approving');
       return;
     }
@@ -1270,15 +1334,19 @@ export default function ProjectPage() {
       toast.error('Signature is required for approval');
       return;
     }
-    projectStatusMutation.mutate({
-      status: 'APPROVED',
-      signature: trimmed,
+    projectWorkflowMutation.mutate({
+      endpoint: `/projects/${projectId}/workflow/approve`,
+      body: {
+        signature: trimmed,
+        expectedVersion: workflowVersion,
+      },
+      successMessage: 'Project approved',
     });
   };
 
   const requestChanges = () => {
-    if (!canApprove) {
-      toast.error('Only assigned reviewers or approvers can request changes');
+    if (!canRequestProjectChanges) {
+      toast.error('Only assigned reviewers can request changes');
       return;
     }
     if (monetizationEnabled && !isPaidPlan) {
@@ -1286,7 +1354,18 @@ export default function ProjectPage() {
       toast.error('Upgrade to request changes and run approvals.');
       return;
     }
-    projectStatusMutation.mutate({ status: 'CHANGES_REQUESTED' });
+    if (!reviewMessage.trim()) {
+      toast.error('Add a review note before requesting changes');
+      return;
+    }
+    projectWorkflowMutation.mutate({
+      endpoint: `/projects/${projectId}/workflow/request-changes`,
+      body: {
+        note: reviewMessage.trim() || undefined,
+        expectedVersion: workflowVersion,
+      },
+      successMessage: 'Changes requested',
+    });
   };
 
   const completedSteps = new Set(
@@ -1336,15 +1415,6 @@ export default function ProjectPage() {
       })),
     [trackableStepIds, stepTitleMap, incompleteFieldsByStep, sectionByName],
   );
-  const PROJECT_STATUS_LABELS: Record<string, string> = {
-    DRAFT: 'Draft',
-    IN_REVIEW: 'In review',
-    CHANGES_REQUESTED: 'Changes requested',
-    APPROVED: 'Approved',
-  };
-  const projectStatusLabel = projectQuery.data?.status ?? 'DRAFT';
-  const projectStatusDisplay =
-    PROJECT_STATUS_LABELS[projectStatusLabel] ?? projectStatusLabel;
   const allFieldsComplete = useMemo(
     () =>
       [...incompleteFieldsByStep.values()].every(
@@ -1352,6 +1422,48 @@ export default function ProjectPage() {
       ),
     [incompleteFieldsByStep],
   );
+  const PROJECT_STATUS_LABELS: Record<string, string> = {
+    DRAFT: 'Draft',
+    READY_FOR_REVIEW: 'Ready for review',
+    IN_REVIEW: 'In review',
+    CHANGES_REQUESTED: 'Changes requested',
+    RESUBMITTED: 'Resubmitted',
+    APPROVED: 'Approved',
+    ARCHIVED: 'Archived',
+    REJECTED: 'Rejected',
+    CANCELLED: 'Cancelled',
+  };
+  const projectStatusLabel = workflowStatus;
+  const projectStatusDisplay =
+    PROJECT_STATUS_LABELS[projectStatusLabel] ?? projectStatusLabel;
+  const sendForReviewLabel =
+    workflowStatus === 'CHANGES_REQUESTED'
+      ? 'Resubmit project'
+      : workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED'
+      ? 'Start review'
+      : 'Send for review';
+  const sendForReviewDisabled =
+    !isPaidPlan ||
+    (workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED'
+      ? !canStartProjectReview
+      : workflowStatus === 'CHANGES_REQUESTED'
+      ? !isOwner || !allFieldsComplete || !selectedReviewerId
+      : !isOwner ||
+        workflowStatus === 'IN_REVIEW' ||
+        workflowStatus === 'APPROVED' ||
+        workflowStatus === 'ARCHIVED' ||
+        workflowStatus === 'REJECTED' ||
+        workflowStatus === 'CANCELLED' ||
+        !selectedReviewerId ||
+        !allFieldsComplete);
+  const disableAssignmentFields =
+    workflowStatus === 'READY_FOR_REVIEW' ||
+    workflowStatus === 'RESUBMITTED' ||
+    workflowStatus === 'IN_REVIEW' ||
+    workflowStatus === 'APPROVED' ||
+    workflowStatus === 'ARCHIVED' ||
+    workflowStatus === 'REJECTED' ||
+    workflowStatus === 'CANCELLED';
   const selectionIsDefault = useMemo(() => {
     const selectedSet = new Set(selectedDocumentTypes);
     if (selectedSet.size !== DEFAULT_DOCUMENT_SELECTION.length) {
@@ -2332,6 +2444,7 @@ export default function ProjectPage() {
                   projectStatusLabel={projectStatusLabel}
                   projectStatusDisplay={projectStatusDisplay}
                   onSendForReview={sendProjectForReview}
+                  sendForReviewLabel={sendForReviewLabel}
                   onApprove={approveProject}
                   onRequestChanges={requestChanges}
                   reviewerId={selectedReviewerId}
@@ -2343,9 +2456,11 @@ export default function ProjectPage() {
                   reviewers={reviewersQuery.data ?? []}
                   availableReviewers={availableReviewers}
                   canAssignSelf={canAssignSelf}
-                  canSendForReview={isOwner && isPaidPlan}
-                  canApprove={canApprove && isPaidPlan}
-                  canRequestChanges={canApprove && isPaidPlan}
+                  canSendForReview={isOwner || canStartProjectReview}
+                  sendForReviewDisabled={sendForReviewDisabled}
+                  canApprove={canApproveProject && isPaidPlan}
+                  canRequestChanges={canRequestProjectChanges && isPaidPlan}
+                  disableAssignmentFields={disableAssignmentFields}
                   userId={user?.id}
                 />
                 <div
