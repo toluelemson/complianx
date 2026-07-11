@@ -9,7 +9,7 @@
 | Regulatory frameworks | compliance templates |
 | Evidence | documents, artifacts, uploads — migrated to `apps/api/src/domains/evidence` |
 | Review and approval | project/section statuses, reviewers, approvers |
-| Reporting | generators, reports, exports |
+| Reporting | generators, reports, exports — migrated to `apps/api/src/domains/reporting` |
 | Notifications | notifications and reminders |
 | Subscriptions | billing, plans, usage, monetization |
 

@@ -1,4 +1,4 @@
-import { mergeSections } from './utils';
+import { mergeSections } from './merge-sections';
 
 describe('mergeSections', () => {
   it('merges sections into a composite object keyed by name', () => {

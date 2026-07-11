@@ -11,9 +11,8 @@ import * as archiver from 'archiver';
 import { PassThrough } from 'stream';
 import { LlmService } from '../../../../platform/ai/llm.service';
 import { PdfService } from '../../../../platform/pdf/pdf.service';
-import { renderDocumentHtml } from '../../../../generator/templates';
-import { mergeSections } from '../../../../generator/utils';
-import { ReadinessService } from '../../../../generator/readiness.service';
+import { ReadinessService } from '../../../reporting/application/readiness/readiness.service';
+import { ReportCompositionService } from '../../../reporting/application/report-generation/report-composition.service';
 import {
   FILE_STORAGE,
   type FileStorage,
@@ -57,6 +56,7 @@ export class DocumentsService {
     private readonly llmService: LlmService,
     private readonly pdfService: PdfService,
     private readonly readinessService: ReadinessService,
+    private readonly composition: ReportCompositionService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
   ) {}
 
@@ -193,13 +193,13 @@ export class DocumentsService {
       });
     }
 
-    const merged = mergeSections(sections);
+    const merged = this.composition.mergeSections(sections);
     const markdown = await this.llmService.generate(spec.mode, merged);
     const finalMarkdown =
       readiness.status === 'partial'
         ? `${this.buildReadinessNotice(readiness)}\n\n${markdown}`
         : markdown;
-    const html = renderDocumentHtml(spec.label, finalMarkdown);
+    const html = this.composition.renderHtml(spec.label, finalMarkdown);
     const fileName = `${projectId}-${type}-${Date.now()}.pdf`;
     const filePath = this.storage.resolve(this.storageBucket, fileName);
 

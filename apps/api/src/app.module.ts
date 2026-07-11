@@ -4,7 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
-import { GeneratorModule } from './generator/generator.module';
+import { ReportingModule } from './domains/reporting/reporting.module';
 import { LlmModule } from './llm/llm.module';
 import { PdfModule } from './pdf/pdf.module';
 import { TemplatesModule } from './templates/templates.module';
@@ -33,7 +33,7 @@ import { ReviewApprovalModule } from './review-approval/review-approval.module';
     ProjectsModule,
     AssessmentsModule,
     EvidenceModule,
-    GeneratorModule,
+    ReportingModule,
     LlmModule,
     PdfModule,
     TemplatesModule,

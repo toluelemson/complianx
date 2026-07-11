@@ -5,12 +5,19 @@ import { ProjectsModule } from '../../projects/projects.module';
 import { CompanyModule } from '../../company/company.module';
 import { LlmModule } from '../../platform/ai/llm.module';
 import { PdfModule } from '../../platform/pdf/pdf.module';
-import { ReadinessService } from '../../generator/readiness.service';
 import { FilesModule } from '../../platform/files/files.module';
+import { ReportingFoundationModule } from '../reporting/reporting-foundation.module';
 
 @Module({
-  imports: [ProjectsModule, CompanyModule, LlmModule, PdfModule, FilesModule],
-  providers: [DocumentsService, ReadinessService],
+  imports: [
+    ProjectsModule,
+    CompanyModule,
+    LlmModule,
+    PdfModule,
+    FilesModule,
+    ReportingFoundationModule,
+  ],
+  providers: [DocumentsService],
   controllers: [DocumentsController],
   exports: [DocumentsService],
 })
