@@ -2,8 +2,11 @@ import {
   STEP_CONFIG,
   TRACKABLE_STEP_COUNT,
   type StepField,
-} from '@/constants/steps';
-import type { SectionWithMeta } from '@/domains/ai-systems/pages/ProjectPage';
+} from '@/domains/ai-systems/constants/steps';
+import type {
+  ProjectDetail,
+  SectionWithMeta,
+} from '@complianx/contracts/ai-systems';
 import { useAnimatedNumber } from '@/shared/hooks/useAnimatedNumber';
 
 interface WizardSidebarProps {
@@ -14,7 +17,7 @@ interface WizardSidebarProps {
   incompleteFieldsByStep: Map<string, StepField[]>;
   activeStepId: string;
   setActiveStepId: (id: string) => void;
-  projectQuery: any;
+  projectQuery: { data?: ProjectDetail };
 }
 
 export function WizardSidebar({

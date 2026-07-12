@@ -4,11 +4,12 @@ import {
   Get,
   Param,
   Post,
-  Request,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { SuggestionsService } from '../../application/suggestions/suggestions.service';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '../../../../platform/auth/authenticated-request.type';
 import { CreateFeedbackDto } from '../dto/suggestions/create-feedback.dto';
 
 @UseGuards(JwtAuthGuard)
@@ -17,7 +18,7 @@ export class SuggestionsController {
   constructor(private readonly suggestionsService: SuggestionsService) {}
 
   @Post('feedback')
-  record(@Request() req, @Body() dto: CreateFeedbackDto) {
+  record(@Req() req: AuthenticatedRequest, @Body() dto: CreateFeedbackDto) {
     return this.suggestionsService.recordFeedback(req.user.userId, dto);
   }
 

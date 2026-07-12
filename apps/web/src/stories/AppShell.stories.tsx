@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { AppShell } from '../components/AppShell';
+import { AppShell } from '../app/layout/AppShell';
 import { StoryProviders } from '../storybook/StoryProviders';
 import api from '@/platform/api/client';
 

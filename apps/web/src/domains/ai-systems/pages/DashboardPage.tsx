@@ -3,13 +3,18 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api from '@/platform/api/client';
-import { AppShell } from '@/components/AppShell';
+import { AppShell } from '@/app/layout/AppShell';
 import type { NewProjectFormValues } from '../components/NewProjectModal';
 import { NewProjectModal } from '../components/NewProjectModal';
 import { CloneProjectModal } from '../components/CloneProjectModal';
-import { TRACKABLE_STEP_COUNT } from '@/constants/steps';
-import { DOCUMENT_LABELS } from '@/constants/documents';
+import {
+  cloneProject,
+  createProject,
+  listProjects,
+} from '@/domains/ai-systems/api';
+import type { ProjectListItem } from '@complianx/contracts/ai-systems';
+import { TRACKABLE_STEP_COUNT } from '@/domains/ai-systems/constants/steps';
+import { DOCUMENT_LABELS } from '@/domains/ai-systems/constants/documents';
 import { useAuth } from '@/app/providers/AuthContext';
 
 export default function DashboardPage() {
@@ -23,15 +28,14 @@ export default function DashboardPage() {
     id: string;
     name: string;
   } | null>(null);
-  const projectsQuery = useQuery({
+  const projectsQuery = useQuery<ProjectListItem[]>({
     queryKey: ['projects', activeCompanyId],
     enabled: Boolean(token && activeCompanyId),
-    queryFn: () => api.get('/projects').then((res) => res.data),
+    queryFn: listProjects,
   });
 
   const createMutation = useMutation({
-    mutationFn: (values: NewProjectFormValues) =>
-      api.post('/projects', values).then((res) => res.data),
+    mutationFn: (values: NewProjectFormValues) => createProject(values),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['projects', activeCompanyId],
@@ -46,9 +50,7 @@ export default function DashboardPage() {
 
   const cloneMutation = useMutation({
     mutationFn: (payload: { projectId: string; name: string }) =>
-      api
-        .post(`/projects/${payload.projectId}/clone`, { name: payload.name })
-        .then((res) => res.data),
+      cloneProject(payload.projectId, payload.name),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['projects', activeCompanyId],
@@ -62,10 +64,10 @@ export default function DashboardPage() {
   });
   const projects = projectsQuery.data ?? [];
   const ownedProjects = projects.filter(
-    (project: any) => !project.viewerRole || project.viewerRole === 'OWNER',
+    (project) => !project.viewerRole || project.viewerRole === 'OWNER',
   );
   const assignedProjects = projects.filter(
-    (project: any) => project.viewerRole && project.viewerRole !== 'OWNER',
+    (project) => project.viewerRole && project.viewerRole !== 'OWNER',
   );
   const readinessBadgeClass = (value: number) =>
     value >= 80
@@ -84,16 +86,16 @@ export default function DashboardPage() {
         projectName: string;
       }> = [];
 
-      ownedProjects.forEach((project: any) => {
+      ownedProjects.forEach((project) => {
         const uniqueSections = new Set(
-          (project.sections ?? []).map((section: any) => section.name),
+          (project.sections ?? []).map((section) => section.name),
         );
         const readiness = Math.round(
           (uniqueSections.size / TRACKABLE_STEP_COUNT) * 100 || 0,
         );
         readinessMap.set(project.id, readiness);
         readinessTotal += readiness;
-        (project.documents ?? []).forEach((doc: any) => {
+        (project.documents ?? []).forEach((doc) => {
           docs.push({
             id: doc.id,
             type: doc.type,
@@ -243,7 +245,7 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="mt-3 space-y-2">
-            {assignedProjects.map((project: any) => (
+            {assignedProjects.map((project) => (
               <Link
                 key={project.id}
                 to={`/projects/${project.id}${workspaceSuffix}`}
@@ -258,11 +260,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <span className="text-xs font-semibold text-slate-500">
-                  {(
-                    project.workflowStatus ??
-                    project.status ??
-                    'IN_REVIEW'
-                  ).replaceAll('_', ' ')}
+                  {(project.workflowStatus ?? 'IN_REVIEW').replaceAll('_', ' ')}
                 </span>
               </Link>
             ))}
@@ -284,7 +282,7 @@ export default function DashboardPage() {
             </thead>
             <tbody>
               {ownedProjects.length ? (
-                ownedProjects.map((project: any) => {
+                ownedProjects.map((project) => {
                   const readiness = readinessByProject.get(project.id) ?? 0;
                   const readinessBadge = readinessBadgeClass(readiness);
                   return (
@@ -356,7 +354,7 @@ export default function DashboardPage() {
       </div>
       <div className="mt-6 space-y-4 md:hidden">
         {ownedProjects.length ? (
-          ownedProjects.map((project: any) => {
+          ownedProjects.map((project) => {
             const readiness = readinessByProject.get(project.id) ?? 0;
             const readinessBadge = readinessBadgeClass(readiness);
             return (

@@ -1,16 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../platform/database/prisma.service';
-import {
-  inferProjectWorkflowFromLegacyStatus,
-  inferSectionWorkflowFromLegacyStatus,
-  mapProjectWorkflowToLegacyStatus,
-  mapSectionWorkflowToLegacyStatus,
-} from '../domain/workflow-transition';
 import {
   ProjectWorkflowStatus,
   SectionWorkflowStatus,
 } from '../domain/workflow-status';
 import {
+  AssignedProjectReview,
   ProjectWorkflowHistoryEntry,
   ProjectWorkflowTransitionRequest,
   SectionWorkflowHistoryEntry,
@@ -23,6 +19,71 @@ import { ProjectWorkflowRepository } from './project-workflow.repository';
 import { SectionWorkflowRepository } from './section-workflow.repository';
 
 const WORKFLOW_NOTE_PREFIX = '[workflow:';
+
+const projectWorkflowSelect = Prisma.validator<Prisma.ProjectSelect>()({
+  id: true,
+  name: true,
+  companyId: true,
+  ownerId: true,
+  reviewerId: true,
+  approverId: true,
+  workflowStatus: true,
+  workflowVersion: true,
+  sections: {
+    select: {
+      id: true,
+      name: true,
+      workflowStatus: true,
+    },
+  },
+});
+
+const projectApprovalSnapshotSelect = Prisma.validator<Prisma.ProjectSelect>()({
+  id: true,
+  name: true,
+  companyId: true,
+  approverId: true,
+  workflowStatus: true,
+  approver: { select: { email: true } },
+  sections: { select: { workflowStatus: true } },
+});
+
+const assignedReviewSelect = Prisma.validator<Prisma.ProjectSelect>()({
+  id: true,
+  name: true,
+  ownerId: true,
+  reviewerId: true,
+  approverId: true,
+  workflowStatus: true,
+  workflowVersion: true,
+  updatedAt: true,
+});
+
+const sectionWorkflowSelect = Prisma.validator<Prisma.SectionSelect>()({
+  id: true,
+  name: true,
+  projectId: true,
+  workflowStatus: true,
+  project: {
+    select: {
+      id: true,
+      name: true,
+      companyId: true,
+      ownerId: true,
+      reviewerId: true,
+      approverId: true,
+      workflowStatus: true,
+      workflowVersion: true,
+    },
+  },
+});
+
+type ProjectStatusEventRecord = Prisma.ProjectStatusEventGetPayload<{
+  include: { actor: { select: { id: true; email: true } } };
+}>;
+type SectionStatusEventRecord = Prisma.SectionStatusEventGetPayload<{
+  include: { actor: { select: { id: true; email: true } } };
+}>;
 
 function encodeWorkflowNote(status: string, note?: string) {
   return `${WORKFLOW_NOTE_PREFIX}${status}]${note ? ` ${note}` : ''}`;
@@ -45,6 +106,18 @@ function decodeWorkflowNote<TStatus extends string>(
   ) as TStatus;
   const decodedNote = note.slice(end + 1).trim();
   return { workflowStatus, note: decodedNote || null };
+}
+
+function toProjectWorkflowStatus(
+  status: `${ProjectWorkflowStatus}`,
+): ProjectWorkflowStatus {
+  return status as ProjectWorkflowStatus;
+}
+
+function toSectionWorkflowStatus(
+  status: `${SectionWorkflowStatus}`,
+): SectionWorkflowStatus {
+  return status as SectionWorkflowStatus;
 }
 
 @Injectable()
@@ -75,35 +148,86 @@ export class PrismaWorkflowRepository
   }
 
   async getProject(projectId: string) {
-    const project = await (this.prisma as any).project.findUnique({
+    const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      select: {
-        id: true,
-        name: true,
-        companyId: true,
-        ownerId: true,
-        reviewerId: true,
-        approverId: true,
-        status: true,
-        workflowStatus: true,
-        workflowVersion: true,
-        sections: {
-          select: {
-            id: true,
-            name: true,
-            status: true,
-            workflowStatus: true,
-          },
-        },
+      select: projectWorkflowSelect,
+    });
+    if (!project) {
+      return null;
+    }
+    return {
+      ...project,
+      workflowStatus: toProjectWorkflowStatus(project.workflowStatus),
+      sections: project.sections.map((section) => ({
+        ...section,
+        workflowStatus: toSectionWorkflowStatus(section.workflowStatus),
+      })),
+    };
+  }
+
+  async listReviewerCandidates(companyId: string, actorId: string) {
+    const memberships = await this.prisma.userCompany.findMany({
+      where: {
+        companyId,
+        role: { in: ['REVIEWER', 'ADMIN'] as const },
+      },
+      include: {
+        user: { select: { id: true, email: true } },
       },
     });
-    return project ?? null;
+    if (memberships.length > 0) {
+      return memberships
+        .map((entry) => ({
+          id: entry.user.id,
+          email: entry.user.email,
+          role: entry.role,
+        }))
+        .sort((a, b) => a.email.localeCompare(b.email));
+    }
+    const selfMembership = await this.prisma.userCompany.findUnique({
+      where: { userId_companyId: { userId: actorId, companyId } },
+      include: { user: { select: { id: true, email: true } } },
+    });
+    if (!selfMembership) {
+      return [];
+    }
+    return [
+      {
+        id: selfMembership.user.id,
+        email: selfMembership.user.email,
+        role: selfMembership.role,
+      },
+    ];
+  }
+
+  async getProjectApprovalSnapshot(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: projectApprovalSnapshotSelect,
+    });
+    if (!project) {
+      return null;
+    }
+    return {
+      id: project.id,
+      name: project.name,
+      companyId: project.companyId ?? null,
+      approverId: project.approverId ?? null,
+      approverEmail: project.approver?.email ?? null,
+      workflowStatus: toProjectWorkflowStatus(project.workflowStatus),
+      allSectionsApproved:
+        project.sections.length > 0 &&
+        project.sections.every(
+          (section) =>
+            toSectionWorkflowStatus(section.workflowStatus) ===
+            SectionWorkflowStatus.APPROVED,
+        ),
+    };
   }
 
   async transitionProject(request: ProjectWorkflowTransitionRequest) {
-    const legacyStatus = mapProjectWorkflowToLegacyStatus(request.toStatus);
     await this.prisma.$transaction(async (tx) => {
-      const updateResult = await (tx as any).project.updateMany({
+      const updateResult = await tx.project.updateMany({
         where: {
           id: request.projectId,
           ...(typeof request.expectedVersion === 'number'
@@ -111,7 +235,6 @@ export class PrismaWorkflowRepository
             : {}),
         },
         data: {
-          status: legacyStatus,
           workflowStatus: request.toStatus,
           workflowVersion: { increment: 1 },
           reviewerId: request.reviewerId ?? undefined,
@@ -121,10 +244,10 @@ export class PrismaWorkflowRepository
       if (updateResult.count !== 1) {
         throw new WorkflowVersionConflictError();
       }
-      await (tx as any).projectStatusEvent.create({
+      await tx.projectStatusEvent.create({
         data: {
           projectId: request.projectId,
-          status: legacyStatus,
+          status: request.toStatus,
           note: encodeWorkflowNote(request.toStatus, request.note),
           signature: request.signature?.trim(),
           actorId: request.actorId,
@@ -136,22 +259,21 @@ export class PrismaWorkflowRepository
   async listProjectHistory(
     projectId: string,
   ): Promise<ProjectWorkflowHistoryEntry[]> {
-    const events = await (this.prisma as any).projectStatusEvent.findMany({
+    const events = await this.prisma.projectStatusEvent.findMany({
       where: { projectId },
       orderBy: { createdAt: 'desc' },
       include: { actor: { select: { id: true, email: true } } },
     });
-    return events.map((event: any) => {
+    return events.map((event: ProjectStatusEventRecord) => {
       const decoded = decodeWorkflowNote<ProjectWorkflowStatus>(
         event.note,
-        inferProjectWorkflowFromLegacyStatus(event.status),
+        toProjectWorkflowStatus(event.status),
       );
       return {
         id: event.id,
         createdAt: event.createdAt,
         actorId: event.actorId,
         actorEmail: event.actor?.email,
-        legacyStatus: event.status,
         workflowStatus: decoded.workflowStatus,
         note: decoded.note,
         signature: event.signature,
@@ -159,91 +281,78 @@ export class PrismaWorkflowRepository
     });
   }
 
-  async listAssignedReviews(userId: string, companyId: string) {
-    return (this.prisma as any).project.findMany({
+  async listAssignedReviews(
+    userId: string,
+    companyId: string,
+  ): Promise<AssignedProjectReview[]> {
+    const projects = await this.prisma.project.findMany({
       where: {
         companyId,
         OR: [{ reviewerId: userId }, { approverId: userId }],
       },
-      select: {
-        id: true,
-        name: true,
-        ownerId: true,
-        reviewerId: true,
-        approverId: true,
-        workflowStatus: true,
-        workflowVersion: true,
-        updatedAt: true,
-      },
+      select: assignedReviewSelect,
       orderBy: { updatedAt: 'desc' },
     });
+    return projects.map((project) => ({
+      ...project,
+      workflowStatus: toProjectWorkflowStatus(project.workflowStatus),
+    }));
   }
 
   async getSection(sectionId: string) {
-    const section = await (this.prisma as any).section.findUnique({
+    const section = await this.prisma.section.findUnique({
       where: { id: sectionId },
-      select: {
-        id: true,
-        name: true,
-        projectId: true,
-        status: true,
-        workflowStatus: true,
-        project: {
-          select: {
-            id: true,
-            name: true,
-            companyId: true,
-            ownerId: true,
-            reviewerId: true,
-            approverId: true,
-            workflowStatus: true,
-            workflowVersion: true,
-          },
-        },
-      },
+      select: sectionWorkflowSelect,
     });
-    return section ?? null;
+    if (!section) {
+      return null;
+    }
+    return {
+      ...section,
+      workflowStatus: toSectionWorkflowStatus(section.workflowStatus),
+      project: {
+        ...section.project,
+        workflowStatus: toProjectWorkflowStatus(section.project.workflowStatus),
+      },
+    };
   }
 
   async transitionSection(request: SectionWorkflowTransitionRequest) {
-    const legacyStatus = mapSectionWorkflowToLegacyStatus(request.toStatus);
     await this.prisma.$transaction(async (tx) => {
-      const section = await (tx as any).section.findUnique({
+      const section = await tx.section.findUnique({
         where: { id: request.sectionId },
         select: { projectId: true },
       });
       if (!section) {
         throw new NotFoundException('Section not found');
       }
-      await (tx as any).section.update({
+      await tx.section.update({
         where: { id: request.sectionId },
         data: {
-          status: legacyStatus,
           workflowStatus: request.toStatus,
         },
       });
-      await (tx as any).sectionStatusEvent.create({
+      await tx.sectionStatusEvent.create({
         data: {
           sectionId: request.sectionId,
-          status: legacyStatus,
+          status: request.toStatus,
           note: encodeWorkflowNote(request.toStatus, request.note),
           signature: request.signature?.trim(),
           actorId: request.actorId,
         },
       });
       if (request.toStatus === SectionWorkflowStatus.CHANGES_REQUESTED) {
-        await (tx as any).project.update({
+        await tx.project.update({
           where: { id: section.projectId },
           data: {
-            status: 'CHANGES_REQUESTED',
             workflowStatus: ProjectWorkflowStatus.CHANGES_REQUESTED,
             workflowVersion: { increment: 1 },
           },
         });
-        await (tx as any).projectStatusEvent.create({
+        await tx.projectStatusEvent.create({
           data: {
             projectId: section.projectId,
-            status: 'CHANGES_REQUESTED',
+            status: ProjectWorkflowStatus.CHANGES_REQUESTED,
             note: encodeWorkflowNote(
               ProjectWorkflowStatus.CHANGES_REQUESTED,
               request.note ?? 'Section changes requested',
@@ -258,22 +367,21 @@ export class PrismaWorkflowRepository
   async listSectionHistory(
     sectionId: string,
   ): Promise<SectionWorkflowHistoryEntry[]> {
-    const events = await (this.prisma as any).sectionStatusEvent.findMany({
+    const events = await this.prisma.sectionStatusEvent.findMany({
       where: { sectionId },
       orderBy: { createdAt: 'desc' },
       include: { actor: { select: { id: true, email: true } } },
     });
-    return events.map((event: any) => {
+    return events.map((event: SectionStatusEventRecord) => {
       const decoded = decodeWorkflowNote<SectionWorkflowStatus>(
         event.note,
-        inferSectionWorkflowFromLegacyStatus(event.status),
+        toSectionWorkflowStatus(event.status),
       );
       return {
         id: event.id,
         createdAt: event.createdAt,
         actorId: event.actorId,
         actorEmail: event.actor?.email,
-        legacyStatus: event.status,
         workflowStatus: decoded.workflowStatus,
         note: decoded.note,
         signature: event.signature,

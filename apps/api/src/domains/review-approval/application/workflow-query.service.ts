@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   PROJECT_WORKFLOW_REPOSITORY,
   ProjectWorkflowRepository,
@@ -56,5 +61,19 @@ export class WorkflowQueryService {
 
   async getAssignedReviews(actorId: string, companyId: string) {
     return this.projects.listAssignedReviews(actorId, companyId);
+  }
+
+  async listProjectReviewers(projectId: string, actorId: string) {
+    const context = await this.context.loadProjectContext(projectId, actorId);
+    if (context.project.ownerId !== actorId) {
+      throw new ForbiddenException();
+    }
+    if (!context.project.companyId) {
+      throw new NotFoundException('Project company not set');
+    }
+    return this.projects.listReviewerCandidates(
+      context.project.companyId,
+      actorId,
+    );
   }
 }

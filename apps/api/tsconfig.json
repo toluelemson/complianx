@@ -19,8 +19,8 @@
       "@/platform/*": ["src/platform/*"],
       "@/shared/*": ["src/shared/*"],
       "@/config/*": ["src/platform/config/*"],
-      "@complianx/contracts": ["../../packages/contracts/src/index.ts"],
-      "@complianx/contracts/*": ["../../packages/contracts/src/*"]
+      "@complianx/contracts": ["../../packages/contracts/dist/index.d.ts"],
+      "@complianx/contracts/*": ["../../packages/contracts/dist/*"]
     },
     "incremental": false,
     "skipLibCheck": true,

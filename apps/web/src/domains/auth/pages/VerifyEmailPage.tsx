@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '@/platform/api/client';
-import { SiteHeader } from '@/components/SiteHeader';
+import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();

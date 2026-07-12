@@ -2,7 +2,7 @@
 import { useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { AppShell } from '@/components/AppShell';
+import { AppShell } from '@/app/layout/AppShell';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 

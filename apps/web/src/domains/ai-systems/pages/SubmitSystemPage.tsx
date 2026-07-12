@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import api from '@/platform/api/client';
-import { SiteHeader } from '@/components/SiteHeader';
+import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';

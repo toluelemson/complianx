@@ -1,20 +1,32 @@
 // Assessments domain route.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import api from '@/platform/api/client';
-import { AppShell } from '@/components/AppShell';
+import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
-import { STEP_CONFIG } from '@/constants/steps';
+import {
+  analyzeCohorts,
+  analyzeDrift,
+  analyzeFairness,
+  analyzeRobustness,
+  createTrustMetric,
+  createTrustSample,
+  deleteTrustMetric,
+  deleteTrustSample,
+  getTrustProject,
+  getTrustSections,
+  listTrustMetrics,
+  uploadTrustArtifact,
+} from '@/domains/assessments/api';
+import type {
+  CohortResult,
+  SectionSummary,
+  TrustMetric,
+  TrustProjectDetail,
+} from '@complianx/contracts/assessments';
+import { STEP_CONFIG } from '@/domains/ai-systems/constants/steps';
 import { useAnimatedNumber } from '@/shared/hooks/useAnimatedNumber';
-
-type SectionSummary = {
-  id: string;
-  name: string;
-  updatedAt: string;
-  status: 'DRAFT' | 'IN_REVIEW' | 'APPROVED';
-};
 
 type ArtifactPurpose = 'GENERIC' | 'DATASET' | 'MODEL';
 
@@ -26,8 +38,8 @@ const METRIC_STATUS_STYLES: Record<string, string> = {
 };
 
 export default function ProjectTrustPage() {
-  const { projectId } = useParams<{ projectId: string }>();
-  const navigate = useNavigate();
+  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
+  const projectId = routeProjectId ?? '';
   const queryClient = useQueryClient();
   const { user, activeCompanyId, setActiveCompany } = useAuth();
   const location = useLocation();
@@ -49,45 +61,36 @@ export default function ProjectTrustPage() {
     }
   }, [location.search, activeCompanyId, setActiveCompany, user?.companies]);
 
-  const projectQuery = useQuery({
+  const projectQuery = useQuery<TrustProjectDetail>({
     queryKey: ['project', projectId, activeCompanyId],
-    queryFn: () => api.get(`/projects/${projectId}`).then((res) => res.data),
+    queryFn: () => getTrustProject(projectId),
     enabled: Boolean(projectId && activeCompanyId),
   });
 
   const sectionsQuery = useQuery<SectionSummary[]>({
     queryKey: ['sections', projectId, activeCompanyId],
-    queryFn: () =>
-      api.get(`/projects/${projectId}/sections`).then((res) => res.data),
+    queryFn: () => getTrustSections(projectId),
     enabled: Boolean(projectId && activeCompanyId),
   });
 
-  const trustMetricsQuery = useQuery({
+  const trustMetricsQuery = useQuery<TrustMetric[]>({
     queryKey: ['trustMetrics', projectId, activeCompanyId],
     enabled: Boolean(projectId && activeCompanyId),
-    queryFn: () =>
-      api.get(`/projects/${projectId}/metrics`).then((res) => res.data),
+    queryFn: () => listTrustMetrics(projectId),
   });
   const viewerRole = projectQuery.data?.viewerRole ?? 'OWNER';
   const isOwner = viewerRole === 'OWNER';
 
-  const fairnessMetrics = useMemo(
-    () =>
-      (trustMetricsQuery.data ?? []).filter(
-        (metric: any) => (metric.pillar || '').toLowerCase() === 'fairness',
-      ),
-    [trustMetricsQuery.data],
-  );
   const robustnessMetrics = useMemo(
     () =>
       (trustMetricsQuery.data ?? []).filter(
-        (metric: any) => (metric.pillar || '').toLowerCase() === 'robustness',
+        (metric) => (metric.pillar || '').toLowerCase() === 'robustness',
       ),
     [trustMetricsQuery.data],
   );
   const driftMetrics = useMemo(
     () =>
-      (trustMetricsQuery.data ?? []).filter((metric: any) => {
+      (trustMetricsQuery.data ?? []).filter((metric) => {
         const pillar = (metric.pillar || '').toLowerCase();
         const name = (metric.name || '').toLowerCase();
         return (
@@ -145,33 +148,23 @@ export default function ProjectTrustPage() {
   const [cohortBName, setCohortBName] = useState('Segment B');
   const [cohortBColumn, setCohortBColumn] = useState('group');
   const [cohortBValues, setCohortBValues] = useState('GroupB');
-  const [cohortResults, setCohortResults] = useState<any[] | null>(null);
+  const [cohortResults, setCohortResults] = useState<CohortResult[] | null>(null);
   const [attachmentSectionId, setAttachmentSectionId] = useState<string>('');
-
-  useEffect(() => {
-    if (!attachmentSectionId && sectionsQuery.data?.length) {
-      setAttachmentSectionId(sectionsQuery.data[0].id);
-    }
-  }, [attachmentSectionId, sectionsQuery.data]);
-
-  useEffect(() => {
-    if (trustMetricsQuery.data?.length) {
-      setSelectedMetricId(trustMetricsQuery.data[0].id);
-    }
-  }, [trustMetricsQuery.data]);
+  const resolvedAttachmentSectionId =
+    attachmentSectionId || sectionsQuery.data?.[0]?.id || '';
+  const resolvedSelectedMetricId =
+    selectedMetricId || trustMetricsQuery.data?.[0]?.id || null;
 
   const createFairnessMetricMutation = useMutation({
     mutationFn: () =>
-      api
-        .post(`/projects/${projectId}/metrics`, {
-          name: 'Fairness gap',
-          pillar: 'Fairness',
-          unit: 'gap %',
-          targetMax: 0.05,
-          datasetName: fairnessDataset,
-          modelName: fairnessModel,
-        })
-        .then((res) => res.data),
+      createTrustMetric(projectId, {
+        name: 'Fairness gap',
+        pillar: 'Fairness',
+        unit: 'gap %',
+        targetMax: 0.05,
+        datasetName: fairnessDataset,
+        modelName: fairnessModel,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['trustMetrics', projectId, activeCompanyId],
@@ -185,16 +178,10 @@ export default function ProjectTrustPage() {
 
   const submitFairnessSampleMutation = useMutation({
     mutationFn: (value: number) =>
-      api
-        .post(
-          `/metrics/${selectedMetricId}/samples`,
-          {
-            value,
-            note: `Fairness gap recorded for ${fairnessDataset} @ ${fairnessModel}`,
-          },
-          { timeout: 10000 },
-        )
-        .then((res) => res.data),
+      createTrustSample(resolvedSelectedMetricId!, {
+        value,
+        note: `Fairness gap recorded for ${fairnessDataset} @ ${fairnessModel}`,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['trustMetrics', projectId, activeCompanyId],
@@ -210,15 +197,12 @@ export default function ProjectTrustPage() {
     mutationFn: async (payload: {
       datasetArtifactId: string;
       modelArtifactId?: string;
-    }) => {
-      return api
-        .post(`/trust/fairness/analyze`, {
-          projectId,
-          datasetArtifactId: payload.datasetArtifactId,
-          modelArtifactId: payload.modelArtifactId,
-        })
-        .then((res) => res.data);
-    },
+    }) =>
+      analyzeFairness({
+        projectId,
+        datasetArtifactId: payload.datasetArtifactId,
+        modelArtifactId: payload.modelArtifactId,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['trustMetrics', projectId, activeCompanyId],
@@ -238,15 +222,12 @@ export default function ProjectTrustPage() {
         y_pred_perturbed?: string;
         y_score?: string;
       };
-    }) => {
-      return api
-        .post(`/trust/robustness/analyze`, {
-          projectId,
-          datasetArtifactId: payload.datasetArtifactId,
-          columns: payload.columns,
-        })
-        .then((res) => res.data);
-    },
+    }) =>
+      analyzeRobustness({
+        projectId,
+        datasetArtifactId: payload.datasetArtifactId,
+        columns: payload.columns,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['trustMetrics', projectId, activeCompanyId],
@@ -262,17 +243,14 @@ export default function ProjectTrustPage() {
       currentArtifactId: string;
       columns?: string[];
       targets?: { y_true?: string; y_score?: string };
-    }) => {
-      return api
-        .post(`/trust/drift/analyze`, {
-          projectId,
-          baselineArtifactId: payload.baselineArtifactId,
-          currentArtifactId: payload.currentArtifactId,
-          columns: payload.columns,
-          targets: payload.targets,
-        })
-        .then((res) => res.data);
-    },
+    }) =>
+      analyzeDrift({
+        projectId,
+        baselineArtifactId: payload.baselineArtifactId,
+        currentArtifactId: payload.currentArtifactId,
+        columns: payload.columns,
+        targets: payload.targets,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['trustMetrics', projectId, activeCompanyId],
@@ -294,16 +272,13 @@ export default function ProjectTrustPage() {
         name: string;
         filter: { column: string; values: (string | number)[] };
       }>;
-    }) => {
-      return api
-        .post(`/trust/fairness/segments`, {
-          projectId,
-          datasetArtifactId: payload.datasetArtifactId,
-          columns: payload.columns,
-          segments: payload.segments,
-        })
-        .then((res) => res.data);
-    },
+    }) =>
+      analyzeCohorts({
+        projectId,
+        datasetArtifactId: payload.datasetArtifactId,
+        columns: payload.columns,
+        segments: payload.segments,
+      }),
     onSuccess: (data) => {
       setCohortResults(data?.results ?? null);
       toast.success('Cohort analysis complete');
@@ -313,9 +288,7 @@ export default function ProjectTrustPage() {
 
   const deleteMetricMutation = useMutation({
     mutationFn: (metricId: string) =>
-      api
-        .delete(`/projects/${projectId}/metrics/${metricId}`)
-        .then((res) => res.data),
+      deleteTrustMetric(projectId, metricId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['trustMetrics', projectId, activeCompanyId],
@@ -326,8 +299,7 @@ export default function ProjectTrustPage() {
   });
 
   const deleteSampleMutation = useMutation({
-    mutationFn: (sampleId: string) =>
-      api.delete(`/samples/${sampleId}`).then((res) => res.data),
+    mutationFn: (sampleId: string) => deleteTrustSample(sampleId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['trustMetrics', projectId, activeCompanyId],
@@ -345,24 +317,21 @@ export default function ProjectTrustPage() {
     if (!projectId) {
       throw new Error('Missing project');
     }
-    if (!attachmentSectionId) {
+    if (!resolvedAttachmentSectionId) {
       toast.error('Select a section to attach evidence');
       throw new Error('Missing section');
     }
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('description', description);
-    fd.append('purpose', purpose);
-    const response = await api.post(
-      `/projects/${projectId}/sections/${attachmentSectionId}/artifacts`,
-      fd,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
-    );
-    return response.data;
+    return uploadTrustArtifact({
+      projectId,
+      sectionId: resolvedAttachmentSectionId,
+      file,
+      description,
+      purpose,
+    });
   };
 
   const handleManualSampleSubmit = () => {
-    if (!selectedMetricId) {
+    if (!resolvedSelectedMetricId) {
       toast.error('Create a metric first');
       return;
     }
@@ -536,11 +505,6 @@ export default function ProjectTrustPage() {
     }
   };
 
-  if (!projectId) {
-    navigate('/dashboard');
-    return null;
-  }
-
   const sectionTitleMap = useMemo(() => {
     const map = new Map<string, string>();
     STEP_CONFIG.forEach((step) => map.set(step.id, step.title));
@@ -548,7 +512,7 @@ export default function ProjectTrustPage() {
   }, []);
 
   const attachmentSection = sectionsQuery.data?.find(
-    (section) => section.id === attachmentSectionId,
+    (section) => section.id === resolvedAttachmentSectionId,
   );
 
   return (
@@ -605,7 +569,7 @@ export default function ProjectTrustPage() {
               {trustMetricsQuery.isLoading ? (
                 <p className="text-sm text-slate-500">Loading metrics...</p>
               ) : trustMetricsQuery.data?.length ? (
-                trustMetricsQuery.data.map((metric: any) => (
+                trustMetricsQuery.data.map((metric) => (
                   <MetricCard
                     key={metric.id}
                     metric={metric}
@@ -698,7 +662,7 @@ export default function ProjectTrustPage() {
                     Select metric
                   </label>
                   <select
-                    value={selectedMetricId ?? ''}
+                    value={resolvedSelectedMetricId ?? ''}
                     onChange={(event) =>
                       setSelectedMetricId(
                         event.target.value ? event.target.value : null,
@@ -707,7 +671,7 @@ export default function ProjectTrustPage() {
                     className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
                   >
                     <option value="">Select metric</option>
-                    {trustMetricsQuery.data?.map((metric: any) => (
+                    {trustMetricsQuery.data?.map((metric) => (
                       <option key={metric.id} value={metric.id}>
                         {metric.name}
                       </option>
@@ -873,39 +837,9 @@ export default function ProjectTrustPage() {
                     Latest robustness metrics
                   </p>
                   {robustnessMetrics.length ? (
-                    robustnessMetrics.map((metric: any) => {
-                      const latestSample = metric.samples[0];
-                      const animatedSampleValue = useAnimatedNumber(
-                        latestSample?.value ?? 0,
-                        { duration: 700, precision: 2 },
-                      );
-                      const sampleStatus = latestSample?.status ?? 'N/A';
-                      const statusStyle =
-                        METRIC_STATUS_STYLES[sampleStatus] ??
-                        METRIC_STATUS_STYLES['N/A'];
-                      return (
-                        <div
-                          key={metric.id}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
-                        >
-                          <div>
-                            <p className="font-semibold text-slate-900">
-                              {metric.name}
-                            </p>
-                            <p className="text-[11px] text-slate-500">
-                              {latestSample
-                                ? `Latest ${animatedSampleValue.toFixed(2)} (${latestSample.note ?? 'no note'})`
-                                : 'No samples yet'}
-                            </p>
-                          </div>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusStyle}`}
-                          >
-                            {sampleStatus}
-                          </span>
-                        </div>
-                      );
-                    })
+                    robustnessMetrics.map((metric) => (
+                      <MetricSummaryRow key={metric.id} metric={metric} />
+                    ))
                   ) : (
                     <p className="text-xs text-slate-500">
                       No robustness metrics yet.
@@ -991,39 +925,9 @@ export default function ProjectTrustPage() {
                     Latest drift & calibration metrics
                   </p>
                   {driftMetrics.length ? (
-                    driftMetrics.map((metric: any) => {
-                      const latestSample = metric.samples[0];
-                      const animatedSampleValue = useAnimatedNumber(
-                        latestSample?.value ?? 0,
-                        { duration: 700, precision: 2 },
-                      );
-                      const sampleStatus = latestSample?.status ?? 'N/A';
-                      const statusStyle =
-                        METRIC_STATUS_STYLES[sampleStatus] ??
-                        METRIC_STATUS_STYLES['N/A'];
-                      return (
-                        <div
-                          key={metric.id}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
-                        >
-                          <div>
-                            <p className="font-semibold text-slate-900">
-                              {metric.name}
-                            </p>
-                            <p className="text-[11px] text-slate-500">
-                              {latestSample
-                                ? `Latest ${animatedSampleValue.toFixed(2)} (${latestSample.note ?? 'no note'})`
-                                : 'No samples yet'}
-                            </p>
-                          </div>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusStyle}`}
-                          >
-                            {sampleStatus}
-                          </span>
-                        </div>
-                      );
-                    })
+                    driftMetrics.map((metric) => (
+                      <MetricSummaryRow key={metric.id} metric={metric} />
+                    ))
                   ) : (
                     <p className="text-xs text-slate-500">
                       No drift/calibration metrics yet.
@@ -1159,7 +1063,7 @@ export default function ProjectTrustPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {cohortResults.map((row: any, idx: number) => (
+                        {cohortResults.map((row, idx: number) => (
                           <tr key={idx}>
                             <td className="border border-slate-200 px-2 py-1">
                               {row.segment}
@@ -1202,7 +1106,7 @@ export default function ProjectTrustPage() {
               Project status
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {projectQuery.data?.status ?? '—'}
+              {projectQuery.data?.workflowStatus ?? '—'}
             </p>
             <p className="text-xs text-slate-500">
               Updated{' '}
@@ -1228,7 +1132,7 @@ export default function ProjectTrustPage() {
               </p>
             </div>
             <select
-              value={attachmentSectionId}
+              value={resolvedAttachmentSectionId}
               onChange={(event) => setAttachmentSectionId(event.target.value)}
               className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
             >
@@ -1236,7 +1140,7 @@ export default function ProjectTrustPage() {
                 sectionsQuery.data.map((section) => (
                   <option key={section.id} value={section.id}>
                     {sectionTitleMap.get(section.name) ?? section.name} ·{' '}
-                    {section.status}
+                    {section.workflowStatus}
                   </option>
                 ))
               ) : (
@@ -1283,12 +1187,41 @@ export default function ProjectTrustPage() {
 }
 
 type MetricCardProps = {
-  metric: any;
+  metric: TrustMetric;
   onDeleteMetric: () => void;
   onDeleteSample: (sampleId: string) => void;
   disableMetricActions: boolean;
   disableSampleActions: boolean;
 };
+
+function MetricSummaryRow({ metric }: { metric: TrustMetric }) {
+  const latestSample = metric.samples[0];
+  const animatedSampleValue = useAnimatedNumber(latestSample?.value ?? 0, {
+    duration: 700,
+    precision: 2,
+  });
+  const sampleStatus = latestSample?.status ?? 'N/A';
+  const statusStyle =
+    METRIC_STATUS_STYLES[sampleStatus] ?? METRIC_STATUS_STYLES['N/A'];
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+      <div>
+        <p className="font-semibold text-slate-900">{metric.name}</p>
+        <p className="text-[11px] text-slate-500">
+          {latestSample
+            ? `Latest ${animatedSampleValue.toFixed(2)} (${latestSample.note ?? 'no note'})`
+            : 'No samples yet'}
+        </p>
+      </div>
+      <span
+        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusStyle}`}
+      >
+        {sampleStatus}
+      </span>
+    </div>
+  );
+}
 
 function MetricCard({
   metric,

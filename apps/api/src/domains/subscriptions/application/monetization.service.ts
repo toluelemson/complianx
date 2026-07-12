@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import type { BillingPlan, BillingUsage } from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../platform/database/prisma.service';
 
 type UsageType = 'docgen' | 'trust' | 'review';
@@ -11,7 +12,7 @@ export class MonetizationService {
     return process.env.MONETIZATION_ENABLED !== 'false';
   }
 
-  getLimits(plan: string | null | undefined) {
+  getLimits(plan: string | null | undefined): BillingPlan['limits'] {
     if (!this.isEnabled()) {
       return {
         docs: Number.MAX_SAFE_INTEGER,
@@ -60,7 +61,10 @@ export class MonetizationService {
     return { id: company?.id || null, plan: company?.plan || 'FREE' };
   }
 
-  async getUsage(companyId: string, month = this.currentMonth()) {
+  async getUsage(
+    companyId: string,
+    month = this.currentMonth(),
+  ): Promise<BillingUsage> {
     let usage = await this.prisma.companyUsage.findUnique({
       where: { companyId_month: { companyId, month } },
     });
@@ -107,7 +111,8 @@ export class MonetizationService {
       }
       // in case of no company, we cannot persist usage; allow small free burst
       const cap =
-        this.pickLimitKey(type) === 'docs' ? limits.docs : limits.trust;
+        (this.pickLimitKey(type) === 'docs' ? limits.docs : limits.trust) ??
+        Number.MAX_SAFE_INTEGER;
       if (cap < amount) {
         throw new BadRequestException({
           code: 'PAYWALL',

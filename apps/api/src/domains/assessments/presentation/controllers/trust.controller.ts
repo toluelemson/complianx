@@ -5,11 +5,12 @@ import {
   Post,
   Get,
   Delete,
-  Request,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { TrustService } from '../../application/trust/trust.service';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '../../../../platform/auth/authenticated-request.type';
 import { CreateMetricDto } from '../dto/trust/create-metric.dto';
 import { CreateSampleDto } from '../dto/trust/create-sample.dto';
 import { AnalyzeFairnessDto } from '../dto/trust/analyze-fairness.dto';
@@ -26,7 +27,7 @@ export class TrustController {
     private readonly companyContext: CompanyContextService,
   ) {}
 
-  private resolveCompanyId(req: any) {
+  private resolveCompanyId(req: AuthenticatedRequest) {
     return this.companyContext.resolveCompany(
       req.user,
       (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
@@ -34,7 +35,10 @@ export class TrustController {
   }
 
   @Get('projects/:projectId/metrics')
-  list(@Param('projectId') projectId: string, @Request() req) {
+  list(
+    @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.trustService.listByProject(
       projectId,
@@ -46,7 +50,7 @@ export class TrustController {
   @Post('projects/:projectId/metrics')
   create(
     @Param('projectId') projectId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: CreateMetricDto,
   ) {
     const companyId = this.resolveCompanyId(req);
@@ -56,7 +60,7 @@ export class TrustController {
   @Post('metrics/:metricId/samples')
   addSample(
     @Param('metricId') metricId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: CreateSampleDto,
   ) {
     const companyId = this.resolveCompanyId(req);
@@ -69,14 +73,17 @@ export class TrustController {
   }
 
   @Post('trust/fairness/analyze')
-  analyzeFairness(@Request() req, @Body() dto: AnalyzeFairnessDto) {
+  analyzeFairness(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: AnalyzeFairnessDto,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.trustService.analyzeFairness(req.user.userId, companyId, dto);
   }
 
   @Post('trust/fairness/segments')
   analyzeFairnessSegments(
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: AnalyzeFairnessSegmentsDto,
   ) {
     const companyId = this.resolveCompanyId(req);
@@ -88,7 +95,10 @@ export class TrustController {
   }
 
   @Delete('metrics/:metricId')
-  removeMetric(@Param('metricId') metricId: string, @Request() req) {
+  removeMetric(
+    @Param('metricId') metricId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.trustService.removeMetric(metricId, req.user.userId, companyId);
   }
@@ -98,26 +108,32 @@ export class TrustController {
   removeMetricNested(
     @Param('metricId') metricId: string,
     @Param('projectId') _projectId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
   ) {
     const companyId = this.resolveCompanyId(req);
     return this.trustService.removeMetric(metricId, req.user.userId, companyId);
   }
 
   @Delete('samples/:sampleId')
-  removeSample(@Param('sampleId') sampleId: string, @Request() req) {
+  removeSample(
+    @Param('sampleId') sampleId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.trustService.removeSample(sampleId, req.user.userId, companyId);
   }
 
   @Post('trust/robustness/analyze')
-  analyzeRobustness(@Request() req, @Body() dto: AnalyzeRobustnessDto) {
+  analyzeRobustness(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: AnalyzeRobustnessDto,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.trustService.analyzeRobustness(req.user.userId, companyId, dto);
   }
 
   @Post('trust/drift/analyze')
-  analyzeDrift(@Request() req, @Body() dto: AnalyzeDriftDto) {
+  analyzeDrift(@Req() req: AuthenticatedRequest, @Body() dto: AnalyzeDriftDto) {
     const companyId = this.resolveCompanyId(req);
     return this.trustService.analyzeDrift(req.user.userId, companyId, dto);
   }

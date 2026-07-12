@@ -3,7 +3,6 @@ import { SectionsController } from './presentation/controllers/sections.controll
 import { SectionsService } from './application/sections/sections.service';
 import { AiSystemsModule } from '../ai-systems/ai-systems.module';
 import { LlmModule } from '../../platform/ai/llm.module';
-import { EmailService } from '../../platform/email/email.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CompanyModule } from '../organizations/company.module';
 import { MonetizationService } from '../subscriptions/application/monetization.service';
@@ -18,7 +17,7 @@ import { ReviewApprovalModule } from '../review-approval/review-approval.module'
     ReviewApprovalModule,
   ],
   controllers: [SectionsController],
-  providers: [SectionsService, EmailService, MonetizationService],
+  providers: [SectionsService, MonetizationService],
   exports: [SectionsService],
 })
 export class SectionsModule {}

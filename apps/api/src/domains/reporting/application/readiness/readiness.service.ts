@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { GenerationReadiness } from '@complianx/contracts/ai-systems';
 
 type SectionInput = {
   name: string;
@@ -121,7 +122,7 @@ const REQUIREMENTS: Requirement[] = [
 
 @Injectable()
 export class ReadinessService {
-  assess(sections: SectionInput[]) {
+  assess(sections: SectionInput[]): GenerationReadiness {
     const sectionMap = new Map(
       sections.map((section) => [section.name, section]),
     );

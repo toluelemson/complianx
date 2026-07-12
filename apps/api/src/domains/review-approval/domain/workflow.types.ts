@@ -1,8 +1,4 @@
 import {
-  ProjectWorkflowAction,
-  SectionWorkflowAction,
-} from './workflow-action';
-import {
   ProjectWorkflowStatus,
   SectionWorkflowStatus,
 } from './workflow-status';
@@ -25,13 +21,11 @@ export interface ProjectWorkflowAggregate {
   ownerId: string;
   reviewerId: string | null;
   approverId: string | null;
-  status: string;
   workflowStatus: ProjectWorkflowStatus;
   workflowVersion: number;
   sections: Array<{
     id: string;
     name: string;
-    status: string;
     workflowStatus: SectionWorkflowStatus;
   }>;
 }
@@ -40,7 +34,6 @@ export interface SectionWorkflowAggregate {
   id: string;
   name: string;
   projectId: string;
-  status: string;
   workflowStatus: SectionWorkflowStatus;
   project: Pick<
     ProjectWorkflowAggregate,
@@ -90,10 +83,20 @@ export interface ProjectWorkflowHistoryEntry {
   createdAt: Date;
   actorId: string;
   actorEmail?: string;
-  legacyStatus: string;
   workflowStatus: ProjectWorkflowStatus;
   note?: string | null;
   signature?: string | null;
+}
+
+export interface AssignedProjectReview {
+  id: string;
+  name: string;
+  ownerId: string;
+  reviewerId: string | null;
+  approverId: string | null;
+  workflowStatus: ProjectWorkflowStatus;
+  workflowVersion: number;
+  updatedAt: Date;
 }
 
 export interface SectionWorkflowHistoryEntry {
@@ -101,7 +104,6 @@ export interface SectionWorkflowHistoryEntry {
   createdAt: Date;
   actorId: string;
   actorEmail?: string;
-  legacyStatus: string;
   workflowStatus: SectionWorkflowStatus;
   note?: string | null;
   signature?: string | null;

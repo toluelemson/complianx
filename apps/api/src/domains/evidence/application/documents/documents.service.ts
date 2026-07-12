@@ -5,6 +5,10 @@ import {
   NotFoundException,
   StreamableFile,
 } from '@nestjs/common';
+import type {
+  DocumentItem,
+  GenerationReadiness,
+} from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../../platform/database/prisma.service';
 import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
 import * as archiver from 'archiver';
@@ -60,7 +64,11 @@ export class DocumentsService {
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
   ) {}
 
-  async list(projectId: string, userId: string, companyId: string) {
+  async list(
+    projectId: string,
+    userId: string,
+    companyId: string,
+  ): Promise<DocumentItem[]> {
     await this.projectsService.assertAccess(projectId, userId, companyId, {
       allowOwner: true,
       allowReviewer: true,
@@ -70,7 +78,14 @@ export class DocumentsService {
     return this.prisma.document.findMany({
       where: { projectId },
       orderBy: { createdAt: 'desc' },
-    });
+    }).then((documents) =>
+      documents.map((document) => ({
+        id: document.id,
+        type: document.type,
+        url: document.url,
+        createdAt: document.createdAt.toISOString(),
+      })),
+    );
   }
 
   async createRecord(projectId: string, type: string, fileName: string) {
@@ -230,10 +245,10 @@ export class DocumentsService {
   }
 
   private buildReadinessNotice(readiness: {
-    score: number;
-    summary: string;
-    missingCriticalFields: string[];
-    weakSections: string[];
+    score: GenerationReadiness['score'];
+    summary: GenerationReadiness['summary'];
+    missingCriticalFields: GenerationReadiness['missingCriticalFields'];
+    weakSections: GenerationReadiness['weakSections'];
   }) {
     const lines = [
       '## Readiness Notice',

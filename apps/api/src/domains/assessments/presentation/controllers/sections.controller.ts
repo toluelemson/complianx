@@ -5,16 +5,16 @@ import {
   Param,
   Post,
   Put,
-  Request,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { AuthenticatedRequest } from '../../../../platform/auth/authenticated-request.type';
 import { SectionsService } from '../../application/sections/sections.service';
 import { CreateSectionDto } from '../dto/sections/create-section.dto';
 import { UpdateSectionDto } from '../dto/sections/update-section.dto';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
 import { CreateCommentDto } from '../dto/sections/create-comment.dto';
 import { SuggestSectionDto } from '../dto/sections/suggest-section.dto';
-import { UpdateSectionStatusDto } from '../dto/sections/update-section-status.dto';
 import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
 
 @UseGuards(JwtAuthGuard)
@@ -25,7 +25,7 @@ export class SectionsController {
     private readonly companyContext: CompanyContextService,
   ) {}
 
-  private resolveCompanyId(req: any) {
+  private resolveCompanyId(req: AuthenticatedRequest) {
     return this.companyContext.resolveCompany(
       req.user,
       (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
@@ -33,7 +33,10 @@ export class SectionsController {
   }
 
   @Get()
-  list(@Param('projectId') projectId: string, @Request() req) {
+  list(
+    @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.sectionsService.list(projectId, req.user.userId, companyId);
   }
@@ -41,7 +44,7 @@ export class SectionsController {
   @Post()
   save(
     @Param('projectId') projectId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: CreateSectionDto,
   ) {
     const companyId = this.resolveCompanyId(req);
@@ -57,7 +60,7 @@ export class SectionsController {
   update(
     @Param('projectId') projectId: string,
     @Param('sectionId') sectionId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: UpdateSectionDto,
   ) {
     const companyId = this.resolveCompanyId(req);
@@ -74,7 +77,7 @@ export class SectionsController {
   listComments(
     @Param('projectId') projectId: string,
     @Param('sectionId') sectionId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
   ) {
     const companyId = this.resolveCompanyId(req);
     return this.sectionsService.listComments(
@@ -89,7 +92,7 @@ export class SectionsController {
   addComment(
     @Param('projectId') projectId: string,
     @Param('sectionId') sectionId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: CreateCommentDto,
   ) {
     const companyId = this.resolveCompanyId(req);
@@ -106,30 +109,13 @@ export class SectionsController {
   suggest(
     @Param('projectId') projectId: string,
     @Param('sectionId') sectionName: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: SuggestSectionDto,
   ) {
     const companyId = this.resolveCompanyId(req);
     return this.sectionsService.suggest(
       projectId,
       sectionName,
-      req.user.userId,
-      companyId,
-      dto,
-    );
-  }
-
-  @Post(':sectionId/status')
-  updateStatus(
-    @Param('projectId') projectId: string,
-    @Param('sectionId') sectionId: string,
-    @Request() req,
-    @Body() dto: UpdateSectionStatusDto,
-  ) {
-    const companyId = this.resolveCompanyId(req);
-    return this.sectionsService.updateStatus(
-      projectId,
-      sectionId,
       req.user.userId,
       companyId,
       dto,

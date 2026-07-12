@@ -19,17 +19,7 @@ describe('ProjectsService access boundary', () => {
       },
     };
 
-    const service = new ProjectsService(
-      prisma as never,
-      undefined as never,
-      undefined as never,
-      undefined as never,
-      undefined as never,
-      undefined as never,
-      undefined as never,
-      undefined as never,
-      undefined as never,
-    );
+    const service = new ProjectsService(prisma as never);
     return service;
   }
 

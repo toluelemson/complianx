@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { ReminderItem } from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { CreateReminderDto } from '../presentation/dto/create-reminder.dto';
 import { UpdateReminderDto } from '../presentation/dto/update-reminder.dto';
@@ -15,7 +16,7 @@ export class RemindersService {
     private readonly projectsService: ProjectsService,
   ) {}
 
-  async list(projectId: string, userId: string) {
+  async list(projectId: string, userId: string): Promise<ReminderItem[]> {
     const project = await this.projectsService.assertOwnership(
       projectId,
       userId,
@@ -23,10 +24,21 @@ export class RemindersService {
     return this.prisma.reminder.findMany({
       where: { projectId: project.id },
       orderBy: { dueAt: 'asc' },
-    });
+    }).then((reminders) =>
+      reminders.map((reminder) => ({
+        id: reminder.id,
+        message: reminder.message,
+        dueAt: reminder.dueAt.toISOString(),
+        completed: reminder.completed,
+      })),
+    );
   }
 
-  async create(projectId: string, userId: string, dto: CreateReminderDto) {
+  async create(
+    projectId: string,
+    userId: string,
+    dto: CreateReminderDto,
+  ): Promise<ReminderItem> {
     await this.projectsService.assertOwnership(projectId, userId);
     return this.prisma.reminder.create({
       data: {
@@ -35,7 +47,12 @@ export class RemindersService {
         projectId,
         ownerId: userId,
       },
-    });
+    }).then((reminder) => ({
+      id: reminder.id,
+      message: reminder.message,
+      dueAt: reminder.dueAt.toISOString(),
+      completed: reminder.completed,
+    }));
   }
 
   async update(
@@ -43,7 +60,7 @@ export class RemindersService {
     reminderId: string,
     userId: string,
     dto: UpdateReminderDto,
-  ) {
+  ): Promise<ReminderItem> {
     await this.projectsService.assertOwnership(projectId, userId);
     const reminder = await this.prisma.reminder.findUnique({
       where: { id: reminderId },
@@ -62,6 +79,11 @@ export class RemindersService {
         completed:
           dto.completed !== undefined ? dto.completed : reminder.completed,
       },
-    });
+    }).then((updatedReminder) => ({
+      id: updatedReminder.id,
+      message: updatedReminder.message,
+      dueAt: updatedReminder.dueAt.toISOString(),
+      completed: updatedReminder.completed,
+    }));
   }
 }

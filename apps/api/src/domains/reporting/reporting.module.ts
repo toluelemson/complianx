@@ -8,6 +8,7 @@ import { PdfModule } from '../../platform/pdf/pdf.module';
 import { MonetizationService } from '../subscriptions/application/monetization.service';
 import { FilesModule } from '../../platform/files/files.module';
 import { ReportingFoundationModule } from './reporting-foundation.module';
+import { AnalyticsModule } from './analytics.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ReportingFoundationModule } from './reporting-foundation.module';
     PdfModule,
     FilesModule,
     ReportingFoundationModule,
+    AnalyticsModule,
   ],
   controllers: [GeneratorController],
   providers: [GeneratorService, MonetizationService],

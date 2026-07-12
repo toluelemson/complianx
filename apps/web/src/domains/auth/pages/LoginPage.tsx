@@ -5,7 +5,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import api from '@/platform/api/client';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useState } from 'react';
-import { SiteHeader } from '@/components/SiteHeader';
+import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';

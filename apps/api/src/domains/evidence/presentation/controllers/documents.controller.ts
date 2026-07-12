@@ -1,6 +1,7 @@
-import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import { DocumentsService } from '../../application/documents/documents.service';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '../../../../platform/auth/authenticated-request.type';
 import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
 
 @UseGuards(JwtAuthGuard)
@@ -11,7 +12,7 @@ export class DocumentsController {
     private readonly companyContext: CompanyContextService,
   ) {}
 
-  private resolveCompanyId(req: any) {
+  private resolveCompanyId(req: AuthenticatedRequest) {
     return this.companyContext.resolveCompany(
       req.user,
       (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
@@ -19,13 +20,16 @@ export class DocumentsController {
   }
 
   @Get('projects/:projectId/documents')
-  list(@Param('projectId') projectId: string, @Request() req) {
+  list(
+    @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.documentsService.list(projectId, req.user.userId, companyId);
   }
 
   @Get('documents/:id/download')
-  download(@Param('id') id: string, @Request() req) {
+  download(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const companyId = this.resolveCompanyId(req);
     return this.documentsService.getDocumentForDownload(
       id,
@@ -35,7 +39,7 @@ export class DocumentsController {
   }
 
   @Get('projects/:projectId/documents.zip')
-  zip(@Param('projectId') projectId: string, @Request() req) {
+  zip(@Param('projectId') projectId: string, @Req() req: AuthenticatedRequest) {
     const companyId = this.resolveCompanyId(req);
     return this.documentsService.zipDocuments(
       projectId,

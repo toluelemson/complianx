@@ -21,9 +21,7 @@
       "@/app/*": ["./src/app/*"],
       "@/domains/*": ["./src/domains/*"],
       "@/platform/*": ["./src/platform/*"],
-      "@/shared/*": ["./src/shared/*"],
-      "@complianx/contracts": ["../../packages/contracts/src/index.ts"],
-      "@complianx/contracts/*": ["../../packages/contracts/src/*"]
+      "@/shared/*": ["./src/shared/*"]
     },
 
     /* Linting */
@@ -34,5 +32,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "../../packages/contracts/src"]
+  "include": ["src"]
 }

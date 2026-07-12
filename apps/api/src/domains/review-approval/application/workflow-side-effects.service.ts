@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationsService } from '../../notifications/application/notifications.service';
+import { EmailService } from '../../../platform/email/email.service';
 import {
   ProjectWorkflowAggregate,
   SectionWorkflowAggregate,
@@ -8,10 +9,20 @@ import {
   ProjectWorkflowStatus,
   SectionWorkflowStatus,
 } from '../domain/workflow-status';
+import {
+  PROJECT_WORKFLOW_REPOSITORY,
+  ProjectWorkflowRepository,
+} from '../infrastructure/project-workflow.repository';
+import { Inject } from '@nestjs/common';
 
 @Injectable()
 export class WorkflowSideEffectsService {
-  constructor(private readonly notifications: NotificationsService) {}
+  constructor(
+    private readonly notifications: NotificationsService,
+    private readonly emailService: EmailService,
+    @Inject(PROJECT_WORKFLOW_REPOSITORY)
+    private readonly projects: ProjectWorkflowRepository,
+  ) {}
 
   async onProjectTransition(params: {
     project: ProjectWorkflowAggregate;
@@ -84,5 +95,31 @@ export class WorkflowSideEffectsService {
         meta: { projectId: section.projectId, sectionId: section.id },
       });
     }
+
+    if (toStatus !== SectionWorkflowStatus.APPROVED) {
+      return;
+    }
+    const project = await this.projects.getProjectApprovalSnapshot(
+      section.projectId,
+    );
+    if (!project?.allSectionsApproved || !project.approverId) {
+      return;
+    }
+    const companyId = project.companyId ?? undefined;
+    if (project.approverEmail) {
+      const link = `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/projects/${section.projectId}?companyId=${project.companyId ?? ''}`;
+      await this.emailService.sendReminder(
+        project.approverEmail,
+        `Approval requested: ${project.name}`,
+        `All sections have been approved by reviewers. Please approve the project.\n\nLink: ${link}`,
+      );
+    }
+    await this.notifications.create({
+      userId: project.approverId,
+      title: `Approval requested: ${project.name}`,
+      body: 'All sections are approved and ready for your approval.',
+      type: 'approval',
+      meta: { projectId: project.id, companyId },
+    });
   }
 }

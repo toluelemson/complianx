@@ -4,16 +4,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Select } from '@/shared/components/ui/select';
-
-interface TemplateItem {
-  id: string;
-  name: string;
-  category?: string;
-  shared?: boolean;
-  sectionName: string;
-  ownerId: string;
-  owner?: { email?: string };
-}
+import type { TemplateItem } from '@complianx/contracts/ai-systems';
 
 interface TemplateLibraryModalProps {
   open: boolean;

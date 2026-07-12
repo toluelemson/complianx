@@ -16,9 +16,3 @@ export interface SuggestSectionCommand {
   hint?: string;
   targetField?: string;
 }
-
-export interface UpdateSectionStatusCommand {
-  status: 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
-  note?: string;
-  signature?: string;
-}

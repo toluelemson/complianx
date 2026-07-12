@@ -4,10 +4,11 @@ import {
   Get,
   Param,
   Post,
-  Request,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../platform/auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '../../../platform/auth/authenticated-request.type';
 import { CompanyContextService } from '../../organizations/application/membership/company-context.service';
 import { SubmitProjectForReviewUseCase } from '../application/submit-project-for-review.use-case';
 import { StartProjectReviewUseCase } from '../application/start-project-review.use-case';
@@ -41,7 +42,7 @@ export class WorkflowController {
     private readonly queries: WorkflowQueryService,
   ) {}
 
-  private resolveCompanyId(req: any) {
+  private resolveCompanyId(req: AuthenticatedRequest) {
     return this.companyContext.resolveCompany(
       req.user,
       (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
@@ -51,7 +52,7 @@ export class WorkflowController {
   @Post('projects/:projectId/workflow/submit')
   submit(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ProjectWorkflowActionDto,
   ) {
     return this.submitProject.execute({
@@ -67,7 +68,7 @@ export class WorkflowController {
   @Post('projects/:projectId/workflow/start-review')
   startReview(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ProjectWorkflowActionDto,
   ) {
     return this.startProjectReview.execute({
@@ -81,7 +82,7 @@ export class WorkflowController {
   @Post('projects/:projectId/workflow/request-changes')
   requestChanges(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ProjectWorkflowActionDto,
   ) {
     return this.requestProjectChanges.execute({
@@ -95,7 +96,7 @@ export class WorkflowController {
   @Post('projects/:projectId/workflow/resubmit')
   resubmit(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ProjectWorkflowActionDto,
   ) {
     return this.resubmitProject.execute({
@@ -109,7 +110,7 @@ export class WorkflowController {
   @Post('projects/:projectId/workflow/approve')
   approve(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ProjectWorkflowActionDto,
   ) {
     return this.approveProject.execute({
@@ -124,7 +125,7 @@ export class WorkflowController {
   @Post('projects/:projectId/workflow/archive')
   archive(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ProjectWorkflowActionDto,
   ) {
     return this.archiveProject.execute({
@@ -138,15 +139,23 @@ export class WorkflowController {
   @Get('projects/:projectId/workflow')
   getProjectWorkflow(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.queries.getProjectWorkflow(projectId, req.user.userId);
+  }
+
+  @Get('projects/:projectId/reviewers')
+  getProjectReviewers(
+    @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.queries.listProjectReviewers(projectId, req.user.userId);
   }
 
   @Get('projects/:projectId/workflow/history')
   getProjectHistory(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.queries.getProjectHistory(projectId, req.user.userId);
   }
@@ -154,7 +163,7 @@ export class WorkflowController {
   @Get('projects/:projectId/workflow/readiness')
   getProjectReadiness(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.queries.getProjectReadiness(projectId, req.user.userId);
   }
@@ -162,7 +171,7 @@ export class WorkflowController {
   @Post('sections/:sectionId/workflow/complete')
   complete(
     @Param('sectionId') sectionId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: SectionWorkflowActionDto,
   ) {
     return this.completeSection.execute({
@@ -175,7 +184,7 @@ export class WorkflowController {
   @Post('sections/:sectionId/workflow/start-review')
   startSectionReview(
     @Param('sectionId') sectionId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: SectionWorkflowActionDto,
   ) {
     return this.submitSection.execute({
@@ -188,7 +197,7 @@ export class WorkflowController {
   @Post('sections/:sectionId/workflow/request-changes')
   requestSectionChangesAction(
     @Param('sectionId') sectionId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: SectionWorkflowActionDto,
   ) {
     return this.requestSectionChanges.execute({
@@ -201,7 +210,7 @@ export class WorkflowController {
   @Post('sections/:sectionId/workflow/approve')
   approveSectionAction(
     @Param('sectionId') sectionId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: SectionWorkflowActionDto,
   ) {
     return this.approveSection.execute({
@@ -215,7 +224,7 @@ export class WorkflowController {
   @Get('sections/:sectionId/workflow')
   getSectionWorkflow(
     @Param('sectionId') sectionId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.queries.getSectionWorkflow(sectionId, req.user.userId);
   }
@@ -223,13 +232,13 @@ export class WorkflowController {
   @Get('sections/:sectionId/workflow/history')
   getSectionHistory(
     @Param('sectionId') sectionId: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.queries.getSectionHistory(sectionId, req.user.userId);
   }
 
   @Get('reviews/assigned-to-me')
-  assignedToMe(@Request() req: any) {
+  assignedToMe(@Req() req: AuthenticatedRequest) {
     const companyId = this.resolveCompanyId(req);
     return this.queries.getAssignedReviews(req.user.userId, companyId);
   }

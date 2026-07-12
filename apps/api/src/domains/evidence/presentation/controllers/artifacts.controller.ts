@@ -6,13 +6,14 @@ import {
   Param,
   Patch,
   Post,
-  Request,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ArtifactsService } from '../../application/artifacts/artifacts.service';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '../../../../platform/auth/authenticated-request.type';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ReviewArtifactDto } from '../dto/artifacts/review-artifact.dto';
@@ -26,7 +27,7 @@ export class ArtifactsController {
     private readonly companyContext: CompanyContextService,
   ) {}
 
-  private resolveCompanyId(req: any) {
+  private resolveCompanyId(req: AuthenticatedRequest) {
     return this.companyContext.resolveCompany(
       req.user,
       (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
@@ -37,7 +38,7 @@ export class ArtifactsController {
   list(
     @Param('projectId') projectId: string,
     @Param('sectionId') sectionId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
   ) {
     const companyId = this.resolveCompanyId(req);
     return this.artifactsService.list(
@@ -58,7 +59,7 @@ export class ArtifactsController {
   upload(
     @Param('projectId') projectId: string,
     @Param('sectionId') sectionId: string,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
     @UploadedFile() file: Express.Multer.File,
     @Body('description') description?: string,
     @Body('purpose') purpose?: 'DATASET' | 'MODEL' | 'GENERIC',
@@ -76,13 +77,19 @@ export class ArtifactsController {
   }
 
   @Delete('artifacts/:artifactId')
-  remove(@Param('artifactId') artifactId: string, @Request() req) {
+  remove(
+    @Param('artifactId') artifactId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.artifactsService.remove(artifactId, req.user.userId, companyId);
   }
 
   @Get('artifacts/:artifactId/download')
-  download(@Param('artifactId') artifactId: string, @Request() req) {
+  download(
+    @Param('artifactId') artifactId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const companyId = this.resolveCompanyId(req);
     return this.artifactsService.download(
       artifactId,
@@ -95,7 +102,7 @@ export class ArtifactsController {
   review(
     @Param('artifactId') artifactId: string,
     @Body() dto: ReviewArtifactDto,
-    @Request() req,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.artifactsService.review(
       artifactId,

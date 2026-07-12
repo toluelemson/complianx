@@ -7,7 +7,7 @@ import {
   RefreshCcw,
   Sparkles,
 } from 'lucide-react';
-import { SiteHeader } from '@/components/SiteHeader';
+import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,

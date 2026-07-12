@@ -9,7 +9,7 @@ import {
   Scale,
   ShieldCheck,
 } from 'lucide-react';
-import { SiteHeader } from '@/components/SiteHeader';
+import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {

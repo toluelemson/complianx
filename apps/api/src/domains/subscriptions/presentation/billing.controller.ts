@@ -3,11 +3,13 @@ import {
   Get,
   Post,
   Body,
-  Request,
+  Req,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import type { BillingPlan, BillingUsage } from '@complianx/contracts/ai-systems';
 import { JwtAuthGuard } from '../../../platform/auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '../../../platform/auth/authenticated-request.type';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { MonetizationService } from '../application/monetization.service';
 import { BillingService } from '../application/billing.service';
@@ -23,7 +25,7 @@ export class BillingController {
     private readonly companyContext: CompanyContextService,
   ) {}
 
-  private resolveCompanyId(req: any) {
+  private resolveCompanyId(req: AuthenticatedRequest) {
     return this.companyContext.resolveCompany(
       req.user,
       (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
@@ -31,7 +33,7 @@ export class BillingController {
   }
 
   @Get('plan')
-  async getPlan(@Request() req) {
+  async getPlan(@Req() req: AuthenticatedRequest): Promise<BillingPlan> {
     const companyId = this.resolveCompanyId(req);
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
@@ -42,14 +44,17 @@ export class BillingController {
   }
 
   @Get('usage')
-  async getUsage(@Request() req) {
+  async getUsage(@Req() req: AuthenticatedRequest): Promise<BillingUsage> {
     const companyId = this.resolveCompanyId(req);
     const u = await this.monetization.getUsage(companyId);
     return u;
   }
 
   @Post('checkout')
-  async checkout(@Body() body: { plan: 'PRO' | 'ENTERPRISE' }, @Request() req) {
+  async checkout(
+    @Body() body: { plan: 'PRO' | 'ENTERPRISE' },
+    @Req() req: AuthenticatedRequest,
+  ) {
     if (!body?.plan) {
       throw new BadRequestException('Select a plan to upgrade');
     }
@@ -69,7 +74,7 @@ export class BillingController {
   }
 
   @Post('portal')
-  async portal(@Request() req) {
+  async portal(@Req() req: AuthenticatedRequest) {
     if (!this.billing.isEnabled()) {
       return { url: null, message: 'Stripe not configured.' };
     }

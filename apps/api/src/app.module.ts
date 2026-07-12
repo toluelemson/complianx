@@ -8,15 +8,12 @@ import { LlmModule } from './platform/ai/llm.module';
 import { PdfModule } from './platform/pdf/pdf.module';
 import { RegulatoryFrameworksModule } from './domains/regulatory-frameworks/regulatory-frameworks.module';
 import { RemindersModule } from './domains/notifications/reminders.module';
-import { AutoSaveModule } from './auto-save/auto-save.module';
 import { OrganizationsModule } from './domains/organizations/organizations.module';
 import { EvidenceModule } from './domains/evidence/evidence.module';
 import { AssessmentsModule } from './domains/assessments/assessments.module';
 import { SubscriptionsModule } from './domains/subscriptions/subscriptions.module';
 import { NotificationsModule } from './domains/notifications/notifications.module';
-import { ContactModule } from './contact/contact.module';
-import { AnalyticsModule } from './analytics/analytics.module';
-import { EuAiActPublicModule } from './eu-ai-act-public/eu-ai-act-public.module';
+import { ContactModule } from './domains/marketing/contact.module';
 import { ReviewApprovalModule } from './domains/review-approval/review-approval.module';
 
 @Module({
@@ -32,12 +29,9 @@ import { ReviewApprovalModule } from './domains/review-approval/review-approval.
     PdfModule,
     RegulatoryFrameworksModule,
     RemindersModule,
-    AutoSaveModule,
     OrganizationsModule,
     NotificationsModule,
     ContactModule,
-    AnalyticsModule,
-    EuAiActPublicModule,
     ReviewApprovalModule,
     SubscriptionsModule,
   ],

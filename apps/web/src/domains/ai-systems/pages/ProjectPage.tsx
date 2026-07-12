@@ -2,21 +2,65 @@
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '@/platform/api/client';
-import { AppShell } from '@/components/AppShell';
+import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import {
+  addSectionComment,
+  bulkTemplateAction,
+  createProjectReminder,
+  createTemplate,
+  deleteArtifact,
+  deleteTemplate,
+  generateProjectDocuments,
+  getBillingPlan,
+  getBillingUsage,
+  getGenerationReadiness,
+  getProject,
+  getProjectDocuments,
+  getProjectSections,
+  getSectionAutosave,
+  listProjectReminders,
+  listProjectReviewers,
+  listTemplates,
+  reviewArtifact,
+  runProjectWorkflowAction,
+  saveProjectSection,
+  saveSectionAutosave,
+  sendSuggestionFeedback,
+  suggestSection,
+  updateProjectReminder,
+  updateTemplate,
+  uploadArtifact,
+} from '@/domains/ai-systems/api';
+import type {
+  ArtifactStatus,
+  BillingPlan,
+  BillingUsage,
+  DocumentItem,
+  FormValues,
+  GenerationReadiness,
+  ProjectDetail,
+  ReminderItem,
+  ReviewerItem,
+  SectionArtifactItem,
+  SectionWithMeta,
+  SuggestionResponse,
+  StatusEvent,
+  TemplateItem,
+} from '@complianx/contracts/ai-systems';
 import {
   STEP_CONFIG,
   TRACKABLE_STEP_COUNT,
   type StepField,
-} from '@/constants/steps';
+} from '@/domains/ai-systems/constants/steps';
 import {
   DEFAULT_DOCUMENT_SELECTION,
   DOCUMENT_GENERATION_OPTIONS,
   DOCUMENT_LABELS,
-} from '@/constants/documents';
+} from '@/domains/ai-systems/constants/documents';
 import { DocumentPreviewModal } from '@/domains/evidence/components/DocumentPreviewModal';
 import TemplateLibraryModal from '@/domains/reports/components/TemplateLibraryModal';
 import { ReviewApprovalPanel } from '@/domains/workflows/components/ReviewApprovalPanel';
@@ -25,107 +69,25 @@ import { WizardSidebar } from '../components/WizardSidebar';
 const monetizationEnabled =
   import.meta.env.VITE_MONETIZATION_ENABLED !== 'false';
 
-type SectionComment = {
-  id: string;
-  body: string;
-  createdAt: string;
-  author?: {
-    id: string;
-    email: string;
-  };
+type RiskEntry = {
+  description?: string;
+  severity?: string;
+  impact?: string;
+  likelihood?: string;
 };
 
-type ArtifactStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-
-type SectionArtifactItem = {
-  id: string;
-  originalName: string;
-  description?: string | null;
-  createdAt: string;
-  size: number;
-  mimeType: string;
-  version: number;
-  checksum: string;
-  citationKey: string;
-  status: ArtifactStatus;
-  reviewComment?: string | null;
-  reviewedAt?: string | null;
-  uploadedBy?: {
-    id: string;
-    email: string;
-  };
-  reviewedBy?: {
-    id: string;
-    email: string;
-  } | null;
-  previousArtifact?: {
-    id: string;
-    version: number;
-    checksum: string;
-    citationKey: string;
-  } | null;
+type ApiErrorPayload = {
+  message?: string | { message?: string };
 };
 
-export type SectionWithMeta = {
-  id: string;
-  name: string;
-  content: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
-  lastEditor?: {
-    id: string;
-    email: string;
-  };
-  comments: SectionComment[];
-  status: 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
-  statusEvents?: StatusEvent[];
-  artifacts?: SectionArtifactItem[];
-};
-
-type ProjectWorkflowStatus =
-  | 'DRAFT'
-  | 'READY_FOR_REVIEW'
-  | 'IN_REVIEW'
-  | 'CHANGES_REQUESTED'
-  | 'RESUBMITTED'
-  | 'APPROVED'
-  | 'ARCHIVED'
-  | 'REJECTED'
-  | 'CANCELLED';
-
-type ProjectDetail = {
-  id: string;
-  companyId?: string | null;
-  reviewerId?: string | null;
-  approverId?: string | null;
-  status?: 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
-  workflowStatus?: ProjectWorkflowStatus;
-  workflowVersion?: number;
-  viewerRole?: 'OWNER' | 'REVIEWER' | 'APPROVER' | 'MEMBER';
-};
-
-export type DocumentItem = {
-  id: string;
-  type: string;
-  url: string;
-  createdAt: string;
-};
-
-export type TrackableStepSummary = {
-  stepId: string;
-  title: string;
-  missing: number;
-  status: string;
-};
-
-type GenerationReadiness = {
-  score: number;
-  status: 'ready' | 'partial' | 'insufficient';
-  generationMode: 'full' | 'draft' | 'gap_only';
-  missingCriticalFields: string[];
-  weakSections: string[];
-  summary: string;
-};
+function getApiErrorMessage(error: unknown) {
+  const maybeError = error as { response?: { data?: ApiErrorPayload } } | null;
+  const message = maybeError?.response?.data?.message;
+  if (typeof message === 'string') {
+    return message;
+  }
+  return message?.message;
+}
 
 function hasFieldValue(value: unknown) {
   if (value === null || value === undefined) {
@@ -159,12 +121,9 @@ function formatFileSize(bytes?: number) {
 }
 
 export default function ProjectPage() {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
+  const projectId = routeProjectId ?? '';
   const navigate = useNavigate();
-  if (!projectId) {
-    navigate('/dashboard');
-    return null;
-  }
   const queryClient = useQueryClient();
   const [activeStepId, setActiveStepId] = useState(STEP_CONFIG[0].id);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -176,6 +135,11 @@ export default function ProjectPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const { token, user, activeCompanyId, setActiveCompany } = useAuth();
   const location = useLocation();
+  useEffect(() => {
+    if (!routeProjectId) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate, routeProjectId]);
   useEffect(() => {
     const paramsCompanyId = new URLSearchParams(location.search).get(
       'companyId',
@@ -220,48 +184,37 @@ export default function ProjectPage() {
   const projectQuery = useQuery<ProjectDetail>({
     queryKey: projectQueryKey,
     enabled: Boolean(projectId && activeCompanyId),
-    queryFn: () => api.get(`/projects/${projectId}`).then((res) => res.data),
+    queryFn: () => getProject(projectId),
   });
 
   const sectionsQuery = useQuery<SectionWithMeta[]>({
     queryKey: sectionsQueryKey,
     enabled: Boolean(projectId && activeCompanyId),
-    queryFn: () =>
-      api.get(`/projects/${projectId}/sections`).then((res) => res.data),
+    queryFn: () => getProjectSections(projectId),
   });
 
   const documentsQuery = useQuery<DocumentItem[]>({
     queryKey: documentsQueryKey,
     enabled: Boolean(projectId && activeCompanyId),
-    queryFn: () =>
-      api.get(`/projects/${projectId}/documents`).then((res) => res.data),
+    queryFn: () => getProjectDocuments(projectId),
   });
   const readinessQuery = useQuery<GenerationReadiness>({
     queryKey: ['generationReadiness', projectId, activeCompanyId],
     enabled: Boolean(
       projectId && activeCompanyId && projectQuery.data?.viewerRole === 'OWNER',
     ),
-    queryFn: () =>
-      api
-        .get(`/projects/${projectId}/generate/readiness`)
-        .then((res) => res.data),
+    queryFn: () => getGenerationReadiness(projectId),
   });
-  const templatesQuery = useQuery({
+  const templatesQuery = useQuery<TemplateItem[]>({
     queryKey: ['templates', activeStepId],
     enabled: Boolean(isFormStep),
-    queryFn: () =>
-      api
-        .get('/templates', {
-          params: { sectionName: activeStepId },
-        })
-        .then((res) => res.data),
+    queryFn: () => listTemplates(activeStepId),
   });
 
-  const remindersQuery = useQuery({
+  const remindersQuery = useQuery<ReminderItem[]>({
     queryKey: remindersQueryKey,
     enabled: Boolean(projectId && activeCompanyId),
-    queryFn: () =>
-      api.get(`/projects/${projectId}/reminders`).then((res) => res.data),
+    queryFn: () => listProjectReminders(projectId),
   });
   const viewerRole = projectQuery.data?.viewerRole ?? 'OWNER';
   const isOwner = viewerRole === 'OWNER';
@@ -274,24 +227,23 @@ export default function ProjectPage() {
   const canReviewEvidence = isAssignedReviewer || isAssignedApprover || isAdmin;
   const canAssignSelf =
     isOwner && (user?.role === 'REVIEWER' || user?.role === 'ADMIN');
-  const reviewersQuery = useQuery({
+  const reviewersQuery = useQuery<ReviewerItem[]>({
     queryKey: reviewersQueryKey,
-    queryFn: () =>
-      api.get(`/projects/${projectId}/reviewers`).then((res) => res.data),
+    queryFn: () => listProjectReviewers(projectId),
     enabled:
       Boolean(projectId && projectQuery.data?.companyId && activeCompanyId) &&
       isOwner,
   });
   const availableReviewers = useMemo(() => {
     const allowedRoles = new Set(['REVIEWER', 'ADMIN']);
-    return (reviewersQuery.data ?? []).filter((reviewer: any) =>
+    return (reviewersQuery.data ?? []).filter((reviewer) =>
       allowedRoles.has(reviewer.role),
     );
   }, [reviewersQuery.data]);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
-  const { register, handleSubmit, reset, setValue, watch } =
-    useForm<Record<string, any>>();
+  const { control, register, handleSubmit, reset, setValue } =
+    useForm<FormValues>();
   const [commentBody, setCommentBody] = useState('');
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiFieldSuggestions, setAiFieldSuggestions] = useState<
@@ -306,17 +258,20 @@ export default function ProjectPage() {
   });
   const [activeField, setActiveField] = useState<string | null>(null);
   const suggestionFieldRef = useRef<string | null>(null);
+  const [pendingSuggestionField, setPendingSuggestionField] = useState<
+    string | null
+  >(null);
   const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const artifactInputRef = useRef<HTMLInputElement | null>(null);
-  const formValues = watch();
+  const formValues = useWatch({ control }) as FormValues;
   const [autosaveStatus, setAutosaveStatus] = useState<
     'idle' | 'saving' | 'saved'
   >('idle');
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [autosaveRecovery, setAutosaveRecovery] = useState<{
-    content: Record<string, any>;
+    content: FormValues;
     updatedAt: string;
   } | null>(null);
   const [selectedDocumentTypes, setSelectedDocumentTypes] = useState<string[]>(
@@ -351,8 +306,8 @@ export default function ProjectPage() {
     '' | 'share' | 'unshare' | 'delete'
   >('');
   const sectionByName = useMemo(() => {
-    const map = new Map<string, any>();
-    (sectionsQuery.data ?? []).forEach((section: any) =>
+    const map = new Map<string, SectionWithMeta>();
+    (sectionsQuery.data ?? []).forEach((section) =>
       map.set(section.name, section),
     );
     return map;
@@ -361,6 +316,7 @@ export default function ProjectPage() {
   const currentSection = sectionByName.get(activeStepId);
   useEffect(() => {
     if (projectQuery.data?.reviewerId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedReviewerId(projectQuery.data.reviewerId);
       return;
     }
@@ -370,6 +326,7 @@ export default function ProjectPage() {
   }, [availableReviewers, projectQuery.data?.reviewerId]);
   useEffect(() => {
     if (projectQuery.data?.approverId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedApproverId(projectQuery.data.approverId);
       return;
     }
@@ -381,6 +338,7 @@ export default function ProjectPage() {
   useEffect(() => {
     if (currentSection && activeStep.fields.length) {
       reset(currentSection.content ?? {});
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLastSavedAt(currentSection.updatedAt ?? null);
       setAutosaveRecovery(null);
     } else if (activeStep.fields.length) {
@@ -400,6 +358,7 @@ export default function ProjectPage() {
 
   useEffect(() => {
     if (!currentSection?.artifacts?.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setArtifactReviewDraft({});
       return;
     }
@@ -417,13 +376,11 @@ export default function ProjectPage() {
   }, [currentSection?.artifacts]);
 
   const saveMutation = useMutation({
-    mutationFn: (payload: { stepId: string; values: Record<string, any> }) =>
-      api
-        .post(`/projects/${projectId}/sections`, {
-          name: payload.stepId,
-          content: payload.values,
-        })
-        .then((res) => res.data),
+    mutationFn: (payload: { stepId: string; values: FormValues }) =>
+      saveProjectSection(projectId, {
+        name: payload.stepId,
+        content: payload.values,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Section saved');
@@ -436,9 +393,7 @@ export default function ProjectPage() {
 
   const generateMutation = useMutation({
     mutationFn: (payload: { documentTypes: string[] }) =>
-      api
-        .post(`/projects/${projectId}/generate`, payload)
-        .then((res) => res.data),
+      generateProjectDocuments(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentsQueryKey });
       toast.success('Compliance documents are being prepared');
@@ -453,9 +408,7 @@ export default function ProjectPage() {
       templateId: string;
       updates: { name?: string; category?: string; shared?: boolean };
     }) =>
-      api
-        .patch(`/templates/${payload.templateId}`, payload.updates)
-        .then((res) => res.data),
+      updateTemplate(payload.templateId, payload.updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', activeStepId] });
       toast.success('Template updated');
@@ -463,8 +416,7 @@ export default function ProjectPage() {
   });
 
   const deleteTemplateMutation = useMutation({
-    mutationFn: (templateId: string) =>
-      api.delete(`/templates/${templateId}`).then((res) => res.data),
+    mutationFn: (templateId: string) => deleteTemplate(templateId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', activeStepId] });
       toast.success('Template deleted');
@@ -473,7 +425,10 @@ export default function ProjectPage() {
 
   const bulkTemplateMutation = useMutation({
     mutationFn: (payload: { templateIds: string[]; action: string }) =>
-      api.post('/templates/bulk', payload).then((res) => res.data),
+      bulkTemplateAction({
+        templateIds: payload.templateIds,
+        action: payload.action as 'share' | 'unshare' | 'delete',
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', activeStepId] });
       toast.success('Bulk action applied');
@@ -515,25 +470,7 @@ export default function ProjectPage() {
       file: File;
       description?: string;
       purpose?: 'GENERIC' | 'DATASET' | 'MODEL';
-    }) => {
-      const formData = new FormData();
-      formData.append('file', payload.file);
-      if (payload.description) {
-        formData.append('description', payload.description);
-      }
-      if (payload.purpose) {
-        formData.append('purpose', payload.purpose);
-      }
-      return api
-        .post(
-          `/projects/${projectId}/sections/${payload.sectionId}/artifacts`,
-          formData,
-          {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          },
-        )
-        .then((res) => res.data);
-    },
+    }) => uploadArtifact(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       setArtifactFile(null);
@@ -550,8 +487,7 @@ export default function ProjectPage() {
   });
 
   const artifactDeleteMutation = useMutation({
-    mutationFn: (artifactId: string) =>
-      api.delete(`/artifacts/${artifactId}`).then((res) => res.data),
+    mutationFn: (artifactId: string) => deleteArtifact(artifactId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Evidence removed');
@@ -567,12 +503,7 @@ export default function ProjectPage() {
       status: ArtifactStatus;
       comment?: string;
     }) =>
-      api
-        .patch(`/artifacts/${payload.artifactId}/review`, {
-          status: payload.status,
-          comment: payload.comment,
-        })
-        .then((res) => res.data),
+      reviewArtifact(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Evidence review updated');
@@ -602,13 +533,13 @@ export default function ProjectPage() {
     setSelectedDocumentTypes([...DEFAULT_DOCUMENT_SELECTION]);
   };
 
-  const planQuery = useQuery({
+  const planQuery = useQuery<BillingPlan>({
     queryKey: ['billing', 'plan'],
-    queryFn: () => api.get('/billing/plan').then((r) => r.data),
+    queryFn: getBillingPlan,
   });
-  const usageQuery = useQuery({
+  const usageQuery = useQuery<BillingUsage>({
     queryKey: ['billing', 'usage'],
-    queryFn: () => api.get('/billing/usage').then((r) => r.data),
+    queryFn: getBillingUsage,
   });
   const docLimit = !monetizationEnabled
     ? Number.MAX_SAFE_INTEGER
@@ -634,6 +565,7 @@ export default function ProjectPage() {
           : DOCUMENT_GENERATION_OPTIONS.slice(0, allowed).map(
               (opt) => opt.type,
             );
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedDocumentTypes(nextSelection);
       if (allowed === 0) {
         toast.error(
@@ -939,7 +871,7 @@ export default function ProjectPage() {
       link.remove();
       URL.revokeObjectURL(url);
       toast.success('ZIP download started');
-    } catch (error) {
+    } catch {
       toast.error('Unable to download ZIP');
     }
   };
@@ -955,11 +887,7 @@ export default function ProjectPage() {
 
   const commentMutation = useMutation({
     mutationFn: (payload: { sectionId: string; body: string }) =>
-      api
-        .post(`/projects/${projectId}/sections/${payload.sectionId}/comments`, {
-          body: payload.body,
-        })
-        .then((res) => res.data),
+      addSectionComment(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Comment added');
@@ -988,7 +916,7 @@ export default function ProjectPage() {
     });
   };
 
-  const handleApplyTemplate = (template: any) => {
+  const handleApplyTemplate = (template: TemplateItem) => {
     if (template?.content) {
       reset(template.content);
       toast.success('Template applied');
@@ -1007,10 +935,12 @@ export default function ProjectPage() {
   const handleAppendFieldSuggestion = (fieldName: string) => {
     const suggestion = aiFieldSuggestions[fieldName];
     if (!suggestion) return;
-    const currentValue = watch(fieldName) ?? '';
+    const currentValue = formValues[fieldName];
+    const currentText =
+      typeof currentValue === 'string' ? currentValue : String(currentValue ?? '');
     const appended =
-      currentValue.trim().length > 0
-        ? `${currentValue}\n${suggestion}`
+      currentText.trim().length > 0
+        ? `${currentText}\n${suggestion}`
         : suggestion;
     setValue(fieldName, appended, { shouldDirty: true });
     setAiFieldSuggestions({});
@@ -1025,24 +955,23 @@ export default function ProjectPage() {
       fieldName: string;
       suggestion: string;
       liked: boolean;
-    }) => api.post('/suggestions/feedback', payload),
+    }) => sendSuggestionFeedback(payload),
   });
 
-  const suggestionMutation = useMutation({
-    mutationFn: (payload: {
+  const suggestionMutation = useMutation<
+    SuggestionResponse,
+    unknown,
+    {
       hint?: string;
-      partialContent?: Record<string, any>;
+      partialContent?: FormValues;
       targetField?: string;
-    }) =>
-      api
-        .post(
-          `/projects/${projectId}/sections/${activeStepId}/suggest`,
-          payload,
-        )
-        .then((res) => res.data),
+    }
+  >({
+    mutationFn: (payload) => suggestSection(projectId, activeStepId, payload),
     onSuccess: (data) => {
       const fieldTarget = suggestionFieldRef.current;
       suggestionFieldRef.current = null;
+      setPendingSuggestionField(null);
       const resolvedText = fieldTarget
         ? (data.structuredContent?.[fieldTarget] ?? data.suggestion)
         : data.suggestion;
@@ -1076,14 +1005,15 @@ export default function ProjectPage() {
     onError: () => {
       toast.error('Unable to generate suggestion');
       suggestionFieldRef.current = null;
+      setPendingSuggestionField(null);
     },
   });
 
   const autosaveMutation = useMutation({
     mutationFn: (payload: {
       sectionId: string;
-      content: Record<string, any>;
-    }) => api.post('/autosave/sections', payload).then((res) => res.data),
+      content: FormValues;
+    }) => saveSectionAutosave(payload),
     onMutate: () => setAutosaveStatus('saving'),
     onSuccess: (data) => {
       setAutosaveStatus('saved');
@@ -1100,7 +1030,8 @@ export default function ProjectPage() {
     if (!currentSection) return;
     const targetField = fieldName ?? activeField ?? undefined;
     suggestionFieldRef.current = targetField ?? null;
-    const snapshot: Record<string, any> = {
+    setPendingSuggestionField(targetField ?? null);
+    const snapshot: FormValues = {
       ...(currentSection.content ?? {}),
       ...(formValues ?? {}),
     };
@@ -1169,15 +1100,13 @@ export default function ProjectPage() {
         clearTimeout(autosaveDebounceRef.current);
       }
     };
-  }, [formValues, currentSection, isFormStep]);
+  }, [autosaveMutation, currentSection, formValues, isFormStep]);
 
   useEffect(() => {
     if (!currentSection) {
       return;
     }
-    api
-      .get(`/autosave/sections/${currentSection.id}`)
-      .then((res) => res.data)
+    getSectionAutosave(currentSection.id)
       .then((autosave) => {
         if (
           autosave &&
@@ -1191,17 +1120,15 @@ export default function ProjectPage() {
         }
       })
       .catch(() => {});
-  }, [currentSection?.id]);
+  }, [currentSection]);
 
   const saveTemplateMutation = useMutation({
-    mutationFn: (payload: { name: string; content: Record<string, any> }) =>
-      api
-        .post('/templates', {
-          name: payload.name,
-          sectionName: activeStepId,
-          content: payload.content,
-        })
-        .then((res) => res.data),
+    mutationFn: (payload: { name: string; content: FormValues }) =>
+      createTemplate({
+        name: payload.name,
+        sectionName: activeStepId,
+        content: payload.content,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', activeStepId] });
       toast.success('Template saved');
@@ -1213,9 +1140,7 @@ export default function ProjectPage() {
 
   const createReminderMutation = useMutation({
     mutationFn: (payload: { message: string; dueAt: string }) =>
-      api
-        .post(`/projects/${projectId}/reminders`, payload)
-        .then((res) => res.data),
+      createProjectReminder(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: remindersQueryKey });
       toast.success('Reminder scheduled');
@@ -1227,11 +1152,9 @@ export default function ProjectPage() {
 
   const updateReminderMutation = useMutation({
     mutationFn: (payload: { id: string; completed: boolean }) =>
-      api
-        .patch(`/projects/${projectId}/reminders/${payload.id}`, {
-          completed: payload.completed,
-        })
-        .then((res) => res.data),
+      updateProjectReminder(projectId, payload.id, {
+        completed: payload.completed,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: remindersQueryKey });
     },
@@ -1262,8 +1185,11 @@ export default function ProjectPage() {
       body?: Record<string, unknown>;
       successMessage: string;
     }) =>
-      api.post(payload.endpoint, payload.body ?? {}).then((res) => ({
-        data: res.data,
+      runProjectWorkflowAction({
+        endpoint: payload.endpoint,
+        body: payload.body,
+      }).then((data) => ({
+        data,
         successMessage: payload.successMessage,
       })),
     onSuccess: () => {
@@ -1274,7 +1200,6 @@ export default function ProjectPage() {
   });
 
   const workflowStatus = (projectQuery.data?.workflowStatus ??
-    projectQuery.data?.status ??
     'DRAFT') as ProjectWorkflowStatus;
   const workflowVersion = projectQuery.data?.workflowVersion;
 
@@ -1405,7 +1330,7 @@ export default function ProjectPage() {
   };
 
   const completedSteps = new Set(
-    sectionsQuery.data?.map((section: any) => section.name) ?? [],
+    sectionsQuery.data?.map((section) => section.name) ?? [],
   );
   const trackableStepIds = useMemo(
     () =>
@@ -1447,16 +1372,12 @@ export default function ProjectPage() {
         stepId,
         title: stepTitleMap.get(stepId) ?? stepId,
         missing: incompleteFieldsByStep.get(stepId)?.length ?? 0,
-        status: sectionByName.get(stepId)?.status ?? 'DRAFT',
+        status: sectionByName.get(stepId)?.workflowStatus ?? 'DRAFT',
       })),
     [trackableStepIds, stepTitleMap, incompleteFieldsByStep, sectionByName],
   );
-  const allFieldsComplete = useMemo(
-    () =>
-      [...incompleteFieldsByStep.values()].every(
-        (fields) => fields.length === 0,
-      ),
-    [incompleteFieldsByStep],
+  const allFieldsComplete = [...incompleteFieldsByStep.values()].every(
+    (fields) => fields.length === 0,
   );
   const PROJECT_STATUS_LABELS: Record<string, string> = {
     DRAFT: 'Draft',
@@ -1570,10 +1491,10 @@ export default function ProjectPage() {
       .slice(0, 6);
   }, [sectionsQuery.data, documentsQuery.data, stepTitleMap]);
   const riskSection = sectionByName.get('risk_assessment');
-  const riskEntries: Array<any> = Array.isArray(riskSection?.content?.entries)
-    ? riskSection?.content?.entries
+  const riskEntries: RiskEntry[] = Array.isArray(riskSection?.content?.entries)
+    ? (riskSection.content.entries as RiskEntry[])
     : Array.isArray(riskSection?.content?.risks)
-      ? riskSection?.content?.risks
+      ? (riskSection.content.risks as RiskEntry[])
       : [];
   const riskSummaryText =
     typeof riskSection?.content?.risks === 'string'
@@ -1585,7 +1506,7 @@ export default function ProjectPage() {
   const likelihoodLevels = ['Low', 'Medium', 'High'];
   const riskHeatmap = severityLevels.map((severity) =>
     likelihoodLevels.map((likelihood) => {
-      const matches = riskEntries.filter((entry: any) => {
+      const matches = riskEntries.filter((entry) => {
         const entrySeverity = (entry.severity || entry.impact || '')
           .toString()
           .toLowerCase();
@@ -1830,7 +1751,7 @@ export default function ProjectPage() {
                       <select
                         onChange={(event) => {
                           const selected = templatesQuery.data.find(
-                            (tpl: any) => tpl.id === event.target.value,
+                            (tpl) => tpl.id === event.target.value,
                           );
                           if (selected) {
                             handleApplyTemplate(selected);
@@ -1839,7 +1760,7 @@ export default function ProjectPage() {
                         className="rounded-md border border-slate-200 px-2 py-1 text-sm"
                       >
                         <option value="">Select...</option>
-                        {templatesQuery.data.map((tpl: any) => (
+                        {templatesQuery.data.map((tpl) => (
                           <option key={tpl.id} value={tpl.id}>
                             {tpl.name}
                           </option>
@@ -2018,7 +1939,7 @@ export default function ProjectPage() {
                           </div>
                         ) : null}
                         {suggestionMutation.isPending &&
-                          suggestionFieldRef.current === field.name && (
+                          pendingSuggestionField === field.name && (
                             <p className="mt-1 text-[11px] text-slate-400">
                               AI drafting suggestion...
                             </p>
@@ -2098,7 +2019,9 @@ export default function ProjectPage() {
                         <select
                           value={artifactPurpose}
                           onChange={(e) =>
-                            setArtifactPurpose(e.target.value as any)
+                            setArtifactPurpose(
+                              e.target.value as 'GENERIC' | 'DATASET' | 'MODEL',
+                            )
                           }
                           disabled={!isOwner}
                           className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none disabled:bg-slate-50"
@@ -2708,8 +2631,7 @@ export default function ProjectPage() {
                 )}
                 {generateMutation.isError && (
                   <p className="text-sm text-rose-600">
-                    {(generateMutation.error as any)?.response?.data?.message
-                      ?.message ??
+                    {getApiErrorMessage(generateMutation.error) ??
                       'Unable to generate documents. Ensure each section has been saved and try again.'}
                   </p>
                 )}
@@ -3065,7 +2987,7 @@ export default function ProjectPage() {
             </form>
             <div className="mt-4 space-y-3">
               {remindersQuery.data?.length ? (
-                remindersQuery.data.map((reminder: any) => (
+                remindersQuery.data.map((reminder) => (
                   <div
                     key={reminder.id}
                     className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3"
@@ -3138,14 +3060,3 @@ export default function ProjectPage() {
     </AppShell>
   );
 }
-type StatusEvent = {
-  id: string;
-  status: 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
-  note?: string;
-  signature?: string;
-  createdAt: string;
-  actor?: {
-    id: string;
-    email: string;
-  };
-};

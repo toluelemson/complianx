@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import api from '@/platform/api/client';
-import { AppShell } from '@/components/AppShell';
+import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import toast from 'react-hot-toast';
 import { useEffect, useState } from 'react';

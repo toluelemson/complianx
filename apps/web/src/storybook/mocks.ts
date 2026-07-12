@@ -1,4 +1,8 @@
-import { type SectionWithMeta } from '@/domains/ai-systems/pages/ProjectPage';
+import type {
+  SectionWithMeta,
+  TrackableStepSummary,
+} from '@complianx/contracts/ai-systems';
+import type { TrustMetric } from '@complianx/contracts/assessments';
 
 export const sampleProject = {
   id: 'storybook-project',
@@ -6,7 +10,7 @@ export const sampleProject = {
   industry: 'AI Safety',
   riskLevel: 'Medium',
   createdAt: new Date().toISOString(),
-  status: 'IN_REVIEW',
+  workflowStatus: 'IN_REVIEW',
 };
 
 export const sampleSections = new Map<string, SectionWithMeta>([
@@ -19,7 +23,7 @@ export const sampleSections = new Map<string, SectionWithMeta>([
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       comments: [],
-      status: 'IN_REVIEW',
+      workflowStatus: 'IN_REVIEW',
       artifacts: [],
     },
   ],
@@ -32,7 +36,7 @@ export const sampleSections = new Map<string, SectionWithMeta>([
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       comments: [],
-      status: 'DRAFT',
+      workflowStatus: 'DRAFT',
       artifacts: [],
     },
   ],
@@ -43,7 +47,7 @@ export const stepFields = [
   { name: 'scope', label: 'Scope', type: 'textarea' },
 ];
 
-export const sampleTrackableSteps = [
+export const sampleTrackableSteps: TrackableStepSummary[] = [
   {
     stepId: 'system_overview',
     title: 'System overview',
@@ -58,7 +62,7 @@ export const sampleTrackableSteps = [
   },
 ];
 
-export const sampleMetrics = [
+export const sampleMetrics: TrustMetric[] = [
   {
     id: 'metric-1',
     name: 'Fairness gap',
@@ -72,7 +76,7 @@ export const sampleMetrics = [
         value: 0.04,
         status: 'OK',
         note: 'Monthly audit',
-        timestamp: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       },
     ],
   },

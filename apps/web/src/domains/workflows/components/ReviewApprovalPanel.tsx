@@ -4,19 +4,10 @@ import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
 import { Select } from '@/shared/components/ui/select';
 import { Textarea } from '@/shared/components/ui/textarea';
-
-interface TrackableStepSummary {
-  stepId: string;
-  title: string;
-  missing: number;
-  status: string;
-}
-
-interface Reviewer {
-  id: string;
-  email: string;
-  role: string;
-}
+import type {
+  ReviewerItem,
+  TrackableStepSummary,
+} from '@complianx/contracts/ai-systems';
 
 interface ReviewApprovalPanelProps {
   trackableSteps: TrackableStepSummary[];
@@ -32,8 +23,8 @@ interface ReviewApprovalPanelProps {
   onApproverChange: (value: string) => void;
   reviewMessage: string;
   setReviewMessage: (value: string) => void;
-  reviewers: Reviewer[];
-  availableReviewers: Reviewer[];
+  reviewers: ReviewerItem[];
+  availableReviewers: ReviewerItem[];
   canAssignSelf: boolean;
   canSendForReview?: boolean;
   sendForReviewDisabled?: boolean;

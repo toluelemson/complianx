@@ -2,13 +2,14 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthContext';
-import { Hero } from '@/components/landing/Hero';
-import { FaqSection } from '@/components/landing/FaqSection';
-import { Navbar } from '@/components/landing/Navbar';
-import { PricingSection } from '@/components/landing/PricingSection';
-import { CTASection } from '@/components/landing/CTASection';
-import { TrialModal } from '@/components/landing/TrialModal';
-import { VideoSection } from '@/components/landing/VideoSection';
+import { Hero } from '@/domains/marketing/components/Hero';
+import { Capabilities } from '@/domains/marketing/components/Capabilities';
+import { FaqSection } from '@/domains/marketing/components/FaqSection';
+import { Navbar } from '@/domains/marketing/components/Navbar';
+import { PricingSection } from '@/domains/marketing/components/PricingSection';
+import { CTASection } from '@/domains/marketing/components/CTASection';
+import { TrialModal } from '@/domains/marketing/components/TrialModal';
+import { VideoSection } from '@/domains/marketing/components/VideoSection';
 
 const DEMO_VIDEO_SRC = '/neuraldocx-hero.webm';
 
@@ -43,6 +44,7 @@ export default function LandingPage() {
             onOpenTrial={() => setTrialModalOpen(true)}
             videoSrc={DEMO_VIDEO_SRC}
           />
+          <Capabilities />
           <PricingSection />
           <FaqSection />
           <CTASection />

@@ -1,10 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type {
+  TrustCohortAnalysisResponse,
+  TrustMetric as TrustMetricContract,
+} from '@complianx/contracts/assessments';
 import { PrismaService } from '../../../../platform/database/prisma.service';
 import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
-import { TrustMetric, TrustSample as TrustSampleModel } from '@prisma/client';
+import {
+  TrustMetric as TrustMetricRecord,
+  TrustSample as TrustSampleModel,
+} from '@prisma/client';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { MonetizationService } from '../../../subscriptions/application/monetization.service';
+import {
+  calculateKld,
+  calculatePsi,
+  type CsvRow,
+  type FairnessSegmentResult,
+  histogram,
+  parseCsv,
+} from './trust-analysis.helpers';
 
 @Injectable()
 export class TrustService {
@@ -14,7 +29,11 @@ export class TrustService {
     private readonly monetization: MonetizationService,
   ) {}
 
-  async listByProject(projectId: string, userId: string, companyId: string) {
+  async listByProject(
+    projectId: string,
+    userId: string,
+    companyId: string,
+  ): Promise<TrustMetricContract[]> {
     await this.projectsService.assertAccess(projectId, userId, companyId, {
       allowOwner: true,
       allowReviewer: true,
@@ -28,7 +47,26 @@ export class TrustService {
           take: 6,
         },
       },
-    });
+    }).then((metrics) =>
+      metrics.map((metric) => ({
+        id: metric.id,
+        name: metric.name,
+        pillar: metric.pillar,
+        unit: metric.unit,
+        datasetName: metric.datasetName ?? undefined,
+        modelName: metric.modelName ?? undefined,
+        targetMin: metric.targetMin ?? undefined,
+        targetMax: metric.targetMax ?? undefined,
+        sectionId: metric.sectionId ?? undefined,
+        samples: metric.samples.map((sample) => ({
+          id: sample.id,
+          value: sample.value,
+          status: sample.status,
+          note: sample.note ?? undefined,
+          timestamp: sample.timestamp.toISOString(),
+        })),
+      })),
+    );
   }
 
   async create(
@@ -96,7 +134,7 @@ export class TrustService {
     });
   }
 
-  private evaluateStatus(metric: TrustMetric, value: number) {
+  private evaluateStatus(metric: TrustMetricRecord, value: number) {
     if (metric.targetMin !== null && value < metric.targetMin) {
       return 'ALERT';
     }
@@ -142,7 +180,7 @@ export class TrustService {
     const storageRoot = join(process.cwd(), 'storage', 'artifacts');
     const datasetPath = join(storageRoot, dataset.storedName);
     const csvRaw = await fs.readFile(datasetPath, 'utf8');
-    const rows = this.parseCsv(csvRaw);
+    const rows = parseCsv(csvRaw);
     const cols = dto.columns || {};
     const sensitiveCol = cols.sensitive_attribute || 'sensitive_attribute';
     const yTrueCol = cols.y_true || 'y_true';
@@ -156,6 +194,7 @@ export class TrustService {
     if (!(targetCol in rows[0])) {
       throw new NotFoundException(`CSV missing target column: ${targetCol}`);
     }
+    const firstRow: CsvRow = rows[0];
     // Aggregate per-group stats
     type GroupAgg = {
       total: number;
@@ -167,9 +206,9 @@ export class TrustService {
       tn: number;
     };
     const groups = new Map<string, GroupAgg>();
-    const hasPred =
-      !!(dto.columns?.y_pred && dto.columns?.y_pred in rows[0]) ||
-      Object.prototype.hasOwnProperty.call(rows[0], 'y_pred');
+    const hasPred: boolean =
+      !!(dto.columns?.y_pred && Object.hasOwn(firstRow, dto.columns.y_pred)) ||
+      Object.hasOwn(firstRow, 'y_pred');
     for (const r of rows) {
       const g = String(r[sensitiveCol]);
       const yTrue = Number(r[yTrueCol]);
@@ -203,7 +242,7 @@ export class TrustService {
     const gap = Math.abs(maxRate - minRate);
 
     // Upsert metric
-    let metric: TrustMetric | null = null;
+    let metric: TrustMetricRecord | null = null;
     if (dto.metricId) {
       metric = await this.prisma.trustMetric.findUnique({
         where: { id: dto.metricId },
@@ -356,25 +395,6 @@ export class TrustService {
     return { metric, sample, diSample, eoSample, eoddsSample };
   }
 
-  private parseCsv(content: string): Array<Record<string, any>> {
-    const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    if (!lines.length) return [];
-    const header = lines[0].split(',').map((h) => h.trim());
-    const rows: Array<Record<string, any>> = [];
-    for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(',');
-      const obj: Record<string, any> = {};
-      for (let j = 0; j < header.length; j++) {
-        const key = header[j];
-        const val = parts[j] !== undefined ? parts[j].trim() : '';
-        const asNum = Number(val);
-        obj[key] = Number.isNaN(asNum) ? val : asNum;
-      }
-      rows.push(obj);
-    }
-    return rows;
-  }
-
   async analyzeFairnessSegments(
     userId: string,
     companyId: string,
@@ -391,7 +411,7 @@ export class TrustService {
         filter: { column: string; values: (string | number)[] };
       }>;
     },
-  ) {
+  ): Promise<TrustCohortAnalysisResponse> {
     const { projectId } = dto;
     await this.projectsService.assertOwnership(projectId, userId, companyId);
     const dataset = await this.prisma.sectionArtifact.findUnique({
@@ -403,7 +423,7 @@ export class TrustService {
     const storageRoot = join(process.cwd(), 'storage', 'artifacts');
     const datasetPath = join(storageRoot, dataset.storedName);
     const csvRaw = await fs.readFile(datasetPath, 'utf8');
-    const allRows = this.parseCsv(csvRaw);
+    const allRows = parseCsv(csvRaw);
     const cols = dto.columns || {};
     const sensitiveCol = cols.sensitive_attribute || 'sensitive_attribute';
     const yTrueCol = cols.y_true || 'y_true';
@@ -414,14 +434,7 @@ export class TrustService {
       yPredCol in allRows[0]
     );
 
-    const results: Array<{
-      segment: string;
-      counts: number;
-      fairnessGap: number;
-      disparateImpact?: number;
-      equalOpportunityGap?: number;
-      equalizedOddsGap?: number;
-    }> = [];
+    const results: FairnessSegmentResult[] = [];
 
     for (const seg of dto.segments) {
       const { column, values } = seg.filter;
@@ -471,7 +484,7 @@ export class TrustService {
       const maxRate = rates.length ? Math.max(...rates) : 0;
       const minRate = rates.length ? Math.min(...rates) : 0;
       const fairnessGap = Math.abs(maxRate - minRate);
-      const result: any = {
+      const result: FairnessSegmentResult = {
         segment: seg.name,
         counts: rows.length,
         fairnessGap,
@@ -567,7 +580,7 @@ export class TrustService {
     const storageRoot = join(process.cwd(), 'storage', 'artifacts');
     const datasetPath = join(storageRoot, dataset.storedName);
     const csvRaw = await fs.readFile(datasetPath, 'utf8');
-    const rows = this.parseCsv(csvRaw);
+    const rows = parseCsv(csvRaw);
     if (!rows.length) {
       throw new NotFoundException('Dataset is empty');
     }
@@ -703,8 +716,8 @@ export class TrustService {
       join(storageRoot, current.storedName),
       'utf8',
     );
-    const bRows = this.parseCsv(bCsv);
-    const cRows = this.parseCsv(cCsv);
+    const bRows = parseCsv(bCsv);
+    const cRows = parseCsv(cCsv);
     if (!bRows.length || !cRows.length) {
       throw new NotFoundException('Artifacts have no rows');
     }
@@ -724,42 +737,6 @@ export class TrustService {
     const bins = 10;
     const psiVals: number[] = [];
     const klVals: number[] = [];
-    function histogram(
-      values: number[],
-      min: number,
-      max: number,
-      bins: number,
-    ) {
-      const counts = new Array(bins).fill(0);
-      const width = max - min || 1;
-      for (const v of values) {
-        const idx = Math.max(
-          0,
-          Math.min(bins - 1, Math.floor(((v - min) / width) * bins)),
-        );
-        counts[idx] += 1;
-      }
-      const total = values.length || 1;
-      return counts.map((c) => c / total);
-    }
-    function psi(expected: number[], actual: number[]) {
-      let sum = 0;
-      for (let i = 0; i < expected.length; i++) {
-        const e = Math.max(expected[i], 1e-6);
-        const a = Math.max(actual[i], 1e-6);
-        sum += (a - e) * Math.log(a / e);
-      }
-      return sum;
-    }
-    function kld(p: number[], q: number[]) {
-      let sum = 0;
-      for (let i = 0; i < p.length; i++) {
-        const pi = Math.max(p[i], 1e-6);
-        const qi = Math.max(q[i], 1e-6);
-        sum += pi * Math.log(pi / qi);
-      }
-      return sum;
-    }
     for (const col of numCols) {
       const bVals = bRows
         .map((r) => Number(r[col]))
@@ -772,8 +749,8 @@ export class TrustService {
       const max = Math.max(Math.max(...bVals), Math.max(...cVals));
       const bHist = histogram(bVals, min, max, bins);
       const cHist = histogram(cVals, min, max, bins);
-      psiVals.push(psi(bHist, cHist));
-      klVals.push(kld(bHist, cHist));
+      psiVals.push(calculatePsi(bHist, cHist));
+      klVals.push(calculateKld(bHist, cHist));
     }
     const psiAvg = psiVals.length
       ? psiVals.reduce((a, b) => a + b, 0) / psiVals.length

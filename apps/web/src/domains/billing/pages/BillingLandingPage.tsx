@@ -1,6 +1,6 @@
 // Billing domain route.
 import { useEffect } from 'react';
-import { AppShell } from '@/components/AppShell';
+import { AppShell } from '@/app/layout/AppShell';
 
 export default function BillingLandingPage() {
   useEffect(() => {

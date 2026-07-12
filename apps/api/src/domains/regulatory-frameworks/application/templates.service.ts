@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { TemplateItem } from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import {
   BulkTemplateActionDto,
@@ -16,7 +17,32 @@ import { UpdateTemplateDto } from '../presentation/dto/update-template.dto';
 export class TemplatesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listForUser(userId: string, sectionName?: string) {
+  private mapTemplate(template: {
+    id: string;
+    name: string;
+    ownerId: string;
+    sectionName: string;
+    category: string | null;
+    shared: boolean;
+    content?: unknown;
+    owner?: { email?: string; id?: string } | null;
+  }): TemplateItem {
+    return {
+      id: template.id,
+      name: template.name,
+      ownerId: template.ownerId,
+      sectionName: template.sectionName,
+      category: template.category ?? undefined,
+      shared: template.shared,
+      owner: template.owner?.email ? { email: template.owner.email } : undefined,
+      content:
+        template.content && typeof template.content === 'object'
+          ? (template.content as Record<string, unknown>)
+          : undefined,
+    };
+  }
+
+  listForUser(userId: string, sectionName?: string): Promise<TemplateItem[]> {
     return this.prisma.sectionTemplate.findMany({
       where: {
         sectionName: sectionName ?? undefined,
@@ -26,10 +52,10 @@ export class TemplatesService {
       include: {
         owner: { select: { id: true, email: true } },
       },
-    });
+    }).then((templates) => templates.map((template) => this.mapTemplate(template)));
   }
 
-  async create(userId: string, dto: CreateTemplateDto) {
+  async create(userId: string, dto: CreateTemplateDto): Promise<TemplateItem> {
     const existing = await this.prisma.sectionTemplate.findFirst({
       where: {
         ownerId: userId,
@@ -61,10 +87,14 @@ export class TemplatesService {
         category: dto.category,
         shared: dto.shared ?? false,
       },
-    });
+    }).then((template) => this.mapTemplate(template));
   }
 
-  async update(userId: string, templateId: string, dto: UpdateTemplateDto) {
+  async update(
+    userId: string,
+    templateId: string,
+    dto: UpdateTemplateDto,
+  ): Promise<TemplateItem> {
     const template = await this.prisma.sectionTemplate.findUnique({
       where: { id: templateId },
     });
@@ -81,10 +111,10 @@ export class TemplatesService {
         ...('category' in dto ? { category: dto.category } : {}),
         ...(dto.shared !== undefined ? { shared: dto.shared } : {}),
       },
-    });
+    }).then((updatedTemplate) => this.mapTemplate(updatedTemplate));
   }
 
-  async delete(userId: string, templateId: string) {
+  async delete(userId: string, templateId: string): Promise<TemplateItem> {
     const template = await this.prisma.sectionTemplate.findUnique({
       where: { id: templateId },
     });
@@ -94,10 +124,15 @@ export class TemplatesService {
     if (template.ownerId !== userId) {
       throw new ForbiddenException('Only the owner can delete the template');
     }
-    return this.prisma.sectionTemplate.delete({ where: { id: templateId } });
+    return this.prisma.sectionTemplate
+      .delete({ where: { id: templateId } })
+      .then((template) => this.mapTemplate(template));
   }
 
-  async bulkAction(userId: string, dto: BulkTemplateActionDto) {
+  async bulkAction(
+    userId: string,
+    dto: BulkTemplateActionDto,
+  ): Promise<TemplateItem[]> {
     const templates = await this.prisma.sectionTemplate.findMany({
       where: { id: { in: dto.templateIds } },
     });
@@ -127,6 +162,8 @@ export class TemplatesService {
     };
     return this.prisma.$transaction(
       templates.map((template) => actions[dto.action](template)),
+    ).then((updatedTemplates) =>
+      updatedTemplates.map((template) => this.mapTemplate(template)),
     );
   }
 }
