@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, ProjectStatus, SectionStatus } from '@prisma/client';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import {
   ProjectWorkflowStatus,
@@ -118,6 +118,44 @@ function toSectionWorkflowStatus(
   status: `${SectionWorkflowStatus}`,
 ): SectionWorkflowStatus {
   return status as SectionWorkflowStatus;
+}
+
+function toProjectEventStatus(
+  status: ProjectWorkflowStatus,
+): ProjectStatus {
+  switch (status) {
+    case ProjectWorkflowStatus.APPROVED:
+    case ProjectWorkflowStatus.ARCHIVED:
+      return ProjectStatus.APPROVED;
+    case ProjectWorkflowStatus.CHANGES_REQUESTED:
+    case ProjectWorkflowStatus.REJECTED:
+    case ProjectWorkflowStatus.CANCELLED:
+      return ProjectStatus.CHANGES_REQUESTED;
+    case ProjectWorkflowStatus.IN_REVIEW:
+    case ProjectWorkflowStatus.READY_FOR_REVIEW:
+    case ProjectWorkflowStatus.RESUBMITTED:
+      return ProjectStatus.IN_REVIEW;
+    case ProjectWorkflowStatus.DRAFT:
+    default:
+      return ProjectStatus.DRAFT;
+  }
+}
+
+function toSectionEventStatus(
+  status: SectionWorkflowStatus,
+): SectionStatus {
+  switch (status) {
+    case SectionWorkflowStatus.APPROVED:
+      return SectionStatus.APPROVED;
+    case SectionWorkflowStatus.CHANGES_REQUESTED:
+      return SectionStatus.CHANGES_REQUESTED;
+    case SectionWorkflowStatus.COMPLETE:
+    case SectionWorkflowStatus.IN_REVIEW:
+      return SectionStatus.IN_REVIEW;
+    case SectionWorkflowStatus.DRAFT:
+    default:
+      return SectionStatus.DRAFT;
+  }
 }
 
 @Injectable()
@@ -247,7 +285,7 @@ export class PrismaWorkflowRepository
       await tx.projectStatusEvent.create({
         data: {
           projectId: request.projectId,
-          status: request.toStatus,
+          status: toProjectEventStatus(request.toStatus),
           note: encodeWorkflowNote(request.toStatus, request.note),
           signature: request.signature?.trim(),
           actorId: request.actorId,
@@ -335,7 +373,7 @@ export class PrismaWorkflowRepository
       await tx.sectionStatusEvent.create({
         data: {
           sectionId: request.sectionId,
-          status: request.toStatus,
+          status: toSectionEventStatus(request.toStatus),
           note: encodeWorkflowNote(request.toStatus, request.note),
           signature: request.signature?.trim(),
           actorId: request.actorId,
@@ -352,7 +390,9 @@ export class PrismaWorkflowRepository
         await tx.projectStatusEvent.create({
           data: {
             projectId: section.projectId,
-            status: ProjectWorkflowStatus.CHANGES_REQUESTED,
+            status: toProjectEventStatus(
+              ProjectWorkflowStatus.CHANGES_REQUESTED,
+            ),
             note: encodeWorkflowNote(
               ProjectWorkflowStatus.CHANGES_REQUESTED,
               request.note ?? 'Section changes requested',
