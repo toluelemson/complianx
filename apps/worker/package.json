@@ -1,0 +1,6 @@
+{
+  "name": "worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": { "build": "echo 'Worker is a documented placeholder'", "test": "echo 'No worker tests yet'", "lint": "echo 'No worker lint yet'", "format": "echo 'No worker format yet'" }
+}

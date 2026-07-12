@@ -1,0 +1,7 @@
+{
+  "name": "@complianx/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared, framework-neutral configuration conventions",
+  "scripts": { "build": "echo 'Config package is source-only'", "test": "echo 'No config tests yet'", "lint": "echo 'No config lint yet'", "format": "echo 'No config format yet'" }
+}

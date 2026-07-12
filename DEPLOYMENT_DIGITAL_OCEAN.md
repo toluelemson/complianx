@@ -1,81 +1,27 @@
-## Deploying to DigitalOcean App Platform
+# Deploying Complianx to DigitalOcean App Platform
 
-This project runs as two apps (backend Nest.js API and frontend Vite/React SPA). The App Platform can host them side-by-side:
+Complianx deploys as an API service and a web static site. The architecture refactor changes source paths only; routes and runtime behavior are unchanged.
 
-### Quick Deploy Checklist (DigitalOcean App Platform)
+## API service
 
-1. **Prep repo**
-   - Keep current root `Dockerfile` (builds backend from `/backend`, outputs `dist/src/main`).
-   - Frontend stays under `/frontend` (deploy separately if needed).
+- Source directory: `/` (the build needs the workspace lockfile and shared packages)
+- Dockerfile: `/apps/api/Dockerfile`
+- HTTP port: `8080`
+- Health/runtime command is provided by the Dockerfile.
 
-2. **Create App**
-   - In DigitalOcean, “Create App” → pick your GitHub repo → region `fra`.
-   - Choose the Dockerfile service (source dir `/`, Dockerfile `/Dockerfile`).
+Configure at least `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, and `CORS_ORIGINS`, plus the LLM, SMTP, and Stripe variables required by enabled capabilities. Run `prisma migrate deploy` from `apps/api` before serving a release that contains migrations.
 
-3. **Add environment variables (backend service)**
-   ```
-   DATABASE_URL=postgresql://user:pass@host:5432/db
-   JWT_SECRET=...
-   LLM_BASE_URL=...
-   LLM_API_KEY=...
-   LLM_MODEL=...
-   FRONTEND_URL=https://<frontend-app>.ondigitalocean.app
-   CORS_ORIGINS=https://neuraldocx.com,https://www.neuraldocx.com
-   STRIPE_SECRET_KEY=sk_test_...
-   STRIPE_PUBLISHABLE_KEY=pk_test_...
-   STRIPE_WEBHOOK_SECRET=whsec_...
-   STRIPE_PRICE_PRO=price_...
-   STRIPE_PRICE_ENTERPRISE=price_...
-   ```
-   - `CORS_ORIGINS` controls which browser origins may call the API. Use a comma-separated list.
-   - For the frontend (static site) set `VITE_API_URL=https://<backend-app>.ondigitalocean.app/api`.
+## Web static site
 
-4. **Deploy**
-   - App Platform runs the Docker build (installs deps, `prisma generate`, `npm run build`, `node dist/src/main`).
-   - Health check auto-routes traffic once ready.
+- Source directory: `/` (the build needs the workspace lockfile and shared packages)
+- Dockerfile: `/apps/web/Dockerfile`
+- HTTP port: `8080`
+- Build argument: `VITE_API_URL=https://<api-host>/api`
 
-5. **Stripe webhook**
-   - At https://dashboard.stripe.com → Developers → Webhooks → add endpoint `https://<backend-app>.ondigitalocean.app/billing/webhook`.
-   - Subscribe to `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`.
-   - Paste the signing secret into `STRIPE_WEBHOOK_SECRET`.
+## Stripe
 
-6. **Database migrations**
-   - Locally: `cd backend && DATABASE_URL=... npm run prisma:migrate`.
-   - In staging/prod, run `prisma migrate deploy` against your managed Postgres.
+Keep the existing webhook route: `https://<api-host>/billing/webhook`. Configure `STRIPE_WEBHOOK_SECRET` with the endpoint signing secret and retain the currently subscribed event types.
 
-7. **Spec (copy/paste into App Platform or use `doctl apps create --spec`)**
+## Required dashboard change
 
-```yaml
-name: complianx
-region: fra
-build:
-  buildpacks:
-    - buildpack: dockerfile
-      stack: ubuntu-22
-alerts:
-  rules:
-    - rule: DEPLOYMENT_FAILED
-    - rule: DOMAIN_FAILED
-ingress:
-  rules:
-    - component:
-        name: complianx
-      match:
-        authority:
-          exact: ""
-        path:
-          prefix: /
-services:
-  - name: complianx
-    github:
-      repo: toluelemson/complianx
-      branch: main
-      deploy_on_push: true
-    dockerfile_path: /Dockerfile
-    source_dir: /
-    http_port: 8080
-    instance_count: 2
-    instance_size_slug: apps-s-1vcpu-1gb
-```
-
-That’s it—deploy, point Stripe to the new webhook URL, and your DigitalOcean app is live.***
+Use the repository root as the build context and set each component's Dockerfile path to `/apps/api/Dockerfile` or `/apps/web/Dockerfile`. Existing components that point to `/backend` or `/frontend` must be updated. No public URL or API route change is required.

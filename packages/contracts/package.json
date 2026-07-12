@@ -1,0 +1,11 @@
+{
+  "name": "@complianx/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": "./dist/index.js", "./*": "./dist/*" },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "echo 'No contract tests yet'", "lint": "tsc --noEmit", "format": "prettier --write src" },
+  "devDependencies": { "typescript": "^5.7.3", "prettier": "^3.4.2" }
+}
