@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { PrismaService } from './platform/database/prisma.service';
-import * as bodyParser from 'body-parser';
+import { raw } from 'express';
 
 function normalizeOrigin(origin: string) {
   return origin.replace(/\/$/, '').toLowerCase();
@@ -49,7 +49,7 @@ async function bootstrap() {
     rawBody: true,
   });
 
-  app.use('/billing/webhook', bodyParser.raw({ type: '*/*' }));
+  app.use('/billing/webhook', raw({ type: '*/*' }));
   app.setGlobalPrefix('api', {
     exclude: [{ path: 'billing/webhook', method: RequestMethod.POST }],
   });
