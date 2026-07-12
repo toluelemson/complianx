@@ -1,26 +1,23 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { PrismaModule } from './prisma/prisma.module';
+import { PrismaModule } from './platform/database/prisma.module';
 import { IdentityAccessModule } from './domains/identity-access/identity-access.module';
 import { AiSystemsModule } from './domains/ai-systems/ai-systems.module';
 import { ReportingModule } from './domains/reporting/reporting.module';
-import { LlmModule } from './llm/llm.module';
-import { PdfModule } from './pdf/pdf.module';
-import { TemplatesModule } from './templates/templates.module';
-import { RemindersModule } from './reminders/reminders.module';
+import { LlmModule } from './platform/ai/llm.module';
+import { PdfModule } from './platform/pdf/pdf.module';
+import { RegulatoryFrameworksModule } from './domains/regulatory-frameworks/regulatory-frameworks.module';
+import { RemindersModule } from './domains/notifications/reminders.module';
 import { AutoSaveModule } from './auto-save/auto-save.module';
 import { OrganizationsModule } from './domains/organizations/organizations.module';
 import { EvidenceModule } from './domains/evidence/evidence.module';
 import { AssessmentsModule } from './domains/assessments/assessments.module';
-import { BillingController } from './billing/billing.controller';
-import { BillingWebhookController } from './billing/billing.webhook.controller';
-import { MonetizationService } from './monetization/monetization.service';
-import { BillingService } from './billing/billing.service';
-import { NotificationsModule } from './notifications/notifications.module';
+import { SubscriptionsModule } from './domains/subscriptions/subscriptions.module';
+import { NotificationsModule } from './domains/notifications/notifications.module';
 import { ContactModule } from './contact/contact.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { EuAiActPublicModule } from './eu-ai-act-public/eu-ai-act-public.module';
-import { ReviewApprovalModule } from './review-approval/review-approval.module';
+import { ReviewApprovalModule } from './domains/review-approval/review-approval.module';
 
 @Module({
   imports: [
@@ -33,7 +30,7 @@ import { ReviewApprovalModule } from './review-approval/review-approval.module';
     ReportingModule,
     LlmModule,
     PdfModule,
-    TemplatesModule,
+    RegulatoryFrameworksModule,
     RemindersModule,
     AutoSaveModule,
     OrganizationsModule,
@@ -42,8 +39,7 @@ import { ReviewApprovalModule } from './review-approval/review-approval.module';
     AnalyticsModule,
     EuAiActPublicModule,
     ReviewApprovalModule,
+    SubscriptionsModule,
   ],
-  controllers: [BillingController, BillingWebhookController],
-  providers: [MonetizationService, BillingService],
 })
 export class AppModule {}

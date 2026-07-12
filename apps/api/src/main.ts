@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaService } from './platform/database/prisma.service';
 import * as bodyParser from 'body-parser';
 
 function normalizeOrigin(origin: string) {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 
 const NAV_LINKS = [
   { label: 'Product', href: '/#product' },
@@ -53,10 +53,19 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="hidden sm:inline-flex"
+          >
             <Link to="/login">Log in</Link>
           </Button>
-          <Button asChild size="sm" className="hidden sm:inline-flex bg-slate-950 text-white hover:bg-black">
+          <Button
+            asChild
+            size="sm"
+            className="hidden sm:inline-flex bg-slate-950 text-white hover:bg-black"
+          >
             <Link to="/submit-system">Submit your system</Link>
           </Button>
           <Button

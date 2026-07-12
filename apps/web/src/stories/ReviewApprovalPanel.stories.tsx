@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ReviewApprovalPanel } from '../components/project/ReviewApprovalPanel';
+import { ReviewApprovalPanel } from '@/domains/workflows/components/ReviewApprovalPanel';
 import { StoryProviders } from '../storybook/StoryProviders';
 import { sampleTrackableSteps } from '../storybook/mocks';
 

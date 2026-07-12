@@ -7,8 +7,13 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/shared/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/shared/components/ui/card';
 
 interface TrialModalProps {
   isOpen: boolean;
@@ -45,7 +50,9 @@ const FEATURE_LIST = [
 export function TrialModal({ isOpen, onClose }: TrialModalProps) {
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
@@ -57,7 +64,10 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
       className="animate-enter-fade fixed inset-0 z-50 flex items-center justify-center bg-[#020406]/72 px-4 backdrop-blur-sm"
       onClick={onClose}
     >
-      <Card onClick={(e) => e.stopPropagation()} className="animate-enter-scale w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#f7f8fc] shadow-[0_45px_120px_-48px_rgba(15,23,42,0.65)]">
+      <Card
+        onClick={(e) => e.stopPropagation()}
+        className="animate-enter-scale w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#f7f8fc] shadow-[0_45px_120px_-48px_rgba(15,23,42,0.65)]"
+      >
         <CardHeader className="border-b border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#eef3ff_100%)] p-5 pb-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="max-w-lg">
@@ -73,7 +83,8 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
                 Start with NeuralDocx
               </CardTitle>
               <p className="mt-3 max-w-md text-sm leading-6 text-slate-600 sm:text-base">
-                AI compliance documentation with first delivery in as little as 48 hours.
+                AI compliance documentation with first delivery in as little as
+                48 hours.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]">
@@ -97,27 +108,28 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
               const Icon = item.icon;
 
               return (
-              <div
-                key={item.title}
-                className={`animate-enter-up rounded-[1.1rem] border border-slate-200 bg-white p-3.5 shadow-[0_22px_50px_-36px_rgba(15,23,42,0.25)] animation-delay-${Math.min((index + 1) * 100, 500)}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ${item.accent}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-base font-semibold tracking-tight text-slate-900">
-                      {item.title}
-                    </p>
-                    <p className="mt-1 text-sm leading-5 text-slate-600">
-                      {item.detail}
-                    </p>
+                <div
+                  key={item.title}
+                  className={`animate-enter-up rounded-[1.1rem] border border-slate-200 bg-white p-3.5 shadow-[0_22px_50px_-36px_rgba(15,23,42,0.25)] animation-delay-${Math.min((index + 1) * 100, 500)}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ${item.accent}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold tracking-tight text-slate-900">
+                        {item.title}
+                      </p>
+                      <p className="mt-1 text-sm leading-5 text-slate-600">
+                        {item.detail}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )})}
+              );
+            })}
           </div>
           <div className="animate-enter-up animation-delay-300 rounded-[1.1rem] border border-slate-200 bg-[#f3f6fb] p-3 shadow-[0_22px_50px_-36px_rgba(15,23,42,0.22)]">
             <div className="flex flex-col gap-3 lg:flex-row">

@@ -3,7 +3,7 @@ import { TrustService } from './application/trust/trust.service';
 import { TrustController } from './presentation/controllers/trust.controller';
 import { PrismaModule } from '../../platform/database/prisma.module';
 import { AiSystemsModule } from '../ai-systems/ai-systems.module';
-import { MonetizationService } from '../../monetization/monetization.service';
+import { MonetizationService } from '../subscriptions/application/monetization.service';
 import { CompanyModule } from '../organizations/company.module';
 
 @Module({

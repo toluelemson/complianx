@@ -8,4 +8,4 @@ Owns the current project-backed AI-system workspace, creation, cloning, access c
 - `presentation`: Nest controller and validation DTOs
 - workflow transitions remain owned by review approval
 
-Legacy `src/projects` paths remain compatibility re-exports.
+Project consumers import the AI systems domain directly.

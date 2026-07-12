@@ -8,4 +8,4 @@ Owns account registration, login, verification, password reset, profiles, and us
 - email remains a platform adapter
 - invitations remain behind their existing application service until organizations migrate
 
-Legacy `src/auth` and `src/users` paths remain compatibility re-exports.
+Authentication and user consumers import this domain or `platform/auth` directly.

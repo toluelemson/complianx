@@ -13,7 +13,7 @@ import { UsersService } from '../../application/users/users.service';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
 import { UpdateRoleDto } from '../dto/users/update-role.dto';
 import { UpdateProfileDto } from '../dto/users/update-profile.dto';
-import { NotificationsService } from '../../../../notifications/notifications.service';
+import { NotificationsService } from '../../../notifications/application/notifications.service';
 import { EmailService } from '../../../../platform/email/email.service';
 import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
 

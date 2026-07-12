@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { AppShell } from '../components/AppShell';
 import { StoryProviders } from '../storybook/StoryProviders';
-import api from '../api/client';
+import api from '@/platform/api/client';
 
 const meta: Meta<typeof AppShell> = {
   title: 'Layout/AppShell',
@@ -35,7 +35,9 @@ function setupApiMocks() {
 
   api.get = (async (url: string, config?: any) => {
     if (url === '/notifications/count') {
-      return { data: { count: mockNotifications.filter((n) => !n.readAt).length } };
+      return {
+        data: { count: mockNotifications.filter((n) => !n.readAt).length },
+      };
     }
     if (url.startsWith('/notifications?')) {
       return { data: mockNotifications };
@@ -44,7 +46,9 @@ function setupApiMocks() {
   }) as typeof api.get;
   api.post = (async (url: string, data?: any, config?: any) => {
     if (url.endsWith('/read-all')) {
-      mockNotifications.forEach((n) => (n.readAt = new Date().toISOString() as any));
+      mockNotifications.forEach(
+        (n) => (n.readAt = new Date().toISOString() as any),
+      );
       return { data: { ok: true } };
     }
     if (url.includes('/read')) {
@@ -65,8 +69,8 @@ export const DefaultShell: Story = {
     children: (
       <div className="space-y-4">
         <p className="text-slate-600">
-          This shell mirrors the application layout with notification dropdowns, billing entry
-          points, and workspace links.
+          This shell mirrors the application layout with notification dropdowns,
+          billing entry points, and workspace links.
         </p>
         <div className="rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
           Place page content here.

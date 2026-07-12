@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthContext, type User } from '../context/AuthContext';
+import { AuthContext, type User } from '@/app/providers/AuthContext';
 import { setupApiMocks } from './setupApiMocks';
 
 const defaultUser: User = {
@@ -20,7 +20,10 @@ interface StoryProvidersProps {
   user?: User;
 }
 
-export function StoryProviders({ children, user = defaultUser }: StoryProvidersProps) {
+export function StoryProviders({
+  children,
+  user = defaultUser,
+}: StoryProvidersProps) {
   const login = () => undefined;
   const logout = () => undefined;
 

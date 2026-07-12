@@ -6,13 +6,13 @@ import {
 } from '@nestjs/common';
 import { AnswerType, Prisma, PublicSessionStatus } from '@prisma/client';
 import { randomBytes, createHash } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../platform/database/prisma.service';
 import { CreatePublicSessionDto } from './dto/create-public-session.dto';
 import { SavePublicAnswerDto } from './dto/save-public-answer.dto';
 import { QuickAssessDto } from './dto/quick-assess.dto';
 import { GenerateDemoReportDto } from './dto/generate-demo-report.dto';
-import { LlmService } from '../llm/llm.service';
-import { renderDocumentHtml } from '../generator/templates';
+import { LlmService } from '../platform/ai/llm.service';
+import { renderDocumentHtml } from '../domains/reporting/infrastructure/rendering/templates';
 
 @Injectable()
 export class EuAiActPublicService {

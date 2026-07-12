@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { SuggestionsService } from '../../application/suggestions/suggestions.service';
-import { JwtAuthGuard } from '../../../../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
 import { CreateFeedbackDto } from '../dto/suggestions/create-feedback.dto';
 
 @UseGuards(JwtAuthGuard)

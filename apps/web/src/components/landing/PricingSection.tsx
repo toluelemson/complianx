@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BadgeEuro, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent } from '@/shared/components/ui/card';
 
 type PricingPlan = {
   name: string;
@@ -152,7 +152,6 @@ export function PricingSection() {
           <h2 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
             Choose the right plan for you
           </h2>
-
         </div>
 
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -164,12 +163,10 @@ export function PricingSection() {
                   ? 'animate-float-soft border-[#3B82F6]/30 text-white'
                   : plan.comingSoon
                     ? 'border-white/12 bg-white/[0.02] text-white'
-                  : 'border-white/10 bg-white/[0.03] text-white'
+                    : 'border-white/10 bg-white/[0.03] text-white'
               } ${inView ? 'animate-enter-scale' : 'translate-y-6 opacity-0'}`}
               style={{
-                ...(inView
-                  ? { animationDelay: `${0.1 + index * 0.08}s` }
-                  : {}),
+                ...(inView ? { animationDelay: `${0.1 + index * 0.08}s` } : {}),
                 ...(plan.featured ? { backgroundColor: '#07296A' } : {}),
               }}
             >
@@ -249,7 +246,9 @@ export function PricingSection() {
                 <div className="mt-8 space-y-7">
                   {plan.sections.map((section, sectionIndex) => (
                     <div key={section.title}>
-                      <h4 className="text-base font-semibold">{section.title}</h4>
+                      <h4 className="text-base font-semibold">
+                        {section.title}
+                      </h4>
                       <div className="mt-3 space-y-3">
                         {section.items.map((item, itemIndex) => (
                           <div
@@ -267,12 +266,16 @@ export function PricingSection() {
                           >
                             <Check
                               className={`mt-0.5 h-4 w-4 shrink-0 ${
-                                plan.featured ? 'text-cyan-200' : 'text-slate-300'
+                                plan.featured
+                                  ? 'text-cyan-200'
+                                  : 'text-slate-300'
                               }`}
                             />
                             <span
                               className={`text-sm leading-6 ${
-                                plan.featured ? 'text-blue-50' : 'text-slate-300'
+                                plan.featured
+                                  ? 'text-blue-50'
+                                  : 'text-slate-300'
                               }`}
                             >
                               {item}

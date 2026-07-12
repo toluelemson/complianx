@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@/app/providers/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../api/client';
+import api from '@/platform/api/client';
 import BillingModal from './BillingModal';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Select } from '@/components/ui/select';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent } from '@/shared/components/ui/card';
+import { Select } from '@/shared/components/ui/select';
 
 interface Notification {
   id: string;
@@ -36,7 +36,8 @@ export function AppShell({ title, children }: AppShellProps) {
   const listQuery = useQuery<Notification[]>({
     queryKey: ['notifications', 'list'],
     enabled: Boolean(user?.id),
-    queryFn: () => api.get('/notifications?unreadOnly=true&limit=5').then((r) => r.data),
+    queryFn: () =>
+      api.get('/notifications?unreadOnly=true&limit=5').then((r) => r.data),
     refetchInterval: open ? 15000 : false,
   });
   const markAllMutation = useMutation({
@@ -48,7 +49,8 @@ export function AppShell({ title, children }: AppShellProps) {
   });
   const [markingId, setMarkingId] = useState<string | null>(null);
   const markSingleMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/notifications/${id}/read`).then((r) => r.data),
+    mutationFn: (id: string) =>
+      api.post(`/notifications/${id}/read`).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications', 'count'] });
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] });
@@ -79,7 +81,9 @@ export function AppShell({ title, children }: AppShellProps) {
     const admin = [
       { label: 'Roles', to: '/admin/roles', show: user?.role === 'ADMIN' },
     ].filter((link) => link.show);
-    const sections = primary.length ? [{ title: 'Navigation', links: primary }] : [];
+    const sections = primary.length
+      ? [{ title: 'Navigation', links: primary }]
+      : [];
     if (admin.length) {
       sections.push({ title: 'Admin', links: admin });
     }
@@ -89,7 +93,12 @@ export function AppShell({ title, children }: AppShellProps) {
   const renderDesktopNav = () =>
     navSections.map((section, idx) => (
       <div key={section.title} className="flex items-center gap-4">
-        {idx > 0 && <span className="hidden h-5 w-px bg-slate-200 lg:block" aria-hidden="true" />}
+        {idx > 0 && (
+          <span
+            className="hidden h-5 w-px bg-slate-200 lg:block"
+            aria-hidden="true"
+          />
+        )}
         {section.links.map((link) => (
           <Link
             key={link.to}
@@ -147,63 +156,75 @@ export function AppShell({ title, children }: AppShellProps) {
       {open && (
         <Card className="absolute right-0 top-full z-20 mt-3 w-80 max-w-[calc(100vw-2rem)]">
           <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-900">Notifications</p>
-            <Badge variant="outline">{unread} unread</Badge>
-          </div>
-          <div className="mt-2 space-y-2">
-            {listQuery.data?.length ? (
-              listQuery.data.map((n) => (
-                <Card key={n.id} className="rounded-xl shadow-none">
-                  <CardContent className="px-3 py-2">
-                  <p className="text-sm font-medium text-slate-900">{n.title}</p>
-                  <p className="text-xs text-slate-600">{n.body}</p>
-                  <p className="text-[11px] text-slate-400">{new Date(n.createdAt).toLocaleString()}</p>
-                  <div className="mt-2 flex justify-end">
-                    {n.read ? (
-                      <span className="text-[11px] font-semibold text-slate-400">Read</span>
-                    ) : (
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setMarkingId(n.id);
-                          markSingleMutation.mutate(n.id);
-                        }}
-                        disabled={markSingleMutation.isPending && markingId === n.id}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-[11px]"
-                      >
-                        {markSingleMutation.isPending && markingId === n.id ? 'Marking...' : 'Mark read'}
-                      </Button>
-                    )}
-                  </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p className="text-sm text-slate-500">No new notifications.</p>
-            )}
-          </div>
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[11px]">
-            <Button
-              onClick={() => markAllMutation.mutate()}
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs font-semibold text-sky-600 hover:text-sky-500"
-            >
-              Mark all read
-            </Button>
-            <Button
-              onClick={() => setOpen(false)}
-              variant="outline"
-              size="sm"
-              aria-label="Close notifications"
-              title="Close"
-            >
-              Close
-            </Button>
-          </div>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-900">
+                Notifications
+              </p>
+              <Badge variant="outline">{unread} unread</Badge>
+            </div>
+            <div className="mt-2 space-y-2">
+              {listQuery.data?.length ? (
+                listQuery.data.map((n) => (
+                  <Card key={n.id} className="rounded-xl shadow-none">
+                    <CardContent className="px-3 py-2">
+                      <p className="text-sm font-medium text-slate-900">
+                        {n.title}
+                      </p>
+                      <p className="text-xs text-slate-600">{n.body}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {new Date(n.createdAt).toLocaleString()}
+                      </p>
+                      <div className="mt-2 flex justify-end">
+                        {n.read ? (
+                          <span className="text-[11px] font-semibold text-slate-400">
+                            Read
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              setMarkingId(n.id);
+                              markSingleMutation.mutate(n.id);
+                            }}
+                            disabled={
+                              markSingleMutation.isPending && markingId === n.id
+                            }
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                          >
+                            {markSingleMutation.isPending && markingId === n.id
+                              ? 'Marking...'
+                              : 'Mark read'}
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">No new notifications.</p>
+              )}
+            </div>
+            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[11px]">
+              <Button
+                onClick={() => markAllMutation.mutate()}
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs font-semibold text-sky-600 hover:text-sky-500"
+              >
+                Mark all read
+              </Button>
+              <Button
+                onClick={() => setOpen(false)}
+                variant="outline"
+                size="sm"
+                aria-label="Close notifications"
+                title="Close"
+              >
+                Close
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -273,7 +294,11 @@ export function AppShell({ title, children }: AppShellProps) {
                 <Link to="/">Home</Link>
               </Button>
               <Button asChild variant="outline" size="sm">
-                <a href="https://calendly.com/neuraldocx" target="_blank" rel="noreferrer">
+                <a
+                  href="https://calendly.com/neuraldocx"
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Book demo
                 </a>
               </Button>
@@ -282,9 +307,7 @@ export function AppShell({ title, children }: AppShellProps) {
               </Button>
               {user?.companies && user.companies.length > 1 && (
                 <Select
-                  value={
-                    activeCompanyId ?? user.companies[0]?.companyId ?? ''
-                  }
+                  value={activeCompanyId ?? user.companies[0]?.companyId ?? ''}
                   onChange={(event) => setActiveCompany(event.target.value)}
                   className="h-9 w-auto rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 shadow-none"
                 >
@@ -322,68 +345,96 @@ export function AppShell({ title, children }: AppShellProps) {
           <div className="border-t border-slate-200/80 bg-white/95 backdrop-blur-xl lg:hidden">
             <Card className="mx-auto max-w-7xl space-y-4 rounded-none border-0 shadow-none">
               <CardContent className="space-y-4 px-4 py-4 sm:px-6">
-              <div className="space-y-4">{renderMobileNav()}</div>
-              <div className="flex flex-col gap-2">
-                <Button asChild variant="outline" className="justify-start rounded-xl">
-                  <Link to="/" onClick={closeMobileMenu}>Home</Link>
-                </Button>
-                {user?.companies && user.companies.length > 1 && (
-                  <Select
-                    value={
-                      activeCompanyId ?? user.companies[0]?.companyId ?? ''
-                    }
-                    onChange={(event) => {
-                      setActiveCompany(event.target.value);
+                <div className="space-y-4">{renderMobileNav()}</div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="justify-start rounded-xl"
+                  >
+                    <Link to="/" onClick={closeMobileMenu}>
+                      Home
+                    </Link>
+                  </Button>
+                  {user?.companies && user.companies.length > 1 && (
+                    <Select
+                      value={
+                        activeCompanyId ?? user.companies[0]?.companyId ?? ''
+                      }
+                      onChange={(event) => {
+                        setActiveCompany(event.target.value);
+                        closeMobileMenu();
+                      }}
+                      className="rounded-xl text-sm font-semibold text-slate-700"
+                    >
+                      {user.companies.map((company) => (
+                        <option
+                          key={company.companyId}
+                          value={company.companyId}
+                        >
+                          {company.companyName ?? company.companyId}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="justify-start rounded-xl"
+                  >
+                    <a
+                      href="https://calendly.com/neuraldocx"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Book demo
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="justify-start rounded-xl"
+                  >
+                    <Link to="/contact" onClick={closeMobileMenu}>
+                      Contact
+                    </Link>
+                  </Button>
+                  <Button
+                    onClick={() => setBillingOpen(true)}
+                    variant="outline"
+                    className="justify-start rounded-xl"
+                    type="button"
+                  >
+                    Billing
+                  </Button>
+                  {renderNotificationsTrigger()}
+                  <Button
+                    onClick={() => {
+                      logout();
                       closeMobileMenu();
                     }}
-                    className="rounded-xl text-sm font-semibold text-slate-700"
+                    variant="outline"
+                    className="justify-start rounded-xl"
+                    type="button"
                   >
-                    {user.companies.map((company) => (
-                      <option key={company.companyId} value={company.companyId}>
-                        {company.companyName ?? company.companyId}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-                <Button asChild variant="outline" className="justify-start rounded-xl">
-                  <a href="https://calendly.com/neuraldocx" target="_blank" rel="noreferrer">
-                    Book demo
-                  </a>
-                </Button>
-                <Button asChild variant="outline" className="justify-start rounded-xl">
-                  <Link to="/contact" onClick={closeMobileMenu}>Contact</Link>
-                </Button>
-                <Button
-                  onClick={() => setBillingOpen(true)}
-                  variant="outline"
-                  className="justify-start rounded-xl"
-                  type="button"
-                >
-                  Billing
-                </Button>
-                {renderNotificationsTrigger()}
-                <Button
-                  onClick={() => {
-                    logout();
-                    closeMobileMenu();
-                  }}
-                  variant="outline"
-                  className="justify-start rounded-xl"
-                  type="button"
-                >
-                  Logout
-                </Button>
-              </div>
+                    Logout
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
         )}
       </header>
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-        <BillingModal isOpen={billingOpen} onClose={() => setBillingOpen(false)} />
+        <BillingModal
+          isOpen={billingOpen}
+          onClose={() => setBillingOpen(false)}
+        />
         {title && (
           <div className="mb-6 rounded-[1.75rem] border border-slate-200/90 bg-white/92 px-6 py-5 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.25)] backdrop-blur">
-            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">{title}</h1>
+            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
+              {title}
+            </h1>
           </div>
         )}
         {children}

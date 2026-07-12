@@ -8,4 +8,4 @@ Owns report readiness, generation orchestration, evidence appendix composition, 
 - AI, PDF, and file storage remain platform adapters
 - generated document records are created through the evidence application service
 
-Legacy `src/generator` paths remain compatibility exports.
+Report consumers import the reporting application and rendering surfaces directly.

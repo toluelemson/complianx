@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useMemo, useState } from 'react';
-import { WizardSidebar } from '../components/project/WizardSidebar';
+import { WizardSidebar } from '@/domains/ai-systems/components/WizardSidebar';
 import { sampleSections, sampleTrackableSteps } from '../storybook/mocks';
 
 const meta: Meta<typeof WizardSidebar> = {
@@ -14,7 +14,9 @@ type Story = StoryObj<typeof WizardSidebar>;
 
 export const Overview: Story = {
   render: () => {
-    const [activeStepId, setActiveStepId] = useState(sampleTrackableSteps[0].stepId);
+    const [activeStepId, setActiveStepId] = useState(
+      sampleTrackableSteps[0].stepId,
+    );
     const incompleteFieldsByStep = useMemo(() => {
       const map = new Map<string, any[]>();
       map.set('system_overview', []);
@@ -22,7 +24,9 @@ export const Overview: Story = {
       return map;
     }, []);
 
-    const completedSteps = new Set(sampleTrackableSteps.filter((s) => s.missing === 0).map((s) => s.stepId));
+    const completedSteps = new Set(
+      sampleTrackableSteps.filter((s) => s.missing === 0).map((s) => s.stepId),
+    );
     const completionRate = Math.round(
       (completedSteps.size / sampleTrackableSteps.length) * 100,
     );

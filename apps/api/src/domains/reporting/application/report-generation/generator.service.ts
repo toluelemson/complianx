@@ -4,7 +4,7 @@ import { ProjectsService } from '../../../ai-systems/application/projects/projec
 import { LlmService } from '../../../../platform/ai/llm.service';
 import { DocumentsService } from '../../../evidence/application/documents/documents.service';
 import { PdfService } from '../../../../platform/pdf/pdf.service';
-import { MonetizationService } from '../../../../monetization/monetization.service';
+import { MonetizationService } from '../../../subscriptions/application/monetization.service';
 import { ReadinessService } from '../readiness/readiness.service';
 import { ReportCompositionService } from './report-composition.service';
 import {

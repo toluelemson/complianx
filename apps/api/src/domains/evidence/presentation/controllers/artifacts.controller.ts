@@ -12,7 +12,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ArtifactsService } from '../../application/artifacts/artifacts.service';
-import { JwtAuthGuard } from '../../../../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ReviewArtifactDto } from '../dto/artifacts/review-artifact.dto';

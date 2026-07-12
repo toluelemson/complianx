@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 
 const NAV_LINKS = [
   { label: 'Product', href: '#product' },
@@ -16,8 +16,12 @@ export function Navbar() {
 
   useEffect(() => {
     const updateTheme = () => {
-      const header = document.querySelector('header[data-landing-navbar="true"]');
-      const lightSections = document.querySelectorAll<HTMLElement>('[data-nav-theme="light"]');
+      const header = document.querySelector(
+        'header[data-landing-navbar="true"]',
+      );
+      const lightSections = document.querySelectorAll<HTMLElement>(
+        '[data-nav-theme="light"]',
+      );
 
       if (!header || lightSections.length === 0) {
         setIsLightSection(false);
@@ -111,18 +115,11 @@ export function Navbar() {
 
         <nav className="hidden items-center gap-6 lg:flex">
           {NAV_LINKS.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className={navLinkClassName}
-            >
+            <a key={link.label} href={link.href} className={navLinkClassName}>
               {link.label}
             </a>
           ))}
-          <Link
-            to="/eu-ai-act-checker"
-            className={utilityLinkClassName}
-          >
+          <Link to="/eu-ai-act-checker" className={utilityLinkClassName}>
             Compliance check
           </Link>
           <a
@@ -136,10 +133,20 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm" className={loginButtonClassName}>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className={loginButtonClassName}
+          >
             <Link to="/login">Log in</Link>
           </Button>
-          <Button asChild variant="outline" size="sm" className={enterpriseButtonClassName}>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className={enterpriseButtonClassName}
+          >
             <a
               href="https://calendly.com/neuraldocx"
               target="_blank"
@@ -177,7 +184,11 @@ export function Navbar() {
               )}
             </svg>
           </Button>
-          <Button asChild size="sm" className="bg-white text-black hover:bg-[#F3F6FF]">
+          <Button
+            asChild
+            size="sm"
+            className="bg-white text-black hover:bg-[#F3F6FF]"
+          >
             <Link to="/submit-system">Submit your system</Link>
           </Button>
         </div>
@@ -215,7 +226,11 @@ export function Navbar() {
                 Log in
               </Link>
             </Button>
-            <Button asChild variant="outline" className={mobileEnterpriseClassName}>
+            <Button
+              asChild
+              variant="outline"
+              className={mobileEnterpriseClassName}
+            >
               <a
                 href="https://calendly.com/neuraldocx"
                 target="_blank"

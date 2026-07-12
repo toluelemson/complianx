@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TrustService } from '../../application/trust/trust.service';
-import { JwtAuthGuard } from '../../../../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
 import { CreateMetricDto } from '../dto/trust/create-metric.dto';
 import { CreateSampleDto } from '../dto/trust/create-sample.dto';
 import { AnalyzeFairnessDto } from '../dto/trust/analyze-fairness.dto';

@@ -1,3 +1,7 @@
-# Regulatory frameworks
+# Regulatory frameworks domain
 
-Target boundary for reusable compliance templates.
+Owns reusable compliance section templates and their lifecycle.
+
+- `application`: template orchestration
+- `presentation`: template routes and validation DTOs
+- `regulatory-frameworks.module.ts`: public Nest module

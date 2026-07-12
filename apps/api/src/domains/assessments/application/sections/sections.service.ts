@@ -15,8 +15,8 @@ import {
 } from './section.commands';
 import { LlmService } from '../../../../platform/ai/llm.service';
 import { EmailService } from '../../../../platform/email/email.service';
-import { NotificationsService } from '../../../../notifications/notifications.service';
-import { MonetizationService } from '../../../../monetization/monetization.service';
+import { NotificationsService } from '../../../notifications/application/notifications.service';
+import { MonetizationService } from '../../../subscriptions/application/monetization.service';
 import { WorkflowQueryService } from '../../../review-approval/application/workflow-query.service';
 import { CompleteSectionUseCase } from '../../../review-approval/application/complete-section.use-case';
 import { SubmitSectionForReviewUseCase } from '../../../review-approval/application/submit-section-for-review.use-case';

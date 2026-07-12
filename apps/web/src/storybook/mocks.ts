@@ -1,4 +1,4 @@
-import { type SectionWithMeta } from '../pages/ProjectPage';
+import { type SectionWithMeta } from '@/domains/ai-systems/pages/ProjectPage';
 
 export const sampleProject = {
   id: 'storybook-project',
@@ -9,36 +9,34 @@ export const sampleProject = {
   status: 'IN_REVIEW',
 };
 
-export const sampleSections = new Map<string, SectionWithMeta>(
+export const sampleSections = new Map<string, SectionWithMeta>([
   [
-    [
-      'system_overview',
-      {
-        id: 'section-1',
-        name: 'system_overview',
-        content: { purpose: 'Assist reviewers', scope: 'Global' },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        comments: [],
-        status: 'IN_REVIEW',
-        artifacts: [],
-      },
-    ],
-    [
-      'risk_assessment',
-      {
-        id: 'section-2',
-        name: 'risk_assessment',
-        content: { risks: 'Bias in dataset' },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        comments: [],
-        status: 'DRAFT',
-        artifacts: [],
-      },
-    ],
+    'system_overview',
+    {
+      id: 'section-1',
+      name: 'system_overview',
+      content: { purpose: 'Assist reviewers', scope: 'Global' },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      comments: [],
+      status: 'IN_REVIEW',
+      artifacts: [],
+    },
   ],
-);
+  [
+    'risk_assessment',
+    {
+      id: 'section-2',
+      name: 'risk_assessment',
+      content: { risks: 'Bias in dataset' },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      comments: [],
+      status: 'DRAFT',
+      artifacts: [],
+    },
+  ],
+]);
 
 export const stepFields = [
   { name: 'purpose', label: 'Purpose', type: 'input' },
@@ -46,8 +44,18 @@ export const stepFields = [
 ];
 
 export const sampleTrackableSteps = [
-  { stepId: 'system_overview', title: 'System overview', missing: 0, status: 'IN_REVIEW' },
-  { stepId: 'risk_assessment', title: 'Risk assessment', missing: 2, status: 'DRAFT' },
+  {
+    stepId: 'system_overview',
+    title: 'System overview',
+    missing: 0,
+    status: 'IN_REVIEW',
+  },
+  {
+    stepId: 'risk_assessment',
+    title: 'Risk assessment',
+    missing: 2,
+    status: 'DRAFT',
+  },
 ];
 
 export const sampleMetrics = [

@@ -4,7 +4,7 @@ import { ProjectsService } from '../../../ai-systems/application/projects/projec
 import { TrustMetric, TrustSample as TrustSampleModel } from '@prisma/client';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { MonetizationService } from '../../../../monetization/monetization.service';
+import { MonetizationService } from '../../../subscriptions/application/monetization.service';
 
 @Injectable()
 export class TrustService {

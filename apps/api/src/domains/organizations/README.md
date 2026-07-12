@@ -8,4 +8,4 @@ Owns companies, memberships, active company context, invitations, and organizati
 - `domain/membership`: framework-neutral actor, membership, and role types
 - `presentation`: Nest controllers
 
-Legacy `src/company` and `src/invitations` paths remain compatibility re-exports.
+Company and invitation consumers import the organizations domain directly.

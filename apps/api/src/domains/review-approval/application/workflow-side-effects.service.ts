@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { NotificationsService } from '../../../notifications/notifications.service';
+import { NotificationsService } from '../../notifications/application/notifications.service';
 import {
   ProjectWorkflowAggregate,
   SectionWorkflowAggregate,

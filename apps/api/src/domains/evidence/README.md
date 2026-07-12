@@ -7,4 +7,4 @@ Owns generated documents, uploaded artifacts, evidence versioning, downloads, an
 - `infrastructure`: reserved for evidence persistence adapters
 - `platform/files`: file-system port and local storage implementation
 
-Legacy `src/documents` and `src/artifacts` paths remain compatibility re-exports.
+Document and artifact consumers import the evidence domain directly.

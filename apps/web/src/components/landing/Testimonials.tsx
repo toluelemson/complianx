@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/shared/components/ui/card';
 
 const TESTIMONIALS = [
   {
@@ -38,7 +38,9 @@ export function Testimonials() {
               className="rounded-[1.75rem] border-slate-200 bg-white shadow-sm"
             >
               <CardContent className="p-7">
-                <p className="text-lg leading-8 text-slate-700">“{item.quote}”</p>
+                <p className="text-lg leading-8 text-slate-700">
+                  “{item.quote}”
+                </p>
                 <p className="mt-6 text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">
                   {item.role}
                 </p>

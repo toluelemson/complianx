@@ -6,11 +6,11 @@
 | Organizations | company, invitations, membership — migrated to `apps/api/src/domains/organizations` |
 | AI systems | projects — migrated to `apps/api/src/domains/ai-systems`; Prisma `Project` remains unchanged |
 | Assessments | sections, trust, suggestions — migrated to `apps/api/src/domains/assessments` |
-| Regulatory frameworks | compliance templates |
+| Regulatory frameworks | compliance templates — migrated to `apps/api/src/domains/regulatory-frameworks` |
 | Evidence | documents, artifacts, uploads — migrated to `apps/api/src/domains/evidence` |
 | Review and approval | project/section statuses, reviewers, approvers |
 | Reporting | generators, reports, exports — migrated to `apps/api/src/domains/reporting` |
-| Notifications | notifications and reminders |
-| Subscriptions | billing, plans, usage, monetization |
+| Notifications | notifications and reminders — migrated to `apps/api/src/domains/notifications` |
+| Subscriptions | billing, plans, usage, monetization — migrated to `apps/api/src/domains/subscriptions` |
 
-Review approval and assessments now use explicit domain boundaries. Remaining business modules continue at compatibility paths and migrate incrementally.
+All mapped backend business capabilities now have explicit domain ownership, and legacy compatibility exports have been removed.

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { NotificationsModule } from '../../notifications/notifications.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { CompanyModule } from '../organizations/company.module';
 import { EmailService } from '../../platform/email/email.service';
 import { WorkflowController } from './presentation/workflow.controller';

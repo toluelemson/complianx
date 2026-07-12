@@ -9,4 +9,4 @@
 7. Frontend domains expose public entry points and do not import one another's internals.
 8. Platform folders contain technical integration code only.
 
-Compatibility re-exports temporarily preserve legacy paths. They are migration seams, not preferred dependencies for new code.
+Legacy compatibility re-exports have been removed; consumers use domain public modules or platform adapters directly.

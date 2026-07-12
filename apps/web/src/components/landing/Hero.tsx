@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
 
 export function Hero() {
   return (
@@ -19,7 +19,8 @@ export function Hero() {
             Stop spending hours writing AI documentation
           </h1>
           <p className="animate-enter-up animation-delay-300 mx-auto mt-6 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
-            Fill a form about your AI and get a compliance-ready document in 48 hours.
+            Fill a form about your AI and get a compliance-ready document in 48
+            hours.
           </p>
 
           <div className="animate-enter-up animation-delay-400 mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
@@ -30,7 +31,12 @@ export function Hero() {
             >
               <Link to="/submit-system">Submit your system</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="w-full border-white/15 bg-white/[0.03] px-7 text-white transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white sm:w-auto">
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="w-full border-white/15 bg-white/[0.03] px-7 text-white transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white sm:w-auto"
+            >
               <Link to="/eu-ai-act-checker">Run compliance check first</Link>
             </Button>
           </div>

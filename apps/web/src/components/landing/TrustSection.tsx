@@ -1,4 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/shared/components/ui/card';
 
 const TRUST_BADGES = [
   'EU AI Act aligned delivery',
@@ -9,7 +14,13 @@ const TRUST_BADGES = [
   'Secure document handling',
 ];
 
-const ENTERPRISE_LOGOS = ['Aster Bank', 'NorthGrid', 'Velonix', 'CrestLedger', 'Aureline'];
+const ENTERPRISE_LOGOS = [
+  'Aster Bank',
+  'NorthGrid',
+  'Velonix',
+  'CrestLedger',
+  'Aureline',
+];
 
 export function TrustSection() {
   return (
@@ -29,7 +40,10 @@ export function TrustSection() {
 
         <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {TRUST_BADGES.map((item) => (
-            <Card key={item} className="rounded-[1.75rem] border-slate-200 bg-white shadow-sm transition-transform duration-300 hover:-translate-y-1">
+            <Card
+              key={item}
+              className="rounded-[1.75rem] border-slate-200 bg-white shadow-sm transition-transform duration-300 hover:-translate-y-1"
+            >
               <CardContent className="p-6">
                 <p className="text-lg font-semibold text-slate-950">{item}</p>
               </CardContent>

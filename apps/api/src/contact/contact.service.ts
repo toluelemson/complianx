@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ContactDto } from './dto/contact.dto';
-import { EmailService } from '../notifications/email.service';
+import { EmailService } from '../platform/email/email.service';
 
 const SUPPORT_EMAIL =
   process.env.SALES_EMAIL ??

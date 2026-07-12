@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AutoSaveService } from './auto-save.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../platform/auth/jwt-auth.guard';
 import { SaveSectionDto } from './dto/save-section.dto';
 
 @UseGuards(JwtAuthGuard)

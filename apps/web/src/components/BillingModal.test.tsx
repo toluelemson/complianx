@@ -3,9 +3,9 @@ import '@testing-library/jest-dom/vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import BillingModal from './BillingModal';
-import api from '../api/client';
+import api from '@/platform/api/client';
 
-vi.mock('../api/client', () => {
+vi.mock('@/platform/api/client', () => {
   return {
     __esModule: true,
     default: {
@@ -48,9 +48,7 @@ describe('BillingModal', () => {
   it('shows plan, usage and allows upgrading', async () => {
     renderModal();
 
-    await waitFor(() =>
-      expect(api.get).toHaveBeenCalledWith('/billing/plan'),
-    );
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/billing/plan'));
 
     expect(await screen.findByText('FREE')).toBeInTheDocument();
     expect(await screen.findByText('2')).toBeInTheDocument();

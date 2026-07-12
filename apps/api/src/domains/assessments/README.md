@@ -7,4 +7,4 @@ Owns compliance sections, suggestion feedback, and trust analysis. Existing API 
 - `domain`: reserved for framework-neutral assessment rules as they are extracted
 - `infrastructure`: reserved for persistence adapters when repository ports are justified
 
-Legacy `src/sections`, `src/suggestions`, and `src/trust` paths are compatibility re-exports during incremental migration.
+Section, suggestion, and trust consumers import the assessments domain directly.

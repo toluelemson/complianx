@@ -8,7 +8,7 @@ import { PrismaService } from '../../../../platform/database/prisma.service';
 import type { CreateAiSystemCommand } from './project.commands';
 import { Prisma, Project } from '@prisma/client';
 import { EmailService } from '../../../../platform/email/email.service';
-import { NotificationsService } from '../../../../notifications/notifications.service';
+import { NotificationsService } from '../../../notifications/application/notifications.service';
 import { WorkflowQueryService } from '../../../review-approval/application/workflow-query.service';
 import { SubmitProjectForReviewUseCase } from '../../../review-approval/application/submit-project-for-review.use-case';
 import { StartProjectReviewUseCase } from '../../../review-approval/application/start-project-review.use-case';
