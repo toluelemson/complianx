@@ -1,4 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
+import type { AuthenticatedRequest } from '../../../../platform/auth/authenticated-request.type';
 import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
 import { ProjectsController } from './projects.controller';
 
@@ -25,7 +26,7 @@ describe('ProjectsController company context', () => {
           { companyId: 'company-2', role: 'ADMIN' },
         ],
       },
-    };
+    } as unknown as AuthenticatedRequest;
 
     void controller.list(request);
 
@@ -42,7 +43,7 @@ describe('ProjectsController company context', () => {
         userId: 'user-1',
         companies: [{ companyId: 'company-1', role: 'USER' }],
       },
-    };
+    } as unknown as AuthenticatedRequest;
 
     expect(() => controller.list(request)).toThrow(ForbiddenException);
     expect(projectsService.listForUser).not.toHaveBeenCalled();

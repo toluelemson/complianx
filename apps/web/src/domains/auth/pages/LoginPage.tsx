@@ -15,6 +15,14 @@ interface LoginFormValues {
   password: string;
 }
 
+type ApiError = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
+
 export default function LoginPage() {
   const { token, login } = useAuth();
   const navigate = useNavigate();
@@ -43,9 +51,10 @@ export default function LoginPage() {
       setResendStatus('sent');
       setResendMessage('Check your inbox for a fresh verification link.');
     } catch (err) {
+      const apiError = err as ApiError;
       setResendStatus('idle');
       setResendMessage(
-        err?.response?.data?.message ??
+        apiError.response?.data?.message ??
           'Unable to resend verification email right now.',
       );
     }

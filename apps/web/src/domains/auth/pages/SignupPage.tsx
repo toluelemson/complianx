@@ -65,7 +65,7 @@ export default function SignupPage() {
   const mutation = useMutation({
     mutationFn: (values: SignupFormValues) =>
       api.post('/auth/signup', values).then((res) => res.data),
-    onSuccess: (data) => {
+    onSuccess: () => {
       setSuccessMessage(
         'Check your inbox for a verification link before you can log in.',
       );

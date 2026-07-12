@@ -2,10 +2,29 @@ import axios from 'axios';
 
 const DEFAULT_API_BASE_URL = '/api';
 const envBaseURL = import.meta.env.VITE_API_URL?.trim();
-const baseURL =
-  envBaseURL && envBaseURL.length > 0
-    ? envBaseURL.replace(/\/$/, '')
-    : DEFAULT_API_BASE_URL;
+
+function normalizeApiBaseUrl(baseUrl?: string) {
+  if (!baseUrl || baseUrl.length === 0) {
+    return DEFAULT_API_BASE_URL;
+  }
+
+  const sanitizedBaseUrl = baseUrl.replace(/\/$/, '');
+
+  if (
+    sanitizedBaseUrl === '/api' ||
+    sanitizedBaseUrl.endsWith('/api')
+  ) {
+    return sanitizedBaseUrl;
+  }
+
+  if (sanitizedBaseUrl.startsWith('http://') || sanitizedBaseUrl.startsWith('https://')) {
+    return `${sanitizedBaseUrl}/api`;
+  }
+
+  return sanitizedBaseUrl;
+}
+
+const baseURL = normalizeApiBaseUrl(envBaseURL);
 const monetizationEnabled =
   import.meta.env.VITE_MONETIZATION_ENABLED !== 'false';
 

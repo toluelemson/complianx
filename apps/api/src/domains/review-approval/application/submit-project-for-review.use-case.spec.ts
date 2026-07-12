@@ -66,6 +66,7 @@ describe('SubmitProjectForReviewUseCase', () => {
       expectedVersion: 2,
     });
 
+    expect(result).not.toBeNull();
     expect(repository.transitionProject).toHaveBeenCalledWith(
       expect.objectContaining({
         projectId: 'project-1',
@@ -74,6 +75,6 @@ describe('SubmitProjectForReviewUseCase', () => {
         expectedVersion: 2,
       }),
     );
-    expect(result.workflowStatus).toBe(ProjectWorkflowStatus.READY_FOR_REVIEW);
+    expect(result!.workflowStatus).toBe(ProjectWorkflowStatus.READY_FOR_REVIEW);
   });
 });

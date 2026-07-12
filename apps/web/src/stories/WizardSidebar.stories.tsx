@@ -42,6 +42,8 @@ export const Overview: Story = {
         setActiveStepId={setActiveStepId}
         projectQuery={{
           data: {
+            id: 'storybook-project',
+            name: 'Storybook Project',
             industry: 'Healthcare AI',
             riskLevel: 'Medium',
             createdAt: new Date().toISOString(),

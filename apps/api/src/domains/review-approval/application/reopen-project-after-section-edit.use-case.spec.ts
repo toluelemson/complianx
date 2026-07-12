@@ -60,6 +60,7 @@ describe('ReopenProjectAfterSectionEditUseCase', () => {
       actorId: 'owner-1',
     });
 
+    expect(result).not.toBeNull();
     expect(repository.transitionProject).toHaveBeenCalledWith(
       expect.objectContaining({
         projectId: 'project-1',
@@ -67,7 +68,7 @@ describe('ReopenProjectAfterSectionEditUseCase', () => {
         expectedVersion: 4,
       }),
     );
-    expect(result.workflowStatus).toBe(ProjectWorkflowStatus.CHANGES_REQUESTED);
+    expect(result!.workflowStatus).toBe(ProjectWorkflowStatus.CHANGES_REQUESTED);
   });
 
   it('rejects reopening from draft', async () => {

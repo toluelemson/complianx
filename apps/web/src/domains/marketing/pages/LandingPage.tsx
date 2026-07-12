@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthContext';
 import { Hero } from '@/domains/marketing/components/Hero';
-import { Capabilities } from '@/domains/marketing/components/Capabilities';
 import { FaqSection } from '@/domains/marketing/components/FaqSection';
 import { Navbar } from '@/domains/marketing/components/Navbar';
 import { PricingSection } from '@/domains/marketing/components/PricingSection';
@@ -44,7 +43,7 @@ export default function LandingPage() {
             onOpenTrial={() => setTrialModalOpen(true)}
             videoSrc={DEMO_VIDEO_SRC}
           />
-          <Capabilities />
+          {/* <Capabilities /> */}
           <PricingSection />
           <FaqSection />
           <CTASection />

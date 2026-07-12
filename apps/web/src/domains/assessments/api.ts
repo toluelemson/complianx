@@ -1,6 +1,5 @@
 import api from '@/platform/api/client';
 import type {
-  CohortResult,
   SectionSummary,
   TrustCohortAnalysisResponse,
   TrustMetric,

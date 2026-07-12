@@ -48,6 +48,8 @@ export function StoryProviders({
         value={{
           user,
           token: 'storybook-token',
+          activeCompanyId: user.companyId ?? 'company-1',
+          setActiveCompany: () => undefined,
           initializing: false,
           login,
           logout,

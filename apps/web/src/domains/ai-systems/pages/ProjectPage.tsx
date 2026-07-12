@@ -43,8 +43,10 @@ import type {
   FormValues,
   GenerationReadiness,
   ProjectDetail,
+  ProjectWorkflowStatus,
   ReminderItem,
   ReviewerItem,
+  SectionComment,
   SectionArtifactItem,
   SectionWithMeta,
   SuggestionResponse,
@@ -71,6 +73,7 @@ const monetizationEnabled =
 
 type RiskEntry = {
   description?: string;
+  risk?: string;
   severity?: string;
   impact?: string;
   likelihood?: string;

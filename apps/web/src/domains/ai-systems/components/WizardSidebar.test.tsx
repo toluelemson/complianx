@@ -24,6 +24,8 @@ describe('WizardSidebar', () => {
         setActiveStepId={() => {}}
         projectQuery={{
           data: {
+            id: 'project-1',
+            name: 'Test Project',
             industry: 'Tech',
             riskLevel: 'High',
             createdAt: new Date().toISOString(),

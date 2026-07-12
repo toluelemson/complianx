@@ -6,7 +6,6 @@ import { Link, useParams } from 'react-router-dom';
 import {
   ArrowRight,
   AlertTriangle,
-  CheckCircle2,
   ChevronDown,
   Download,
   FileText,
@@ -25,6 +24,7 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { getPublicResult } from '../api';
+import type { PublicResultResponse } from '../types';
 
 const DOCUMENT_LABELS: Record<string, string> = {
   ai_system_classification_memo: 'AI system classification memo',
@@ -337,7 +337,9 @@ export default function PublicEuAiActResultPage() {
         'Recommended Next Steps',
         'Use these actions to move from this result into delivery.',
       );
-      drawBulletList(nextSteps.map((step, index) => `${index + 1}. ${step}`));
+      drawBulletList(
+        nextSteps.map((step: string, index: number) => `${index + 1}. ${step}`),
+      );
       drawInfoCard('Recommended Engagement', splitLines(service.summary));
     }
 
@@ -552,7 +554,7 @@ export default function PublicEuAiActResultPage() {
                     <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                       <div className="flex items-center gap-2">
                         <Scale className="h-4 w-4" />
-                        <span>Pack {resultQuery.data.packVersion}</span>
+                        <span>Pack {resultQuery.data!.packVersion}</span>
                       </div>
                     </div>
                   </div>
@@ -658,7 +660,7 @@ export default function PublicEuAiActResultPage() {
                         Other Frameworks Selected
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {result.other_frameworks.map((framework) => (
+                        {result.other_frameworks?.map((framework: string) => (
                           <Badge key={framework} variant="outline">
                             {FRAMEWORK_LABELS[framework] ?? framework}
                           </Badge>
@@ -672,7 +674,7 @@ export default function PublicEuAiActResultPage() {
                         Next Steps
                       </p>
                       <div className="mt-3 space-y-3">
-                        {buildTopActions(result).map((entry) => (
+                        {buildTopActions(result).map((entry: string) => (
                           <div
                             key={entry}
                             className="flex items-start gap-3 text-sm text-slate-800"
@@ -864,7 +866,7 @@ export default function PublicEuAiActResultPage() {
                                 Relevant obligations
                               </h2>
                               <div className="mt-4 space-y-3">
-                                {result.obligations.map((item, index) => (
+                                {result.obligations?.map((item, index) => (
                                   <div
                                     key={`${item.role}-${index}`}
                                     className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-4"
@@ -907,14 +909,14 @@ export default function PublicEuAiActResultPage() {
                             </div>
                           ) : null}
 
-                          {(resultQuery.data.legalReferences?.length ?? 0) >
+                          {(resultQuery.data!.legalReferences?.length ?? 0) >
                           0 ? (
                             <div>
                               <h2 className="text-xl font-semibold text-slate-950">
                                 Legal references
                               </h2>
                               <div className="mt-4 flex flex-wrap gap-2">
-                                {resultQuery.data.legalReferences.map(
+                                {resultQuery.data!.legalReferences.map(
                                   (reference) => (
                                     <a
                                       key={reference.id}
@@ -1010,17 +1012,21 @@ function buildEmailBody(
   const nextSteps = buildTopActions(result);
   if (nextSteps.length > 0) {
     lines.push('', 'Next steps:');
-    nextSteps.forEach((step, index) => lines.push(`${index + 1}. ${step}`));
+    nextSteps.forEach((step: string, index: number) =>
+      lines.push(`${index + 1}. ${step}`),
+    );
   }
 
   if ((result.missing_evidence?.length ?? 0) > 0) {
     lines.push('', 'Open gaps:');
-    result.missing_evidence!.forEach((entry) => lines.push(`- ${entry}`));
+    result.missing_evidence!.forEach((entry: string) =>
+      lines.push(`- ${entry}`),
+    );
   }
 
   if ((result.next_required_documents?.length ?? 0) > 0) {
     lines.push('', 'Recommended documents:');
-    result.next_required_documents!.forEach((key) =>
+    result.next_required_documents!.forEach((key: string) =>
       lines.push(`- ${DOCUMENT_LABELS[key] ?? key}`),
     );
   }

@@ -21,7 +21,9 @@
       "@/app/*": ["./src/app/*"],
       "@/domains/*": ["./src/domains/*"],
       "@/platform/*": ["./src/platform/*"],
-      "@/shared/*": ["./src/shared/*"]
+      "@/shared/*": ["./src/shared/*"],
+      "@complianx/contracts": ["../../packages/contracts/src/index.ts"],
+      "@complianx/contracts/*": ["../../packages/contracts/src/*"]
     },
 
     /* Linting */
