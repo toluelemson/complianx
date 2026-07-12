@@ -9,6 +9,7 @@ import {
   Scale,
 } from 'lucide-react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
+import { buildSubmitSystemHref } from '@/domains/marketing/lib/submit-system';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -391,7 +392,7 @@ export default function PublicEuAiActCheckerPage() {
 
                 <div className="text-center text-sm text-slate-500">
                   <Link
-                    to="/submit-system"
+                    to={buildSubmitSystemHref({ source: 'checker_skip' })}
                     className="font-medium text-slate-700 transition-colors hover:text-slate-950"
                   >
                     Skip the check and submit your system

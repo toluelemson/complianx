@@ -14,6 +14,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
+import { buildSubmitSystemHref } from '@/domains/marketing/lib/submit-system';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -745,7 +746,11 @@ export default function PublicEuAiActResultPage() {
                             asChild
                             className="bg-slate-950 text-white hover:bg-black"
                           >
-                            <Link to="/submit-system">
+                            <Link
+                              to={buildSubmitSystemHref({
+                                source: 'checker_result',
+                              })}
+                            >
                               Submit your system
                               <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>

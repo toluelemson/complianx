@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
+import { buildSubmitSystemHref } from '../lib/submit-system';
 
 export function CTASection() {
   return (
@@ -32,7 +34,14 @@ export function CTASection() {
                 size="lg"
                 className="bg-white text-black hover:bg-[#F3F6FF]"
               >
-                <Link to="/submit-system">
+                <Link
+                  to={buildSubmitSystemHref({ source: 'cta_section' })}
+                  onClick={() =>
+                    trackMarketingEvent('marketing_submit_cta_clicked', {
+                      source: 'cta_section',
+                    })
+                  }
+                >
                   Submit your system
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

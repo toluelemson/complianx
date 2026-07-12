@@ -1,5 +1,5 @@
 // AI systems domain route.
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import api from '@/platform/api/client';
@@ -9,6 +9,12 @@ import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Select } from '@/shared/components/ui/select';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { useSearchParams } from 'react-router-dom';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
+import type {
+  SubmitSystemPackageInterest,
+  SubmitSystemSource,
+} from '@/domains/marketing/lib/submit-system';
 
 interface SubmitSystemFormValues {
   name: string;
@@ -21,15 +27,94 @@ interface SubmitSystemFormValues {
   timeline: string;
 }
 
+const SUBMIT_SYSTEM_CONTEXT: Partial<
+  Record<
+    SubmitSystemSource,
+    {
+      eyebrow: string;
+      title: string;
+      description: string;
+      timelineLabel: string;
+    }
+  >
+> = {
+  checker_result: {
+    eyebrow: 'Recommended next step',
+    title: 'Turn this compliance result into a scoped delivery',
+    description:
+      'We will use your checker result as context and match you to the right documentation package, delivery window, and support path.',
+    timelineLabel: 'Best first response: 48 hours',
+  },
+  checker_skip: {
+    eyebrow: 'Direct intake',
+    title: 'Skip the checker and send the system directly',
+    description:
+      'Share the system details once and we will scope the right package, quote, and delivery path without requiring the self-assessment first.',
+    timelineLabel: 'Best first response: 48 hours',
+  },
+  pricing_enterprise: {
+    eyebrow: 'Enterprise intake',
+    title: 'Tell us about the regulated AI program',
+    description:
+      'Share the system details and delivery constraints so we can scope an enterprise workstream, governance alignment, and review path.',
+    timelineLabel: 'Best first response: same business day',
+  },
+  pricing_professional: {
+    eyebrow: 'Professional package intake',
+    title: 'Tell us about the system that needs deeper review',
+    description:
+      'We will use this intake to scope the deeper risk, controls, and governance documentation pack your team likely needs.',
+    timelineLabel: 'Best first response: 48 hours',
+  },
+  trial_modal_exit: {
+    eyebrow: 'Fastest next step',
+    title: 'Share the system and we will scope the first pack',
+    description:
+      'You do not need to adopt a platform first. Submit the system details and we will map the right package, timing, and next actions.',
+    timelineLabel: 'Best first response: 48 hours',
+  },
+  trial_modal_scroll: {
+    eyebrow: 'Ready to move forward?',
+    title: 'Tell us about the system you want documented',
+    description:
+      'Use this short intake to start the documentation workstream without a long implementation step.',
+    timelineLabel: 'Best first response: 48 hours',
+  },
+  trial_modal_video: {
+    eyebrow: 'From the walkthrough',
+    title: 'Share the AI system behind the workflow you just saw',
+    description:
+      'If the walkthrough looked close to your use case, send the system details and we will scope the first documentation pack for you.',
+    timelineLabel: 'Best first response: 48 hours',
+  },
+};
+
 export default function SubmitSystemPage() {
   const [statusMessage, setStatusMessage] = useState<string | undefined>();
+  const [searchParams] = useSearchParams();
+  const source =
+    (searchParams.get('source') as SubmitSystemSource | null) ?? undefined;
+  const packageFromQuery =
+    (searchParams.get('package') as SubmitSystemPackageInterest | null) ??
+    undefined;
+  const pageContext = useMemo(
+    () =>
+      (source && SUBMIT_SYSTEM_CONTEXT[source]) ?? {
+        eyebrow: 'Submit your system',
+        title: 'Tell us about your AI system',
+        description:
+          'Share the key details and we will match you to the right service package, delivery window, and quote.',
+        timelineLabel: 'Best first response: 48 hours',
+      },
+    [source],
+  );
   const { register, handleSubmit, reset } = useForm<SubmitSystemFormValues>({
     defaultValues: {
       name: '',
       email: '',
       company: '',
       aiSystemName: '',
-      packageInterest: 'starter',
+      packageInterest: packageFromQuery ?? 'starter',
       useCase: '',
       dataUsed: '',
       timeline: '48_hours',
@@ -46,6 +131,7 @@ export default function SubmitSystemPage() {
           message: [
             'Submit your system request',
             '',
+            `Lead source: ${source ?? 'direct'}`,
             `Package interest: ${values.packageInterest}`,
             `AI system name: ${values.aiSystemName}`,
             `Use case / product flow: ${values.useCase}`,
@@ -68,6 +154,20 @@ export default function SubmitSystemPage() {
     },
   });
 
+  useEffect(() => {
+    reset((currentValues) => ({
+      ...currentValues,
+      packageInterest: packageFromQuery ?? currentValues.packageInterest,
+    }));
+  }, [packageFromQuery, reset]);
+
+  useEffect(() => {
+    trackMarketingEvent('marketing_submit_page_viewed', {
+      package_interest: packageFromQuery ?? null,
+      source: source ?? 'direct',
+    });
+  }, [packageFromQuery, source]);
+
   return (
     <>
       <SiteHeader />
@@ -75,16 +175,16 @@ export default function SubmitSystemPage() {
         <div className="mx-auto max-w-4xl">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-400">
-              Submit your system
+              {pageContext.eyebrow}
             </p>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-              Tell us about your AI system
+              {pageContext.title}
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-500">
-              Share the key details and we will match you to the right service
-              package, delivery window, and quote.
+              {pageContext.description}
             </p>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+              {pageContext.timelineLabel}.{' '}
               Larger or more regulated deployment?{' '}
               <a
                 href="https://calendly.com/neuraldocx"
@@ -163,7 +263,13 @@ export default function SubmitSystemPage() {
 
               <form
                 className="mt-8 space-y-5"
-                onSubmit={handleSubmit((values) => mutation.mutate(values))}
+                onSubmit={handleSubmit((values) => {
+                  trackMarketingEvent('marketing_submit_form_submitted', {
+                    package_interest: values.packageInterest,
+                    source: source ?? 'direct',
+                  });
+                  mutation.mutate(values);
+                })}
               >
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block text-sm font-medium text-slate-700">

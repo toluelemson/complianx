@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
+import { buildSubmitSystemHref } from '../lib/submit-system';
 
 export function Hero() {
   return (
@@ -29,7 +31,16 @@ export function Hero() {
               size="lg"
               className="w-full bg-white px-7 text-black transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#F3F6FF] sm:w-auto"
             >
-              <Link to="/submit-system">Submit your system</Link>
+              <Link
+                to={buildSubmitSystemHref({ source: 'hero' })}
+                onClick={() =>
+                  trackMarketingEvent('marketing_submit_cta_clicked', {
+                    source: 'hero',
+                  })
+                }
+              >
+                Submit your system
+              </Link>
             </Button>
             <Button
               asChild

@@ -9,6 +9,7 @@ import { PricingSection } from '@/domains/marketing/components/PricingSection';
 import { CTASection } from '@/domains/marketing/components/CTASection';
 import { TrialModal } from '@/domains/marketing/components/TrialModal';
 import { VideoSection } from '@/domains/marketing/components/VideoSection';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
 
 const DEMO_VIDEO_SRC = '/neuraldocx-hero.webm';
 const TRIAL_MODAL_DISMISSED_UNTIL_KEY = 'neuraldocx_trial_modal_dismissed_until';
@@ -55,10 +56,17 @@ export default function LandingPage() {
 
     setTrialModalSource(source);
     setTrialModalOpen(true);
+    trackMarketingEvent('marketing_trial_modal_opened', {
+      auto_triggered: !force,
+      source,
+    });
   };
 
   const closeTrialModal = () => {
     setTrialModalOpen(false);
+    trackMarketingEvent('marketing_trial_modal_dismissed', {
+      source: trialModalSource,
+    });
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(
         TRIAL_MODAL_DISMISSED_UNTIL_KEY,
@@ -72,6 +80,9 @@ export default function LandingPage() {
       return;
     }
     window.localStorage.setItem(TRIAL_MODAL_CONVERTED_KEY, 'true');
+    trackMarketingEvent('marketing_trial_modal_converted', {
+      source: trialModalSource,
+    });
   };
 
   useEffect(() => {

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
+import { buildSubmitSystemHref } from '../lib/submit-system';
 
 const NAV_LINKS = [
   { label: 'Product', href: '#product' },
@@ -189,7 +191,16 @@ export function Navbar() {
             size="sm"
             className="bg-white text-black hover:bg-[#F3F6FF]"
           >
-            <Link to="/submit-system">Submit your system</Link>
+            <Link
+              to={buildSubmitSystemHref({ source: 'navbar' })}
+              onClick={() =>
+                trackMarketingEvent('marketing_submit_cta_clicked', {
+                  source: 'navbar',
+                })
+              }
+            >
+              Submit your system
+            </Link>
           </Button>
         </div>
       </div>
@@ -239,6 +250,22 @@ export function Navbar() {
               >
                 Enterprise demo
               </a>
+            </Button>
+            <Button
+              asChild
+              className="justify-start rounded-2xl bg-white text-black hover:bg-[#F3F6FF]"
+            >
+              <Link
+                to={buildSubmitSystemHref({ source: 'navbar' })}
+                onClick={() => {
+                  closeMobileMenu();
+                  trackMarketingEvent('marketing_submit_cta_clicked', {
+                    source: 'navbar',
+                  });
+                }}
+              >
+                Submit your system
+              </Link>
             </Button>
           </div>
         </div>
