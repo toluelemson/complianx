@@ -1203,6 +1203,7 @@ export default function ProjectPage() {
   });
 
   const workflowStatus = (projectQuery.data?.workflowStatus ??
+    projectQuery.data?.status ??
     'DRAFT') as ProjectWorkflowStatus;
   const workflowVersion = projectQuery.data?.workflowVersion;
 
@@ -1212,10 +1213,7 @@ export default function ProjectPage() {
       toast.error('Upgrade to request reviews and approvals.');
       return;
     }
-    if (
-      workflowStatus === 'READY_FOR_REVIEW' ||
-      workflowStatus === 'RESUBMITTED'
-    ) {
+    if (workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED') {
       if (!canStartProjectReview) {
         toast.error('Only assigned reviewers can start the review');
         return;
@@ -1379,8 +1377,12 @@ export default function ProjectPage() {
       })),
     [trackableStepIds, stepTitleMap, incompleteFieldsByStep, sectionByName],
   );
-  const allFieldsComplete = [...incompleteFieldsByStep.values()].every(
-    (fields) => fields.length === 0,
+  const allFieldsComplete = useMemo(
+    () =>
+      [...incompleteFieldsByStep.values()].every(
+        (fields) => fields.length === 0,
+      ),
+    [incompleteFieldsByStep],
   );
   const PROJECT_STATUS_LABELS: Record<string, string> = {
     DRAFT: 'Draft',
@@ -1399,24 +1401,23 @@ export default function ProjectPage() {
   const sendForReviewLabel =
     workflowStatus === 'CHANGES_REQUESTED'
       ? 'Resubmit project'
-      : workflowStatus === 'READY_FOR_REVIEW' ||
-          workflowStatus === 'RESUBMITTED'
-        ? 'Start review'
-        : 'Send for review';
+      : workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED'
+      ? 'Start review'
+      : 'Send for review';
   const sendForReviewDisabled =
     !isPaidPlan ||
     (workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED'
       ? !canStartProjectReview
       : workflowStatus === 'CHANGES_REQUESTED'
-        ? !isOwner || !allFieldsComplete || !selectedReviewerId
-        : !isOwner ||
-          workflowStatus === 'IN_REVIEW' ||
-          workflowStatus === 'APPROVED' ||
-          workflowStatus === 'ARCHIVED' ||
-          workflowStatus === 'REJECTED' ||
-          workflowStatus === 'CANCELLED' ||
-          !selectedReviewerId ||
-          !allFieldsComplete);
+      ? !isOwner || !allFieldsComplete || !selectedReviewerId
+      : !isOwner ||
+        workflowStatus === 'IN_REVIEW' ||
+        workflowStatus === 'APPROVED' ||
+        workflowStatus === 'ARCHIVED' ||
+        workflowStatus === 'REJECTED' ||
+        workflowStatus === 'CANCELLED' ||
+        !selectedReviewerId ||
+        !allFieldsComplete);
   const disableAssignmentFields =
     workflowStatus === 'READY_FOR_REVIEW' ||
     workflowStatus === 'RESUBMITTED' ||
