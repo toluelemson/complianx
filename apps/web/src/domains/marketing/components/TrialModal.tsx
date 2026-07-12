@@ -18,6 +18,9 @@ import {
 interface TrialModalProps {
   isOpen: boolean;
   onClose: () => void;
+  source?: 'video' | 'exit' | 'scroll';
+  onPrimaryAction?: () => void;
+  onSecondaryAction?: () => void;
 }
 
 const FEATURE_LIST = [
@@ -47,7 +50,13 @@ const FEATURE_LIST = [
   },
 ];
 
-export function TrialModal({ isOpen, onClose }: TrialModalProps) {
+export function TrialModal({
+  isOpen,
+  onClose,
+  source = 'scroll',
+  onPrimaryAction,
+  onSecondaryAction,
+}: TrialModalProps) {
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -58,6 +67,19 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const heading =
+    source === 'video'
+      ? 'Want us to prepare your first compliance pack?'
+      : source === 'exit'
+        ? 'Before you go, see the fastest way to start'
+        : 'Start with NeuralDocx';
+  const description =
+    source === 'video'
+      ? 'If the walkthrough looked close to your use case, send the system details and we can scope the first documentation pack for you.'
+      : source === 'exit'
+        ? 'Share the system details once and we can scope the first delivery without forcing your team into a long implementation cycle.'
+        : 'AI compliance documentation with first delivery in as little as 48 hours.';
 
   return (
     <div
@@ -80,11 +102,10 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
                 NeuralDocx
               </div>
               <CardTitle className="mt-4 text-3xl leading-[0.98] tracking-tight text-slate-950 sm:text-[2.6rem]">
-                Start with NeuralDocx
+                {heading}
               </CardTitle>
               <p className="mt-3 max-w-md text-sm leading-6 text-slate-600 sm:text-base">
-                AI compliance documentation with first delivery in as little as
-                48 hours.
+                {description}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.35)]">
@@ -138,7 +159,9 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
                 size="lg"
                 className="w-full bg-white px-7 text-black shadow-[0_18px_40px_-28px_rgba(15,23,42,0.28)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#F8FAFF] lg:flex-1"
               >
-                <Link to="/submit-system">Submit your system</Link>
+                <Link to="/submit-system" onClick={onPrimaryAction}>
+                  Submit your system
+                </Link>
               </Button>
               <Button
                 asChild
@@ -150,11 +173,15 @@ export function TrialModal({ isOpen, onClose }: TrialModalProps) {
                   href="https://calendly.com/neuraldocx"
                   target="_blank"
                   rel="noreferrer"
+                  onClick={onSecondaryAction}
                 >
                   For enterprise, book a demo
                 </a>
               </Button>
             </div>
+            <p className="mt-3 text-center text-xs text-slate-500 lg:text-left">
+              Takes about 3 minutes. No payment required.
+            </p>
           </div>
         </CardContent>
       </Card>
