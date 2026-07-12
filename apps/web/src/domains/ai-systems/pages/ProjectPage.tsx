@@ -1203,7 +1203,6 @@ export default function ProjectPage() {
   });
 
   const workflowStatus = (projectQuery.data?.workflowStatus ??
-    projectQuery.data?.status ??
     'DRAFT') as ProjectWorkflowStatus;
   const workflowVersion = projectQuery.data?.workflowVersion;
 
