@@ -3,6 +3,12 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, BadgeEuro, Check } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
+import {
+  buildSubmitSystemHref,
+  type SubmitSystemPackageInterest,
+  type SubmitSystemSource,
+} from '../lib/submit-system';
 
 type PricingPlan = {
   name: string;
@@ -11,10 +17,12 @@ type PricingPlan = {
   suffix: string;
   billing?: string;
   cta: string;
-  href: string;
+  href?: string;
   external?: boolean;
   featured?: boolean;
   comingSoon?: boolean;
+  packageInterest?: SubmitSystemPackageInterest;
+  source?: SubmitSystemSource;
   sections: {
     title: string;
     items: string[];
@@ -29,7 +37,8 @@ const PRICING_PLANS: PricingPlan[] = [
     suffix: 'per engagement',
     billing: 'Turnaround: 2-4 days',
     cta: 'Get Starter Audit',
-    href: '/submit-system',
+    packageInterest: 'starter',
+    source: 'pricing_starter',
     sections: [
       {
         title: 'Included',
@@ -49,7 +58,8 @@ const PRICING_PLANS: PricingPlan[] = [
     suffix: 'per engagement',
     billing: 'Most common engagement',
     cta: 'Talk About Professional',
-    href: '/submit-system',
+    packageInterest: 'professional',
+    source: 'pricing_professional',
     featured: true,
     sections: [
       {
@@ -72,6 +82,7 @@ const PRICING_PLANS: PricingPlan[] = [
     cta: 'Book Enterprise Review',
     href: 'https://calendly.com/neuraldocx',
     external: true,
+    source: 'pricing_enterprise',
     sections: [
       {
         title: 'Included',
@@ -92,7 +103,8 @@ const PRICING_PLANS: PricingPlan[] = [
     suffix: 'product roadmap',
     billing: 'Join the early access list',
     cta: 'Coming Soon',
-    href: '/submit-system',
+    packageInterest: 'not_sure',
+    source: 'pricing_saas',
     comingSoon: true,
     sections: [
       {
@@ -244,11 +256,36 @@ export function PricingSection() {
                       }`}
                     >
                       {plan.external ? (
-                        <a href={plan.href} target="_blank" rel="noreferrer">
+                        <a
+                          href={plan.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() =>
+                            trackMarketingEvent(
+                              'marketing_enterprise_cta_clicked',
+                              {
+                                source: plan.source ?? plan.name.toLowerCase(),
+                              },
+                            )
+                          }
+                        >
                           {plan.cta}
                         </a>
                       ) : (
-                        <Link to={plan.href}>{plan.cta}</Link>
+                        <Link
+                          to={buildSubmitSystemHref({
+                            packageInterest: plan.packageInterest,
+                            source: plan.source ?? 'pricing_starter',
+                          })}
+                          onClick={() =>
+                            trackMarketingEvent('marketing_submit_cta_clicked', {
+                              package_interest: plan.packageInterest ?? null,
+                              source: plan.source ?? plan.name.toLowerCase(),
+                            })
+                          }
+                        >
+                          {plan.cta}
+                        </Link>
                       )}
                     </Button>
                   )}

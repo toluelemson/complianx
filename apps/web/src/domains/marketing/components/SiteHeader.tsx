@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
+import { buildSubmitSystemHref } from '../lib/submit-system';
 
 const NAV_LINKS = [
   { label: 'Product', href: '/#product' },
@@ -66,7 +68,16 @@ export function SiteHeader() {
             size="sm"
             className="hidden sm:inline-flex bg-slate-950 text-white hover:bg-black"
           >
-            <Link to="/submit-system">Submit your system</Link>
+            <Link
+              to={buildSubmitSystemHref({ source: 'site_header' })}
+              onClick={() =>
+                trackMarketingEvent('marketing_submit_cta_clicked', {
+                  source: 'site_header',
+                })
+              }
+            >
+              Submit your system
+            </Link>
           </Button>
           <Button
             type="button"
@@ -137,8 +148,13 @@ export function SiteHeader() {
               Log in
             </Link>
             <Link
-              to="/submit-system"
-              onClick={() => setMobileMenuOpen(false)}
+              to={buildSubmitSystemHref({ source: 'site_header' })}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                trackMarketingEvent('marketing_submit_cta_clicked', {
+                  source: 'site_header',
+                });
+              }}
               className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-black"
             >
               Submit your system

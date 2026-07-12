@@ -8,12 +8,14 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui/card';
+import { buildSubmitSystemHref } from '../lib/submit-system';
 
 interface TrialModalProps {
   isOpen: boolean;
@@ -80,6 +82,11 @@ export function TrialModal({
       : source === 'exit'
         ? 'Share the system details once and we can scope the first delivery without forcing your team into a long implementation cycle.'
         : 'AI compliance documentation with first delivery in as little as 48 hours.';
+  const submitSourceByModalSource = {
+    exit: 'trial_modal_exit',
+    scroll: 'trial_modal_scroll',
+    video: 'trial_modal_video',
+  } as const;
 
   return (
     <div
@@ -159,7 +166,17 @@ export function TrialModal({
                 size="lg"
                 className="w-full bg-white px-7 text-black shadow-[0_18px_40px_-28px_rgba(15,23,42,0.28)] transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#F8FAFF] lg:flex-1"
               >
-                <Link to="/submit-system" onClick={onPrimaryAction}>
+                <Link
+                  to={buildSubmitSystemHref({
+                    source: submitSourceByModalSource[source],
+                  })}
+                  onClick={() => {
+                    trackMarketingEvent('marketing_submit_cta_clicked', {
+                      source: submitSourceByModalSource[source],
+                    });
+                    onPrimaryAction?.();
+                  }}
+                >
                   Submit your system
                 </Link>
               </Button>
@@ -173,7 +190,12 @@ export function TrialModal({
                   href="https://calendly.com/neuraldocx"
                   target="_blank"
                   rel="noreferrer"
-                  onClick={onSecondaryAction}
+                  onClick={() => {
+                    trackMarketingEvent('marketing_enterprise_cta_clicked', {
+                      source: submitSourceByModalSource[source],
+                    });
+                    onSecondaryAction?.();
+                  }}
                 >
                   For enterprise, book a demo
                 </a>
