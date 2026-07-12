@@ -61,4 +61,18 @@ describe('ProjectsService access boundary', () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it('rejects access when the project belongs to another organization', async () => {
+    const service = createService({
+      userId: 'reviewer-1',
+      companyId: 'company-1',
+      role: 'REVIEWER',
+    });
+
+    await expect(
+      service.assertAccess('project-1', 'reviewer-1', 'company-2', {
+        allowReviewer: true,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
 });
