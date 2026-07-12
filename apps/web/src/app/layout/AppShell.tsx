@@ -9,6 +9,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Select } from '@/shared/components/ui/select';
+import { BrandLink } from '@/shared/components/brand/BrandLink';
 
 interface Notification {
   id: string;
@@ -235,17 +236,12 @@ export function AppShell({ title, children }: AppShellProps) {
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="flex items-center justify-between gap-3 py-4">
-            <Link
-              to="/"
-              className="flex items-center gap-3 text-lg font-semibold tracking-[-0.02em] text-slate-900"
-            >
-              <img
-                src="/compliance-icon.svg"
-                alt="NeuralDocx"
-                className="h-8 w-8 rounded-2xl border border-slate-900/10 bg-white p-1 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)]"
-              />
-              <span className="whitespace-nowrap">NeuralDocx</span>
-            </Link>
+            <BrandLink
+              className="flex items-center gap-3"
+              brandClassName="whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-slate-900"
+              iconClassName="flex h-8 w-8 items-center justify-center rounded-2xl border border-slate-900/10 bg-white shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)]"
+              imageClassName="h-8 w-8 rounded-2xl p-1"
+            />
             <div className="flex items-center gap-3 lg:hidden">
               <Button
                 onClick={() => setBillingOpen(true)}

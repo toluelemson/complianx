@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
-import { trackMarketingEvent } from '@/platform/analytics/marketing';
-import { buildSubmitSystemHref } from '../lib/submit-system';
-
-const NAV_LINKS = [
-  { label: 'Product', href: '/#product' },
-  { label: 'Solutions', href: '/#solutions' },
-  { label: 'Pricing', href: '/#pricing' },
-];
+import { BrandLink } from '@/shared/components/brand/BrandLink';
+import {
+  MarketingEnterpriseDemoLink,
+  MarketingSubmitSystemLink,
+} from './MarketingTrackedLinks';
+import { MARKETING_SITE_NAV_LINKS } from '../lib/navigation';
 
 export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -16,20 +14,14 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <Link
-          to="/"
-          className="flex items-center gap-3 text-lg font-semibold tracking-[-0.02em] text-slate-900"
-        >
-          <img
-            src="/compliance-icon.svg"
-            alt="NeuralDocx"
-            className="h-8 w-8 rounded-2xl border border-slate-900/10 bg-white p-1 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)]"
-          />
-          <span>NeuralDocx</span>
-        </Link>
+        <BrandLink
+          brandClassName="text-lg font-semibold tracking-[-0.02em] text-slate-900"
+          iconClassName="flex h-8 w-8 items-center justify-center rounded-2xl border border-slate-900/10 bg-white shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)]"
+          imageClassName="h-8 w-8 rounded-2xl p-1"
+        />
 
         <nav className="hidden items-center gap-6 lg:flex">
-          {NAV_LINKS.map((link) => (
+          {MARKETING_SITE_NAV_LINKS.map((link) => (
             <a
               key={link.label}
               href={link.href}
@@ -44,14 +36,12 @@ export function SiteHeader() {
           >
             Compliance check
           </Link>
-          <a
-            href="https://calendly.com/neuraldocx"
-            target="_blank"
-            rel="noreferrer"
+          <MarketingEnterpriseDemoLink
+            source="site_header"
             className="text-sm font-medium text-slate-900 transition-colors hover:text-black"
           >
             Live demo
-          </a>
+          </MarketingEnterpriseDemoLink>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -68,16 +58,9 @@ export function SiteHeader() {
             size="sm"
             className="hidden sm:inline-flex bg-slate-950 text-white hover:bg-black"
           >
-            <Link
-              to={buildSubmitSystemHref({ source: 'site_header' })}
-              onClick={() =>
-                trackMarketingEvent('marketing_submit_cta_clicked', {
-                  source: 'site_header',
-                })
-              }
-            >
+            <MarketingSubmitSystemLink source="site_header">
               Submit your system
-            </Link>
+            </MarketingSubmitSystemLink>
           </Button>
           <Button
             type="button"
@@ -114,7 +97,7 @@ export function SiteHeader() {
       {mobileMenuOpen ? (
         <div className="border-t border-slate-200 bg-white/96 px-4 py-4 sm:px-6 lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-3">
-            {NAV_LINKS.map((link) => (
+            {MARKETING_SITE_NAV_LINKS.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -131,15 +114,13 @@ export function SiteHeader() {
             >
               Compliance check
             </Link>
-            <a
-              href="https://calendly.com/neuraldocx"
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setMobileMenuOpen(false)}
+            <MarketingEnterpriseDemoLink
+              source="site_header"
               className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+              onClick={() => setMobileMenuOpen(false)}
             >
               Live demo
-            </a>
+            </MarketingEnterpriseDemoLink>
             <Link
               to="/login"
               onClick={() => setMobileMenuOpen(false)}
@@ -147,18 +128,13 @@ export function SiteHeader() {
             >
               Log in
             </Link>
-            <Link
-              to={buildSubmitSystemHref({ source: 'site_header' })}
-              onClick={() => {
-                setMobileMenuOpen(false);
-                trackMarketingEvent('marketing_submit_cta_clicked', {
-                  source: 'site_header',
-                });
-              }}
+            <MarketingSubmitSystemLink
+              source="site_header"
               className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-black"
+              onClick={() => setMobileMenuOpen(false)}
             >
               Submit your system
-            </Link>
+            </MarketingSubmitSystemLink>
           </div>
         </div>
       ) : null}

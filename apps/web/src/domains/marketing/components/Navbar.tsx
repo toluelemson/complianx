@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
-import { trackMarketingEvent } from '@/platform/analytics/marketing';
-import { buildSubmitSystemHref } from '../lib/submit-system';
-
-const NAV_LINKS = [
-  { label: 'Product', href: '#product' },
-  { label: 'Solutions', href: '#solutions' },
-  { label: 'Pricing', href: '#pricing' },
-];
+import { BrandLink } from '@/shared/components/brand/BrandLink';
+import {
+  MarketingEnterpriseDemoLink,
+  MarketingSubmitSystemLink,
+} from './MarketingTrackedLinks';
+import { CALENDLY_URL, MARKETING_NAV_LINKS } from '../lib/navigation';
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -102,21 +100,13 @@ export function Navbar() {
   return (
     <header data-landing-navbar="true" className={headerClassName}>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8 lg:px-10">
-        <Link to="/" className="flex items-center gap-3">
-          <div className={logoShellClassName}>
-            <img
-              src="/compliance-icon.svg"
-              alt="NeuralDocx"
-              className="h-6 w-6 rounded-xl"
-            />
-          </div>
-          <div>
-            <p className={brandTextClassName}>NeuralDocx</p>
-          </div>
-        </Link>
+        <BrandLink
+          brandClassName={brandTextClassName}
+          iconClassName={logoShellClassName}
+        />
 
         <nav className="hidden items-center gap-6 lg:flex">
-          {NAV_LINKS.map((link) => (
+          {MARKETING_NAV_LINKS.map((link) => (
             <a key={link.label} href={link.href} className={navLinkClassName}>
               {link.label}
             </a>
@@ -125,7 +115,7 @@ export function Navbar() {
             Compliance check
           </Link>
           <a
-            href="https://calendly.com/neuraldocx"
+            href={CALENDLY_URL}
             target="_blank"
             rel="noreferrer"
             className={utilityLinkClassName}
@@ -149,13 +139,9 @@ export function Navbar() {
             size="sm"
             className={enterpriseButtonClassName}
           >
-            <a
-              href="https://calendly.com/neuraldocx"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <MarketingEnterpriseDemoLink source="navbar">
               Enterprise demo
-            </a>
+            </MarketingEnterpriseDemoLink>
           </Button>
           <Button
             type="button"
@@ -191,23 +177,16 @@ export function Navbar() {
             size="sm"
             className="bg-white text-black hover:bg-[#F3F6FF]"
           >
-            <Link
-              to={buildSubmitSystemHref({ source: 'navbar' })}
-              onClick={() =>
-                trackMarketingEvent('marketing_submit_cta_clicked', {
-                  source: 'navbar',
-                })
-              }
-            >
+            <MarketingSubmitSystemLink source="navbar">
               Submit your system
-            </Link>
+            </MarketingSubmitSystemLink>
           </Button>
         </div>
       </div>
       {mobileMenuOpen && (
         <div className={mobilePanelClassName}>
           <div className="mx-auto flex max-w-7xl flex-col gap-3">
-            {NAV_LINKS.map((link) => (
+            {MARKETING_NAV_LINKS.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -223,14 +202,12 @@ export function Navbar() {
               </Link>
             </Button>
             <Button asChild variant="ghost" className={mobileGhostClassName}>
-              <a
-                href="https://calendly.com/neuraldocx"
-                target="_blank"
-                rel="noreferrer"
+              <MarketingEnterpriseDemoLink
+                source="navbar"
                 onClick={closeMobileMenu}
               >
                 Live demo
-              </a>
+              </MarketingEnterpriseDemoLink>
             </Button>
             <Button asChild variant="ghost" className={mobileGhostClassName}>
               <Link to="/login" onClick={closeMobileMenu}>
@@ -242,30 +219,23 @@ export function Navbar() {
               variant="outline"
               className={mobileEnterpriseClassName}
             >
-              <a
-                href="https://calendly.com/neuraldocx"
-                target="_blank"
-                rel="noreferrer"
+              <MarketingEnterpriseDemoLink
+                source="navbar"
                 onClick={closeMobileMenu}
               >
                 Enterprise demo
-              </a>
+              </MarketingEnterpriseDemoLink>
             </Button>
             <Button
               asChild
               className="justify-start rounded-2xl bg-white text-black hover:bg-[#F3F6FF]"
             >
-              <Link
-                to={buildSubmitSystemHref({ source: 'navbar' })}
-                onClick={() => {
-                  closeMobileMenu();
-                  trackMarketingEvent('marketing_submit_cta_clicked', {
-                    source: 'navbar',
-                  });
-                }}
+              <MarketingSubmitSystemLink
+                source="navbar"
+                onClick={closeMobileMenu}
               >
                 Submit your system
-              </Link>
+              </MarketingSubmitSystemLink>
             </Button>
           </div>
         </div>
