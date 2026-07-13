@@ -112,12 +112,6 @@ export default function CompanyPage() {
     onError: () => toast.error('Unable to create workspace'),
   });
 
-  useEffect(() => {
-    if (companyQuery.isSuccess && companyQuery.data?.company) {
-      setLeftCompany(false);
-    }
-  }, [companyQuery.isSuccess, companyQuery.data]);
-
   const renderCreateWorkspace = (message: { title: string; body: string }) => (
     <Card className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border-slate-200/90 bg-white/90 p-6 text-center shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
       <CardContent className="flex flex-col items-center gap-4 p-0">
@@ -158,7 +152,7 @@ export default function CompanyPage() {
       </AppShell>
     );
   }
-  if (leftCompany) {
+  if (leftCompany && !companyQuery.data?.company) {
     return (
       <AppShell title="Company Settings">
         {renderCreateWorkspace({

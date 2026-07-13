@@ -1,13 +1,19 @@
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 const seedDir = join(
-  process.cwd(),
+  scriptDir,
+  '..',
   'src',
-  'eu-ai-act-public',
+  'domains',
+  'regulatory-frameworks',
+  'infrastructure',
+  'public-eu-ai-act',
   'seeds',
 );
 

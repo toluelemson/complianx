@@ -1376,12 +1376,8 @@ export default function ProjectPage() {
       })),
     [trackableStepIds, stepTitleMap, incompleteFieldsByStep, sectionByName],
   );
-  const allFieldsComplete = useMemo(
-    () =>
-      [...incompleteFieldsByStep.values()].every(
-        (fields) => fields.length === 0,
-      ),
-    [incompleteFieldsByStep],
+  const allFieldsComplete = [...incompleteFieldsByStep.values()].every(
+    (fields) => fields.length === 0,
   );
   const PROJECT_STATUS_LABELS: Record<string, string> = {
     DRAFT: 'Draft',
