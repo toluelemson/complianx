@@ -7,23 +7,29 @@ export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
   const isGif = videoSrc?.toLowerCase().endsWith('.gif');
 
   return (
-    <section id="solutions" className="hidden w-full pb-20 md:block">
+    <section id="solutions" className="hidden w-full border-y border-[#e8e8e8] bg-[#fafafa] py-10 md:block">
       <div className="px-6 lg:px-10">
-        <div className="animate-enter-up mx-auto w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/14 bg-[linear-gradient(135deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.06)_45%,rgba(255,255,255,0.12)_100%)] p-2 shadow-[0_25px_80px_-35px_rgba(15,23,42,0.8)] backdrop-blur-xl">
-          <div className="relative overflow-hidden rounded-[1.6rem] bg-[#0f141a]">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:flex-row lg:items-center">
+          <div className="max-w-xs shrink-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8a8a8a]">See the workflow</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#383838]">From intake to audit-ready records.</h2>
+            <p className="mt-2 text-sm leading-6 text-[#5e5e5e]">A short walkthrough of the workspace your team uses to keep evidence and review decisions together.</p>
+          </div>
+          <div className="animate-enter-up min-w-0 flex-1 overflow-hidden rounded-[6px] border border-[#dbdbdb] bg-[#0f141a] p-1 shadow-[0_1px_3px_rgba(0,0,0,.1),0_1px_2px_rgba(0,0,0,.06)]">
+          <div className="relative overflow-hidden rounded-[4px] bg-[#0f141a]">
             <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.12),_transparent_32%),linear-gradient(180deg,_rgba(15,20,26,0.24)_0%,_rgba(15,20,26,0.72)_100%)]" />
             {videoSrc ? (
               <div className="relative mx-auto w-full max-w-[1100px]">
                 {isGif ? (
                   <img
-                    className="aspect-video w-full bg-black object-cover"
+                    className="aspect-[2.2] w-full bg-black object-cover"
                     src={videoSrc}
                     alt="NeuralDocx product walkthrough"
                     loading="eager"
                   />
                 ) : (
                   <video
-                    className="aspect-video w-full bg-black object-cover"
+                    className="aspect-[2.2] w-full bg-black object-cover"
                     autoPlay
                     loop
                     muted
@@ -45,7 +51,7 @@ export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
               </div>
             ) : (
               <div className="mx-auto w-full max-w-[1100px]">
-                <div className="relative aspect-video w-full">
+                <div className="relative aspect-[2.2] w-full">
                   <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),transparent_40%,rgba(255,255,255,0.02))]" />
                   <div className="relative flex h-full items-center justify-center p-6 sm:p-8">
                     <div className="flex flex-col items-center gap-6">
@@ -65,6 +71,7 @@ export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

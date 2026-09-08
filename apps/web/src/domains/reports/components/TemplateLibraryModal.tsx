@@ -192,29 +192,34 @@ const TemplateLibraryModal = ({
               <p className="text-sm text-slate-500">No templates yet.</p>
             )}
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-            <Select
-              value={bulkAction}
-              onChange={(event) =>
-                setBulkAction(
-                  event.target.value as '' | 'share' | 'unshare' | 'delete',
-                )
-              }
-              className="w-auto min-w-[11rem] rounded-xl"
-            >
-              <option value="">Bulk action</option>
-              <option value="share">Share</option>
-              <option value="unshare">Unshare</option>
-              <option value="delete">Delete</option>
-            </Select>
-            <Button
-              type="button"
-              onClick={executeBulkAction}
-              className="bg-primary text-primary-foreground hover:bg-[#e21236]"
-            >
-              Apply
-            </Button>
-          </div>
+          {selectedTemplates.size > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+              <span className="text-xs text-slate-500">
+                {selectedTemplates.size} selected
+              </span>
+              <Select
+                value={bulkAction}
+                onChange={(event) =>
+                  setBulkAction(
+                    event.target.value as '' | 'share' | 'unshare' | 'delete',
+                  )
+                }
+                className="w-auto min-w-[11rem] rounded-xl"
+              >
+                <option value="">Bulk action</option>
+                <option value="share">Share</option>
+                <option value="unshare">Unshare</option>
+                <option value="delete">Delete</option>
+              </Select>
+              <Button
+                type="button"
+                onClick={executeBulkAction}
+                className="bg-primary text-primary-foreground hover:bg-[#e21236]"
+              >
+                Apply
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

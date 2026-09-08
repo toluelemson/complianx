@@ -131,9 +131,6 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-500">
             Monitor ownership, readiness, evidence, and review status across your AI systems.
           </p>
-          <p className="text-xs text-slate-400">
-            Keep the next compliance decision visible and actionable.
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -149,35 +146,6 @@ export default function DashboardPage() {
             Manage workspace
           </Link>
         </div>
-      </div>
-      <div className="hz-dashboard__quick-actions mt-4 grid gap-3 sm:grid-cols-3">
-        <button
-          onClick={() => setModalOpen(true)}
-          className="hz-console-empty-card text-left text-sm font-semibold"
-        >
-          + Create a new AI system
-          <p className="mt-1 text-xs font-normal text-slate-500">
-            Capture the system context needed for assessment.
-          </p>
-        </button>
-        <Link
-          to="/company"
-          className="border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-        >
-          Review team access
-          <p className="mt-1 text-xs font-normal text-slate-500">
-            Assign owners and reviewers for the workspace.
-          </p>
-        </Link>
-        <Link
-          to="/demo/eu-ai-act-report"
-          className="border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-        >
-          Open demo tool
-          <p className="mt-1 text-xs font-normal text-slate-500">
-            Explore a completed report workflow.
-          </p>
-        </Link>
       </div>
       <div className="hz-dashboard__metrics mt-8 grid gap-4 md:grid-cols-2">
         <div className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">

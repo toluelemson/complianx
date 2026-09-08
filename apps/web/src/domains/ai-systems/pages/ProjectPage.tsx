@@ -1553,7 +1553,7 @@ export default function ProjectPage() {
   return (
     <AppShell title={projectQuery.data?.name ?? 'Project'}>
       <div className="hz-project-page">
-      <div className="hz-project-summary mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="hz-project-summary mb-6">
         <div className="hz-project-panel rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold text-slate-600">
@@ -1608,46 +1608,6 @@ export default function ProjectPage() {
                   : 'Set a reminder'}
               </p>
             </div>
-          </div>
-        </div>
-        <div className="hz-project-panel hz-project-queue rounded-2xl border border-slate-200 bg-white p-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Work queue
-          </p>
-          <div className="mt-4 grid gap-3">
-            <button
-              type="button"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Continue control review
-              <span className="block text-xs font-normal text-slate-500">
-                Return to the current control area.
-              </span>
-            </button>
-            <Link
-              to={`/projects/${projectId}/trust`}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Open assurance workspace
-              <span className="block text-xs font-normal text-slate-500">
-                Review metrics, testing, and evidence.
-              </span>
-            </Link>
-            <button
-              type="button"
-              onClick={() =>
-                document
-                  .getElementById('documents-panel')
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }
-              className="rounded-lg border border-slate-200 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Prepare deliverables
-              <span className="block text-xs font-normal text-slate-500">
-                Check readiness before generating exports.
-              </span>
-            </button>
           </div>
         </div>
       </div>
@@ -1972,12 +1932,21 @@ export default function ProjectPage() {
                         justify this section’s answers.
                       </p>
                     </div>
-                    {currentSection?.artifacts?.length ? (
-                      <span className="text-xs font-semibold text-slate-400">
-                        {currentSection.artifacts.length} file
-                        {currentSection.artifacts.length === 1 ? '' : 's'}
-                      </span>
-                    ) : null}
+                    <div className="flex items-center gap-3">
+                      {currentSection?.artifacts?.length ? (
+                        <span className="text-xs font-semibold text-slate-400">
+                          {currentSection.artifacts.length} file
+                          {currentSection.artifacts.length === 1 ? '' : 's'}
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setManageModalOpen(true)}
+                        className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                      >
+                        Manage templates
+                      </button>
+                    </div>
                   </div>
                   {currentSection ? (
                     <>
@@ -2010,31 +1979,41 @@ export default function ProjectPage() {
                             </span>
                           </button>
                         </div>
-                        <input
-                          type="text"
-                          value={artifactDescription}
-                          onChange={(event) =>
-                            setArtifactDescription(event.target.value)
-                          }
-                          placeholder="Optional description"
-                          disabled={!isOwner}
-                          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50"
-                        />
-                        <select
-                          value={artifactPurpose}
-                          onChange={(e) =>
-                            setArtifactPurpose(
-                              e.target.value as 'GENERIC' | 'DATASET' | 'MODEL',
-                            )
-                          }
-                          disabled={!isOwner}
-                          className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none disabled:bg-slate-50"
-                          title="Purpose"
-                        >
-                          <option value="GENERIC">Generic</option>
-                          <option value="DATASET">Dataset</option>
-                          <option value="MODEL">Model</option>
-                        </select>
+                        <details className="md:col-span-2">
+                          <summary className="cursor-pointer rounded-md border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-500">
+                            Add file details
+                          </summary>
+                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            <input
+                              type="text"
+                              value={artifactDescription}
+                              onChange={(event) =>
+                                setArtifactDescription(event.target.value)
+                              }
+                              placeholder="Optional description"
+                              disabled={!isOwner}
+                              className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50"
+                            />
+                            <select
+                              value={artifactPurpose}
+                              onChange={(e) =>
+                                setArtifactPurpose(
+                                  e.target.value as
+                                    | 'GENERIC'
+                                    | 'DATASET'
+                                    | 'MODEL',
+                                )
+                              }
+                              disabled={!isOwner}
+                              className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none disabled:bg-slate-50"
+                              title="Purpose"
+                            >
+                              <option value="GENERIC">Generic</option>
+                              <option value="DATASET">Dataset</option>
+                              <option value="MODEL">Model</option>
+                            </select>
+                          </div>
+                        </details>
                         <div className="flex items-center justify-end gap-2">
                           {artifactFile ? (
                             <button
@@ -2115,7 +2094,12 @@ export default function ProjectPage() {
                                         </span>
                                       </div>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                                    <details className="text-xs text-slate-500">
+                                      <summary className="cursor-pointer font-semibold text-slate-500 hover:text-slate-800">
+                                        File details
+                                      </summary>
+                                      <div className="mt-2 space-y-2">
+                                    <div className="flex flex-wrap items-center gap-3">
                                       <span>
                                         Citation:
                                         <code className="ml-1 rounded bg-white px-1 py-0.5 text-[11px] text-slate-700">
@@ -2191,7 +2175,8 @@ export default function ProjectPage() {
                                         Awaiting reviewer approval.
                                       </p>
                                     )}
-                                  </div>
+                                      </div>
+                                    </details>
                                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                                     <button
                                       type="button"
@@ -2308,13 +2293,6 @@ export default function ProjectPage() {
                                       </div>
                                     </div>
                                   ) : null}
-                                  <button
-                                    type="button"
-                                    onClick={() => setManageModalOpen(true)}
-                                    className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                                  >
-                                    Manage templates
-                                  </button>
                                 </div>
                               );
                             },
@@ -2343,11 +2321,11 @@ export default function ProjectPage() {
                         {currentSection.comments.length} comments
                       </span>
                     </div>
-                    <div className="mt-2 rounded-xl border border-dashed border-slate-200 px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                        Status history
-                      </p>
-                      <div className="mt-2 space-y-1">
+                      <details className="rounded-xl border border-dashed border-slate-200 px-3 py-2">
+                        <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                          Status history
+                        </summary>
+                        <div className="mt-2 space-y-1">
                         {currentSection.statusEvents?.length ? (
                           currentSection.statusEvents
                             .slice(0, 3)
@@ -2381,8 +2359,8 @@ export default function ProjectPage() {
                             No status changes yet.
                           </p>
                         )}
-                      </div>
-                    </div>
+                        </div>
+                      </details>
                     <div className="mt-4 space-y-3">
                       {currentSection.comments.length ? (
                         currentSection.comments.map(
@@ -2655,7 +2633,7 @@ export default function ProjectPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">
-                Compliance Documents
+                Deliverables
               </h3>
               <div className="flex items-center gap-3">
                 <button
@@ -2727,11 +2705,11 @@ export default function ProjectPage() {
                               : 'Download'}
                           </button>
                         </div>
-                        {previous.length > 0 && (
-                          <div className="mt-4 border-t border-slate-100 pt-4">
-                            <p className="text-xs uppercase tracking-wide text-slate-400">
-                              Version history
-                            </p>
+                          {previous.length > 0 && (
+                          <details className="mt-4 border-t border-slate-100 pt-4">
+                            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-400">
+                              Version history ({previous.length})
+                            </summary>
                             <ul className="mt-2 space-y-2 text-xs text-slate-500">
                               {previous.map((doc: DocumentItem) => {
                                 const ver =
@@ -2765,7 +2743,7 @@ export default function ProjectPage() {
                                 );
                               })}
                             </ul>
-                          </div>
+                          </details>
                         )}
                       </div>
                     );
@@ -2781,7 +2759,11 @@ export default function ProjectPage() {
             )}
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
+            <summary className="cursor-pointer text-lg font-semibold text-slate-900">
+              Project intelligence
+            </summary>
+          <div className="mt-4 grid gap-6 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-6">
               <h3 className="text-lg font-semibold text-slate-900">Insights</h3>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -2942,12 +2924,14 @@ export default function ProjectPage() {
               )}
             </div>
           </div>
+          </details>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Reminders
-              </h3>
+          <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+              Reminders
+            </summary>
+            <div className="mt-4">
+            <div className="flex items-center justify-end">
               <button
                 onClick={() => remindersQuery.refetch()}
                 className="text-sm font-medium text-sky-600 hover:text-sky-500"
@@ -3034,7 +3018,8 @@ export default function ProjectPage() {
                 </p>
               )}
             </div>
-          </div>
+            </div>
+          </details>
         </section>
       </div>
       <TemplateLibraryModal

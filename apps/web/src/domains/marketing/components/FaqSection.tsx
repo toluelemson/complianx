@@ -82,14 +82,13 @@ const FAQ_ITEMS = [
 export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [showAll, setShowAll] = useState(false);
-  const visibleItems = showAll ? FAQ_ITEMS : FAQ_ITEMS.slice(0, 5);
+  const visibleItems = showAll ? FAQ_ITEMS : FAQ_ITEMS.slice(0, 4);
 
   return (
     <section
       data-nav-theme="light"
-      className="relative overflow-hidden bg-[var(--cx-canvas)] px-5 py-28 sm:px-8 lg:px-10"
+      className="relative overflow-hidden bg-[var(--cx-canvas)] px-5 py-20 sm:px-8 lg:px-10"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.14),_transparent_34%)]" />
       <div className="mx-auto max-w-3xl">
         <div className="text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#f3c4cb] bg-[var(--cx-brand-subtle)] px-5 py-3 text-sm font-semibold text-[var(--cx-brand)] shadow-[var(--cx-shadow-sm)]">
@@ -98,16 +97,15 @@ export function FaqSection() {
             </span>
             <span>Common questions</span>
           </div>
-          <h2 className="animate-enter-up mt-5 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl md:text-6xl">
-            Answers before your team commits time
+          <h2 className="animate-enter-up mt-5 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
+            Common questions, answered clearly
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            The service is built to remove ambiguity around scope, turnaround,
-            and what you actually receive at the end of the engagement.
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">
+            A quick overview of scope, turnaround, deliverables, and next steps.
           </p>
         </div>
 
-        <div className="mt-16 space-y-3">
+        <div className="mt-10 space-y-3">
           {visibleItems.map((item, index) => {
             const isOpen = openIndex === index;
 
@@ -154,13 +152,13 @@ export function FaqSection() {
           })}
         </div>
 
-        <div className="mt-10 flex justify-center">
+        <div className="mt-8 flex justify-center">
           <button
             type="button"
             onClick={() => setShowAll((value) => !value)}
             className="inline-flex items-center justify-center rounded-[var(--cx-radius)] bg-[var(--cx-brand)] px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[var(--cx-brand-hover)]"
           >
-            {showAll ? 'Show fewer answers' : 'Read all Answers'}
+            {showAll ? 'Show fewer answers' : 'Read all answers'}
           </button>
         </div>
       </div>

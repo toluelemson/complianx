@@ -112,42 +112,35 @@ export function ReviewApprovalPanel({
               blockers, and a clean approval path.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard
-              label="Ready sections"
-              value={`${readySteps}/${trackableSteps.length || 0}`}
-            />
-            <StatCard
-              label="Open issues"
-              value={String(totalMissing)}
-              tone={totalMissing ? 'warning' : 'success'}
-            />
-            <StatCard
-              label="Reviewer"
-              value={reviewerId ? 'Assigned' : 'Missing'}
-              tone={reviewerId ? 'default' : 'warning'}
-            />
+          <div className="text-sm text-slate-600 lg:text-right">
+            <span className="font-semibold text-slate-900">
+              {readySteps}/{trackableSteps.length || 0} sections ready
+            </span>
+            <span className="mx-2 text-slate-300">·</span>
+            <span className={totalMissing ? 'text-amber-700' : 'text-emerald-700'}>
+              {totalMissing} open issues
+            </span>
+            <span className="mx-2 text-slate-300">·</span>
+            <span>{reviewerId ? 'Reviewer assigned' : 'Reviewer missing'}</span>
           </div>
         </div>
       </div>
 
       <div className="hz-review-panel__body grid gap-5 px-5 py-5 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                Completion map
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                Sections with missing data stay visibly blocked until resolved.
-              </p>
+          <details>
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Completion map ({readySteps}/{trackableSteps.length || 0} ready)
+            </summary>
+            <p className="mt-2 text-sm text-slate-600">
+              Sections with missing data stay visibly blocked until resolved.
+            </p>
+            <div className="mt-3 grid gap-3">
+              {trackableSteps.map((step) => (
+                <TrackableStepRow key={step.stepId} step={step} />
+              ))}
             </div>
-          </div>
-          <div className="grid gap-3">
-            {trackableSteps.map((step) => (
-              <TrackableStepRow key={step.stepId} step={step} />
-            ))}
-          </div>
+          </details>
         </div>
 
         <Card className="hz-review-panel__owner space-y-4 rounded-[24px] bg-slate-50/80 p-4 shadow-none">
@@ -234,38 +227,47 @@ export function ReviewApprovalPanel({
 
       <div className="hz-review-panel__footer border-t border-slate-200 px-5 py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <p className="text-sm text-slate-300">
-            Use the workflow below to move the project forward or send it back
-            with context.
+          <p className="text-sm text-slate-600">
+            {reviewBlocked
+              ? 'Resolve the release gate to move this project forward.'
+              : 'The project is ready for the next review step.'}
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-auto flex-1 md:flex-none"
-              onClick={onSendForReview}
-              disabled={reviewBlocked}
-            >
-              {sendForReviewLabel}
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              className="h-auto flex-1 md:flex-none"
-              onClick={onApprove}
-              disabled={approveBlocked}
-            >
-              Approve project
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-auto flex-1 md:flex-none"
-              onClick={onRequestChanges}
-              disabled={requestChangesBlocked}
-            >
-              Request changes
-            </Button>
+            {canSendForReview &&
+            projectStatusLabel !== 'IN_REVIEW' &&
+            projectStatusLabel !== 'APPROVED' ? (
+              <Button
+                type="button"
+                variant="secondary"
+                className="h-auto flex-1 md:flex-none"
+                onClick={onSendForReview}
+                disabled={reviewBlocked}
+              >
+                {sendForReviewLabel}
+              </Button>
+            ) : null}
+            {canApprove && projectStatusLabel === 'IN_REVIEW' ? (
+              <Button
+                type="button"
+                variant="primary"
+                className="h-auto flex-1 md:flex-none"
+                onClick={onApprove}
+                disabled={approveBlocked}
+              >
+                Approve project
+              </Button>
+            ) : null}
+            {canRequestChanges && projectStatusLabel === 'IN_REVIEW' ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto flex-1 md:flex-none"
+                onClick={onRequestChanges}
+                disabled={requestChangesBlocked}
+              >
+                Request changes
+              </Button>
+            ) : null}
           </div>
         </div>
         {!canSendForReview && (
@@ -322,36 +324,6 @@ function TrackableStepRow({ step }: { step: TrackableStepSummary }) {
           {step.missing ? `${animatedMissing} missing` : 'Ready'}
         </Badge>
       </div>
-    </Card>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone = 'default',
-}: {
-  label: string;
-  value: string;
-  tone?: 'default' | 'warning' | 'success';
-}) {
-  const toneClass =
-    tone === 'warning'
-      ? 'border-amber-200 bg-white/90 text-amber-950'
-      : tone === 'success'
-        ? 'border-emerald-200 bg-white/90 text-emerald-950'
-        : 'border-slate-200 bg-white/90 text-slate-950';
-
-  return (
-    <Card
-      className={`hz-review-panel__stat min-w-[9rem] rounded-2xl px-4 py-3 backdrop-blur shadow-none ${toneClass}`}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-        {label}
-      </p>
-      <p className="hz-review-panel__stat-value mt-1 font-serif text-2xl font-semibold tracking-tight">
-        {value}
-      </p>
     </Card>
   );
 }

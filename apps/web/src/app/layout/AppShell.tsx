@@ -302,21 +302,6 @@ export function AppShell({
               </div>
             </nav>
             <div className="flex shrink-0 items-center gap-3">
-              <Button asChild variant="outline" size="sm">
-                <Link to="/">Home</Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <a
-                  href="https://calendly.com/neuraldocx"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Book demo
-                </a>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/contact">Contact</Link>
-              </Button>
               {user?.companies && user.companies.length > 1 && (
                 <Select
                   value={activeCompanyId ?? user.companies[0]?.companyId ?? ''}
@@ -359,15 +344,6 @@ export function AppShell({
               <CardContent className="space-y-4 px-4 py-4 sm:px-6">
                 <div className="space-y-4">{renderMobileNav()}</div>
                 <div className="flex flex-col gap-2">
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="justify-start rounded-xl"
-                  >
-                    <Link to="/" onClick={closeMobileMenu}>
-                      Home
-                    </Link>
-                  </Button>
                   {user?.companies && user.companies.length > 1 && (
                     <Select
                       value={
@@ -389,28 +365,6 @@ export function AppShell({
                       ))}
                     </Select>
                   )}
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="justify-start rounded-xl"
-                  >
-                    <a
-                      href="https://calendly.com/neuraldocx"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Book demo
-                    </a>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="justify-start rounded-xl"
-                  >
-                    <Link to="/contact" onClick={closeMobileMenu}>
-                      Contact
-                    </Link>
-                  </Button>
                   <Button
                     onClick={() => setBillingOpen(true)}
                     variant="outline"

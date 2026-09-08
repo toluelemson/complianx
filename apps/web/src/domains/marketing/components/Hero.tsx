@@ -42,14 +42,12 @@ export function Hero() {
                 Submit your system
               </Link>
             </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="w-full border-[#dbdbdb] bg-white px-7 text-[#383838] hover:border-[#d40c2e] hover:bg-[#fafafa] hover:text-[#d40c2e] sm:w-auto"
+            <Link
+              to="/eu-ai-act-checker"
+              className="inline-flex items-center justify-center px-2 py-3 text-sm font-semibold text-[#5e5e5e] underline decoration-[#dbdbdb] underline-offset-4 transition hover:text-[#d40c2e] hover:decoration-[#d40c2e] sm:justify-start"
             >
-              <Link to="/eu-ai-act-checker">Run compliance check first</Link>
-            </Button>
+              Run compliance check first
+            </Link>
           </div>
         </div>
         <div className="min-w-0 w-full animate-enter-scale rounded-[6px] border border-[#e8e8e8] bg-white p-8 shadow-[0_1px_3px_rgba(0,0,0,.1),0_1px_2px_rgba(0,0,0,.06)]">

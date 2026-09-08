@@ -46,8 +46,8 @@ describe('ReviewApprovalPanel', () => {
 
     expect(screen.getByRole('button', { name: 'Start review' })).toBeEnabled();
     expect(
-      screen.getByRole('button', { name: 'Approve project' }),
-    ).toBeDisabled();
+      screen.queryByRole('button', { name: 'Approve project' }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders resubmit action for changes requested state', () => {
@@ -66,7 +66,7 @@ describe('ReviewApprovalPanel', () => {
       screen.getByRole('button', { name: 'Resubmit project' }),
     ).toBeEnabled();
     expect(
-      screen.getByRole('button', { name: 'Request changes' }),
-    ).toBeDisabled();
+      screen.queryByRole('button', { name: 'Request changes' }),
+    ).not.toBeInTheDocument();
   });
 });

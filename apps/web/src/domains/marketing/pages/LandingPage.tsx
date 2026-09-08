@@ -134,19 +134,16 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[var(--cx-canvas)] text-[var(--cx-text)]">
       <Navbar />
 
-      <div className="relative">
-        <main className="relative z-10">
+      <main className="relative z-10">
           <Hero />
           <VideoSection
             onOpenTrial={() => openTrialModal('video', true)}
             videoSrc={DEMO_VIDEO_SRC}
           />
-          {/* <Capabilities /> */}
           <PricingSection />
           <FaqSection />
           <CTASection />
-        </main>
-      </div>
+      </main>
 
       <TrialModal
         isOpen={trialModalOpen}

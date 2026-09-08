@@ -45,20 +45,14 @@ export function CTASection() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="border-[var(--cx-border-strong)] bg-[var(--cx-surface)] text-[var(--cx-text)] hover:border-[var(--cx-brand)] hover:bg-[var(--cx-surface-subtle)] hover:text-[var(--cx-brand)]"
+              <a
+                href="https://calendly.com/neuraldocx"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center px-2 py-3 text-sm font-semibold text-[var(--cx-text-secondary)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-brand)] hover:decoration-[var(--cx-brand)]"
               >
-                <a
-                  href="https://calendly.com/neuraldocx"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  For enterprise, book a demo
-                </a>
-              </Button>
+                Enterprise demo
+              </a>
             </div>
           </CardContent>
         </Card>

@@ -48,9 +48,7 @@
 .hz-page-title { min-height: 44px; margin-bottom: 20px; padding-bottom: 16px; }
 .hz-page-title h1 { color: var(--ndx-color-text-primary); font-size: 20px; line-height: 1.25; }
 .hz-dashboard { display: grid; gap: 20px; }
-.hz-dashboard__quick-actions > *, .hz-dashboard__metric-card, .hz-dashboard__assigned, .hz-dashboard__table { border-radius: var(--ndx-radius-card) !important; box-shadow: var(--ndx-shadow-raised) !important; }
-.hz-dashboard__quick-actions > * { padding: 20px !important; }
-.hz-dashboard__quick-actions > .hz-console-empty-card { place-items: start; align-content: center; }
+.hz-dashboard__metric-card, .hz-dashboard__assigned, .hz-dashboard__table { border-radius: var(--ndx-radius-card) !important; box-shadow: var(--ndx-shadow-raised) !important; }
 .hz-dashboard__metric-card { padding: 20px !important; }
 .hz-dashboard__assigned, .hz-dashboard__table { padding: 20px !important; }
 .hz-dashboard__table { padding: 0 !important; }

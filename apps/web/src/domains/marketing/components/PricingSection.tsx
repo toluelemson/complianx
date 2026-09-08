@@ -281,7 +281,14 @@ export function PricingSection() {
                   )}
                 </div>
 
-                <div className="mt-8 space-y-7">
+                <details className="mt-8 group">
+                  <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--cx-text)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-brand)] hover:decoration-[var(--cx-brand)]">
+                    <span className="flex items-center justify-between">
+                      View features
+                      <span className="text-base text-[var(--cx-text-muted)] transition group-open:rotate-180">⌄</span>
+                    </span>
+                  </summary>
+                  <div className="mt-5 space-y-7">
                   {plan.sections.map((section, sectionIndex) => (
                     <div key={section.title}>
                       <h4 className="flex items-center gap-2 text-base font-semibold">
@@ -320,7 +327,8 @@ export function PricingSection() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                </details>
               </CardContent>
             </Card>
           ))}
