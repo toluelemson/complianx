@@ -27,9 +27,8 @@ export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
               ))}
             </div>
           </div>
-          <div className="animate-enter-up min-w-0 flex-1 overflow-hidden rounded-[6px] border border-[#dbdbdb] bg-[#0f141a] p-1 shadow-[0_1px_3px_rgba(0,0,0,.1),0_1px_2px_rgba(0,0,0,.06)]">
-          <div className="relative overflow-hidden rounded-[4px] bg-[#0f141a]">
-            <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.12),_transparent_32%),linear-gradient(180deg,_rgba(15,20,26,0.24)_0%,_rgba(15,20,26,0.72)_100%)]" />
+          <div className="animate-enter-up min-w-0 flex-1 overflow-hidden rounded-[6px] border border-[#dbdbdb] bg-white shadow-[0_1px_3px_rgba(0,0,0,.1),0_1px_2px_rgba(0,0,0,.06)]">
+          <div className="relative overflow-hidden rounded-[5px] bg-white">
             {videoSrc ? (
               <div className="relative mx-auto w-full max-w-[1100px]">
                 {isGif ? (
