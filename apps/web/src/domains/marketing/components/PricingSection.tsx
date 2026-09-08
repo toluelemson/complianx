@@ -164,7 +164,7 @@ export function PricingSection() {
           </p>
         </div>
 
-        <div className="hz-pricing-blueprint__grid mx-auto mt-10 max-w-6xl">
+        <div className="hz-pricing-blueprint__grid hz-pricing-blueprint__grid--services mx-auto mt-10 max-w-6xl">
           {servicePlans.map((plan, index) => (
             <Card
               key={plan.name}
