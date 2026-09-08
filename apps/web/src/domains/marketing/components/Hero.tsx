@@ -9,8 +9,8 @@ export function Hero() {
       id="product"
       className="hz-marketing-hero relative z-10 w-full"
     >
-      <div className="hz-marketing-container hz-marketing-hero__grid min-w-0">
-        <div className="min-w-0 max-w-2xl animate-enter-up">
+      <div className="hz-marketing-container min-w-0">
+        <div className="min-w-0 max-w-3xl animate-enter-up">
           <h1 className="animate-enter-up animation-delay-100 max-w-[680px] text-4xl font-medium tracking-[-0.04em] text-[#383838] sm:text-6xl lg:text-[4rem] lg:leading-[1.02]">
             Keep every AI system ready for review.
           </h1>
@@ -41,22 +41,6 @@ export function Hero() {
             >
               Run compliance check first
             </Link>
-          </div>
-        </div>
-        <div className="min-w-0 w-full animate-enter-scale rounded-[6px] border border-[#e8e8e8] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,.1),0_1px_2px_rgba(0,0,0,.06)] sm:p-8">
-          <div className="flex items-center justify-between border-b border-[#e8e8e8] pb-5">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#8a8a8a]">Workspace snapshot</p>
-              <p className="mt-2 font-[Montserrat,Inter,sans-serif] text-lg font-medium text-[#383838]">EU AI Act readiness</p>
-            </div>
-          </div>
-          <div className="mt-6 space-y-5">
-            {['System context', 'Obligations', 'Evidence coverage'].map((item, index) => (
-              <div key={item} className="flex items-center justify-between gap-4">
-                <span className="text-sm text-[#5e5e5e]">{item}</span>
-                <span className="text-sm font-medium text-[#383838]">{index === 2 ? '0%' : 'Ready to map'}</span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
