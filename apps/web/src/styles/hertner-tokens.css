@@ -16,3 +16,32 @@
   --hz-card-padding: 24px; --hz-pricing-card-min-height: 560px; --hz-pricing-card-gap: 20px; --hz-pricing-card-padding-mobile: 24px;
   --hz-hero-letter-spacing: -0.065em; --hz-copy-line-height: 1.55; --hz-hero-title-size: clamp(2.75rem, 6vw, 5.25rem); --hz-pricing-feature-gap: 12px; --hz-pricing-feature-margin: 28px; --hz-featured-offset: -8px; --hz-recommended-top: 20px; --hz-recommended-right: 20px;
 }
+
+/* Neuraldocx semantic names. Keep these aliases in one place so feature
+ * components can use the console language without depending on source tokens. */
+:root {
+  --ndx-color-brand-primary: var(--hz-color-brand);
+  --ndx-color-brand-hover: var(--hz-color-brand-hover);
+  --ndx-color-brand-subtle: var(--hz-color-brand-subtle);
+  --ndx-color-text-primary: var(--hz-color-text);
+  --ndx-color-text-secondary: var(--hz-color-text-secondary);
+  --ndx-color-text-muted: var(--hz-color-text-muted);
+  --ndx-color-text-inverse: var(--hz-color-text-inverse);
+  --ndx-color-surface-canvas: var(--hz-color-canvas);
+  --ndx-color-surface-card: var(--hz-color-surface);
+  --ndx-color-surface-subtle: var(--hz-color-surface-subtle);
+  --ndx-color-border-default: var(--hz-color-border);
+  --ndx-color-border-strong: var(--hz-color-border-strong);
+  --ndx-space-page-gutter: var(--hz-page-gutter);
+  --ndx-space-grid-gap: var(--hz-pricing-card-gap);
+  --ndx-space-control-gap: var(--hz-space-action-gap);
+  --ndx-radius-card: var(--hz-radius-card);
+  --ndx-radius-pill: var(--hz-radius-pill);
+  --ndx-shadow-raised: var(--hz-shadow-card);
+  --ndx-layout-container-max: var(--hz-content-max);
+  --ndx-layout-header-height: 64px;
+  --ndx-layout-control-height: var(--hz-control-compact);
+  --ndx-transition-standard: var(--cx-motion-interactive);
+  --ndx-z-header: 30;
+  --ndx-z-dropdown: 40;
+}

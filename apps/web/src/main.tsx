@@ -8,6 +8,7 @@ import './styles/dashboard.css';
 import './styles/project-page.css';
 import './styles/buttons.css';
 import './styles/review-approval.css';
+import './styles/hertner-console.css';
 import App from './app/App';
 import { AppProviders } from './app/providers/AppProviders';
 

@@ -125,8 +125,8 @@ export default function DashboardPage() {
 
   return (
     <AppShell title="AI system portfolio">
-      <div className="hz-dashboard">
-      <div className="hz-dashboard__header flex flex-wrap items-center justify-between gap-4">
+      <div className="hz-console-content hz-dashboard">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500">
             Monitor ownership, readiness, evidence, and review status across your AI systems.
@@ -138,13 +138,13 @@ export default function DashboardPage() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setModalOpen(true)}
-            className="rounded-lg bg-[#d40c2e] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e21236]"
+            className="hz-button hz-button--primary"
           >
             Register AI system
           </button>
           <Link
             to="/company"
-            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="hz-button hz-button--outline"
           >
             Manage workspace
           </Link>
@@ -153,7 +153,7 @@ export default function DashboardPage() {
       <div className="hz-dashboard__quick-actions mt-4 grid gap-3 sm:grid-cols-3">
         <button
           onClick={() => setModalOpen(true)}
-          className="border border-dashed border-slate-300 bg-white p-4 text-left text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
+          className="hz-console-empty-card text-left text-sm font-semibold"
         >
           + Create a new AI system
           <p className="mt-1 text-xs font-normal text-slate-500">
@@ -421,7 +421,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-      </div>
       <NewProjectModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
@@ -442,6 +441,7 @@ export default function DashboardPage() {
           }
         }}
       />
+      </div>
     </AppShell>
   );
 }
