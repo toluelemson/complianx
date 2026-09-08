@@ -1,0 +1,24 @@
+/* Project-detail layout adaptation using the shared --hz system. */
+.hz-project-page { display: grid; gap: var(--hz-space-11); min-width: 0; color: var(--hz-color-text); }
+.hz-project-summary { grid-template-columns: minmax(0, 1fr) 320px; }
+.hz-project-panel { min-width: 0; border-color: var(--hz-color-border); border-radius: var(--hz-radius-card); background: var(--hz-color-surface); box-shadow: var(--hz-shadow-card); }
+.hz-project-summary .hz-project-panel { min-height: 144px; }
+.hz-project-queue button,
+.hz-project-queue a { border-color: var(--hz-color-border); color: var(--hz-color-text); }
+.hz-project-queue button:hover,
+.hz-project-queue a:hover { border-color: var(--hz-color-brand); background: var(--hz-color-surface-subtle); color: var(--hz-color-brand); }
+.hz-project-workspace { grid-template-columns: 280px minmax(0, 1fr); gap: var(--hz-space-11); align-items: start; }
+.hz-project-workspace > div:first-child { position: sticky; top: var(--hz-layout-header-height); min-width: 0; }
+.hz-project-content { min-width: 0; }
+.hz-project-page .text-slate-900,
+.hz-project-page .text-slate-800,
+.hz-project-page .text-slate-700 { color: var(--hz-color-text) !important; }
+.hz-project-page .text-slate-600,
+.hz-project-page .text-slate-500 { color: var(--hz-color-text-secondary) !important; }
+.hz-project-page .text-slate-400 { color: var(--hz-color-text-muted) !important; }
+.hz-project-page .text-sky-600,
+.hz-project-page .hover\:text-sky-600:hover { color: var(--hz-color-brand) !important; }
+.hz-project-page input:not([type='checkbox']):not([type='radio']),
+.hz-project-page select,
+.hz-project-page textarea { border-color: var(--hz-color-border-strong); border-radius: var(--hz-radius-card); background: var(--hz-color-surface); }
+@media (max-width: 992px) { .hz-project-summary, .hz-project-workspace { grid-template-columns: 1fr; } .hz-project-workspace > div:first-child { position: static; } }

@@ -131,7 +131,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] text-[#383838]">
+    <div className="min-h-screen bg-[var(--cx-canvas)] text-[var(--cx-text)]">
       <Navbar />
 
       <div className="relative">

@@ -1,0 +1,88 @@
+/* Shared motion layer normalized from the extracted Hetzner interaction rules. */
+:root {
+  --cx-motion-focus: border-color var(--cx-motion-fast) ease-in-out,
+    box-shadow var(--cx-motion-fast) ease-in-out;
+  --cx-motion-interactive: background-color var(--cx-motion-short) var(--cx-motion-ease),
+    border-color var(--cx-motion-short) var(--cx-motion-ease),
+    color var(--cx-motion-short) var(--cx-motion-ease),
+    box-shadow var(--cx-motion-short) var(--cx-motion-ease),
+    transform var(--cx-motion-short) var(--cx-motion-ease);
+}
+
+a,
+button,
+select,
+textarea,
+input:not([type='checkbox']):not([type='radio']):not([type='hidden']) {
+  transition: var(--cx-motion-interactive);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+select,
+textarea {
+  transition: var(--cx-motion-focus);
+}
+
+details[open] summary,
+summary {
+  transition: color var(--cx-motion-short) var(--cx-motion-ease);
+}
+
+[role='dialog'] {
+  animation: cx-dialog-in var(--cx-motion-standard) ease-out both;
+}
+
+.cx-motion-fade {
+  animation: cx-fade-in var(--cx-motion-fast) linear both;
+}
+
+.cx-motion-expand {
+  overflow: hidden;
+  transition: height var(--cx-motion-standard) ease,
+    visibility var(--cx-motion-standard) ease;
+}
+
+.cx-motion-progress {
+  transition: width var(--cx-motion-progress) var(--cx-motion-ease);
+}
+
+.cx-motion-beacon {
+  animation: cx-beacon 2s linear infinite;
+}
+
+.cx-motion-scroll {
+  animation: cx-scroll-indicator 1.4s ease infinite;
+}
+
+@keyframes cx-dialog-in {
+  from { opacity: 0; transform: translateY(-25%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cx-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cx-beacon {
+  0%, 100% { opacity: .35; transform: scale(.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes cx-scroll-indicator {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(10px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0s !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0s !important;
+    transition-duration: 1ms !important;
+  }
+}
