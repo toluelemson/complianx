@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
 import { buildSubmitSystemHref } from '../lib/submit-system';
@@ -41,6 +42,27 @@ export function Hero() {
             >
               Run compliance check first
             </Link>
+          </div>
+
+          <div className="animate-enter-up animation-delay-400 mt-12 border-t border-[#e8e8e8] pt-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8a8a8a]">
+              How it works
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+              {['Register system', 'Map obligations', 'Attach evidence', 'Review'].map(
+                (step, index, steps) => (
+                  <div key={step} className="flex items-center gap-3 text-sm font-medium text-[#383838]">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#fdf3f4] text-xs text-[#d40c2e]">
+                      {index + 1}
+                    </span>
+                    <span>{step}</span>
+                    {index < steps.length - 1 ? (
+                      <ArrowRight className="hidden h-3.5 w-3.5 text-[#b2b2b2] sm:block" />
+                    ) : null}
+                  </div>
+                ),
+              )}
+            </div>
           </div>
         </div>
       </div>
