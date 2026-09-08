@@ -44,11 +44,11 @@ export function Hero() {
             </Link>
           </div>
 
-          <div className="animate-enter-up animation-delay-400 mt-12 border-t border-[#e8e8e8] pt-5">
+          <div className="animate-enter-up animation-delay-400 mt-8 border-t border-[#e8e8e8] pt-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8a8a8a]">
               How it works
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
               {['Register system', 'Map obligations', 'Attach evidence', 'Review'].map(
                 (step, index, steps) => (
                   <div key={step} className="flex items-center gap-3 text-sm font-medium text-[#383838]">

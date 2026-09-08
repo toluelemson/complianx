@@ -1,7 +1,7 @@
 /* Token-consistent homepage and pricing adaptation. */
 .hz-marketing-container { width: min(calc(100% - (var(--hz-page-gutter) * 2)), var(--hz-content-max)); min-width: 0; margin-inline: auto; }
 .hz-marketing-section { padding: var(--hz-space-section) 0; }
-.hz-marketing-hero { width: 100%; padding: var(--hz-space-hero-top) 0 var(--hz-space-hero-bottom); background: var(--hz-color-surface); }
+.hz-marketing-hero { width: 100%; padding: 56px 0 64px; background: var(--hz-color-surface); }
 .hz-marketing-hero__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(var(--hz-hero-side-min), var(--hz-hero-side-max)); gap: var(--hz-space-hero-grid); align-items: center; }
 .hz-marketing-hero h1 { max-width: var(--hz-hero-text-max); color: var(--hz-color-text); font-size: var(--hz-hero-title-size); line-height: var(--hz-line-height-tight); letter-spacing: var(--hz-hero-letter-spacing); }
 .hz-marketing-hero p { max-width: var(--hz-hero-copy-max); color: var(--hz-color-text-secondary); }
@@ -18,4 +18,4 @@
 .hz-pricing-blueprint__features li { color: var(--hz-color-text-secondary); font-size: var(--hz-font-size-md); }
 .hz-pricing-blueprint__features li::before { margin-right: var(--hz-space-3); color: var(--hz-color-success-text); content: '✓'; font-weight: var(--hz-font-weight-semibold); }
 @media (max-width: 992px) { .hz-marketing-hero__grid { grid-template-columns: 1fr; } .hz-pricing-blueprint__grid, .hz-pricing-blueprint__grid--services { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hz-pricing-blueprint__card--featured { transform: none; } }
-@media (max-width: 576px) { .hz-marketing-container { width: min(calc(100% - 32px), var(--hz-content-max)); } .hz-marketing-section, .hz-pricing-blueprint { padding: var(--hz-space-mobile-section) 0; } .hz-marketing-hero { padding: var(--hz-space-mobile-hero-top) 0 var(--hz-space-mobile-section); } .hz-pricing-blueprint__grid { grid-template-columns: 1fr; } .hz-pricing-blueprint__card { min-height: 0; padding: var(--hz-pricing-card-padding-mobile); } }
+@media (max-width: 576px) { .hz-marketing-container { width: min(calc(100% - 32px), var(--hz-content-max)); } .hz-marketing-section, .hz-pricing-blueprint { padding: var(--hz-space-mobile-section) 0; } .hz-marketing-hero { padding: 40px 0 48px; } .hz-pricing-blueprint__grid { grid-template-columns: 1fr; } .hz-pricing-blueprint__card { min-height: 0; padding: var(--hz-pricing-card-padding-mobile); } }
