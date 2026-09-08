@@ -1,0 +1,47 @@
+/* App-local semantic bridge for the extracted Hetzner-inspired token files. */
+:root {
+  --hz-color-brand: #d40c2e; --hz-color-brand-hover: #e21236; --hz-color-brand-disabled: #f88295; --hz-color-brand-subtle: #fdf3f4;
+  --hz-color-text: #383838; --hz-color-text-secondary: #5e5e5e; --hz-color-text-muted: #8a8a8a; --hz-color-text-inverse: #fff;
+  --hz-color-canvas: #f5f5f5; --hz-color-surface: #fff; --hz-color-surface-subtle: #fafafa; --hz-color-border: #e8e8e8; --hz-color-border-strong: #dbdbdb;
+  --hz-color-success: #1dd363; --hz-color-success-text: #17a64e;
+  --hz-font-body: Inter, sans-serif; --hz-font-control: Montserrat, Inter, sans-serif;
+  --hz-font-size-xs: 12px; --hz-font-size-sm: 14px; --hz-font-size-md: 14px; --hz-font-size-base: 16px; --hz-font-size-lg: 20px; --hz-font-size-xl: 28px; --hz-font-weight-medium: 500; --hz-font-weight-semibold: 600;
+  --hz-line-height-tight: 1; --hz-line-height-compact: 1.25; --hz-line-height-default: 1.5; --hz-letter-spacing-ui: -0.24px; --hz-letter-spacing-label: 0.16em; --hz-letter-spacing-status: 0.12em; --hz-letter-spacing-heading: -0.03em;
+  --hz-space-3: 8px; --hz-space-4: 10px; --hz-space-7: 16px; --hz-space-8: 20px; --hz-space-9: 24px; --hz-space-11: 32px; --hz-space-section: 96px;
+  --hz-space-hero-top: 88px; --hz-space-hero-bottom: 104px; --hz-space-hero-grid: 48px; --hz-space-mobile-section: 64px; --hz-space-action-gap: 10px; --hz-space-mobile-hero-top: 56px;
+  --hz-radius-card: 6px; --hz-radius-pill: 9999px; --hz-shadow-card: 0 1px 3px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%); --hz-shadow-none: none;
+  --hz-color-warning: #b86a00; --hz-color-warning-bg: #fff8e8; --hz-color-warning-border: #f2c94c; --hz-color-danger: #b4233c; --hz-color-danger-bg: #fff1f3; --hz-color-success-bg: #effbf3;
+  --hz-border-default: 1px solid var(--hz-color-border); --hz-border-control: 1px solid var(--hz-color-border-strong);
+  --hz-content-max: 1280px; --hz-page-gutter: 25px; --hz-control-height: 44px; --hz-control-compact: 32px; --hz-control-floating: 48px; --hz-hero-text-max: 680px; --hz-hero-copy-max: 620px; --hz-hero-side-min: 320px; --hz-hero-side-max: 420px;
+  --hz-card-padding: 24px; --hz-pricing-card-min-height: 560px; --hz-pricing-card-gap: 20px; --hz-pricing-card-padding-mobile: 24px;
+  --hz-hero-letter-spacing: -0.065em; --hz-copy-line-height: 1.55; --hz-hero-title-size: clamp(2.75rem, 6vw, 5.25rem); --hz-pricing-feature-gap: 12px; --hz-pricing-feature-margin: 28px; --hz-featured-offset: -8px; --hz-recommended-top: 20px; --hz-recommended-right: 20px;
+}
+
+/* Neuraldocx semantic names. Keep these aliases in one place so feature
+ * components can use the console language without depending on source tokens. */
+:root {
+  --ndx-color-brand-primary: var(--hz-color-brand);
+  --ndx-color-brand-hover: var(--hz-color-brand-hover);
+  --ndx-color-brand-subtle: var(--hz-color-brand-subtle);
+  --ndx-color-text-primary: var(--hz-color-text);
+  --ndx-color-text-secondary: var(--hz-color-text-secondary);
+  --ndx-color-text-muted: var(--hz-color-text-muted);
+  --ndx-color-text-inverse: var(--hz-color-text-inverse);
+  --ndx-color-surface-canvas: var(--hz-color-canvas);
+  --ndx-color-surface-card: var(--hz-color-surface);
+  --ndx-color-surface-subtle: var(--hz-color-surface-subtle);
+  --ndx-color-border-default: var(--hz-color-border);
+  --ndx-color-border-strong: var(--hz-color-border-strong);
+  --ndx-space-page-gutter: var(--hz-page-gutter);
+  --ndx-space-grid-gap: var(--hz-pricing-card-gap);
+  --ndx-space-control-gap: var(--hz-space-action-gap);
+  --ndx-radius-card: var(--hz-radius-card);
+  --ndx-radius-pill: var(--hz-radius-pill);
+  --ndx-shadow-raised: var(--hz-shadow-card);
+  --ndx-layout-container-max: var(--hz-content-max);
+  --ndx-layout-header-height: 64px;
+  --ndx-layout-control-height: var(--hz-control-compact);
+  --ndx-transition-standard: var(--cx-motion-interactive);
+  --ndx-z-header: 30;
+  --ndx-z-dropdown: 40;
+}

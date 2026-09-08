@@ -1552,8 +1552,9 @@ export default function ProjectPage() {
 
   return (
     <AppShell title={projectQuery.data?.name ?? 'Project'}>
-      <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+      <div className="hz-project-page">
+      <div className="hz-project-summary mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="hz-project-panel rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold text-slate-600">
                 System workspace
@@ -1609,7 +1610,7 @@ export default function ProjectPage() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+        <div className="hz-project-panel hz-project-queue rounded-2xl border border-slate-200 bg-white p-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
               Work queue
           </p>
@@ -1650,7 +1651,7 @@ export default function ProjectPage() {
           </div>
         </div>
       </div>
-      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+      <div className="hz-project-workspace grid gap-8 lg:grid-cols-[280px_1fr]">
         <div ref={sidebarRef}>
           <WizardSidebar
             completionRate={completionRate}
@@ -1664,7 +1665,7 @@ export default function ProjectPage() {
           />
         </div>
 
-        <section ref={wizardSectionRef} className="space-y-6">
+        <section ref={wizardSectionRef} className="hz-project-content space-y-6">
           <div className="flex justify-end lg:hidden">
             <button
               type="button"
@@ -1683,7 +1684,7 @@ export default function ProjectPage() {
               Back to sections
             </button>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="hz-project-panel rounded-2xl border border-slate-200 bg-white p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">
@@ -3049,6 +3050,7 @@ export default function ProjectPage() {
         deleteTemplate={(id) => deleteTemplateMutation.mutate(id)}
         userId={user?.id}
       />
+      </div>
       <DocumentPreviewModal
         isOpen={Boolean(previewDoc)}
         title={

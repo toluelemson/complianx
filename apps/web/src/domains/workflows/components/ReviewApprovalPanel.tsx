@@ -35,15 +35,15 @@ interface ReviewApprovalPanelProps {
 }
 
 const PROJECT_STATUS_STYLES: Record<string, string> = {
-  DRAFT: 'border-amber-200 bg-amber-50 text-amber-900',
-  READY_FOR_REVIEW: 'border-indigo-200 bg-indigo-50 text-indigo-900',
-  IN_REVIEW: 'border-sky-200 bg-sky-50 text-sky-900',
-  RESUBMITTED: 'border-cyan-200 bg-cyan-50 text-cyan-900',
-  APPROVED: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-  ARCHIVED: 'border-slate-300 bg-slate-100 text-slate-800',
-  CHANGES_REQUESTED: 'border-rose-200 bg-rose-50 text-rose-900',
-  REJECTED: 'border-rose-300 bg-rose-100 text-rose-900',
-  CANCELLED: 'border-slate-300 bg-slate-100 text-slate-800',
+  DRAFT: 'hz-review-status hz-review-status--warning',
+  READY_FOR_REVIEW: 'hz-review-status hz-review-status--brand',
+  IN_REVIEW: 'hz-review-status hz-review-status--brand',
+  RESUBMITTED: 'hz-review-status hz-review-status--brand',
+  APPROVED: 'hz-review-status hz-review-status--success',
+  ARCHIVED: 'hz-review-status hz-review-status--neutral',
+  CHANGES_REQUESTED: 'hz-review-status hz-review-status--danger',
+  REJECTED: 'hz-review-status hz-review-status--danger',
+  CANCELLED: 'hz-review-status hz-review-status--neutral',
 };
 
 export function ReviewApprovalPanel({
@@ -87,22 +87,22 @@ export function ReviewApprovalPanel({
     !canRequestChanges || projectStatusLabel !== 'IN_REVIEW';
   const projectStatusClass =
     PROJECT_STATUS_STYLES[projectStatusLabel] ??
-    'border-slate-200 bg-slate-100 text-slate-800';
+    'hz-review-status hz-review-status--neutral';
 
   return (
-    <Card className="overflow-hidden shadow-[0_20px_60px_-40px_rgba(15,23,42,0.45)]">
-      <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_38%),linear-gradient(135deg,_#f8fafc_0%,_#eef2ff_45%,_#fff7ed_100%)] px-5 py-5">
+    <Card className="hz-review-panel overflow-hidden">
+      <div className="hz-review-panel__header">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="font-serif text-xs uppercase tracking-[0.28em] text-slate-500">
+            <p className="hz-review-panel__eyebrow">
               Governance checkpoint
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
-              <h3 className="font-serif text-2xl font-semibold tracking-tight text-slate-950">
+              <h3 className="hz-review-panel__title">
                 Review and approval flow
               </h3>
               <Badge
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${projectStatusClass}`}
+                className={projectStatusClass}
               >
                 {projectStatusDisplay ?? projectStatusLabel}
               </Badge>
@@ -131,7 +131,7 @@ export function ReviewApprovalPanel({
         </div>
       </div>
 
-      <div className="grid gap-5 px-5 py-5 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="hz-review-panel__body grid gap-5 px-5 py-5 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -150,7 +150,7 @@ export function ReviewApprovalPanel({
           </div>
         </div>
 
-        <Card className="space-y-4 rounded-[24px] bg-slate-50/80 p-4 shadow-none">
+        <Card className="hz-review-panel__owner space-y-4 rounded-[24px] bg-slate-50/80 p-4 shadow-none">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
               Assign owners
@@ -215,7 +215,7 @@ export function ReviewApprovalPanel({
             />
           </div>
 
-          <Card className="rounded-2xl bg-white p-3 shadow-none">
+          <Card className="hz-review-panel__gate rounded-2xl bg-white p-3 shadow-none">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
               Release gate
             </p>
@@ -232,7 +232,7 @@ export function ReviewApprovalPanel({
         </Card>
       </div>
 
-      <div className="border-t border-slate-200 bg-slate-950 px-5 py-4">
+      <div className="hz-review-panel__footer border-t border-slate-200 px-5 py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-slate-300">
             Use the workflow below to move the project forward or send it back
@@ -242,7 +242,7 @@ export function ReviewApprovalPanel({
             <Button
               type="button"
               variant="secondary"
-              className="h-auto flex-1 bg-white px-4 py-3 text-slate-950 hover:bg-slate-100 md:flex-none"
+              className="h-auto flex-1 md:flex-none"
               onClick={onSendForReview}
               disabled={reviewBlocked}
             >
@@ -250,7 +250,8 @@ export function ReviewApprovalPanel({
             </Button>
             <Button
               type="button"
-              className="h-auto flex-1 bg-emerald-500 px-4 py-3 text-white hover:bg-emerald-400 md:flex-none"
+              variant="primary"
+              className="h-auto flex-1 md:flex-none"
               onClick={onApprove}
               disabled={approveBlocked}
             >
@@ -259,7 +260,7 @@ export function ReviewApprovalPanel({
             <Button
               type="button"
               variant="outline"
-              className="h-auto flex-1 border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 md:flex-none"
+              className="h-auto flex-1 md:flex-none"
               onClick={onRequestChanges}
               disabled={requestChangesBlocked}
             >
@@ -268,12 +269,12 @@ export function ReviewApprovalPanel({
           </div>
         </div>
         {!canSendForReview && (
-          <p className="mt-3 text-[11px] font-semibold text-slate-400">
+          <p className="hz-review-panel__paywall mt-3 text-[11px] font-semibold text-slate-400">
             Reviews are available on paid plans.&nbsp;
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event('paywall'))}
-              className="text-sky-300 underline decoration-sky-500/40 underline-offset-2 hover:text-sky-200"
+              className="text-red-700 underline underline-offset-2 hover:text-red-800"
             >
               See plans
             </button>
@@ -290,7 +291,7 @@ function TrackableStepRow({ step }: { step: TrackableStepSummary }) {
 
   return (
     <Card
-      className={`rounded-2xl border px-4 py-3 transition ${
+      className={`hz-review-panel__step rounded-2xl border px-4 py-3 transition ${
         isReady
           ? 'border-emerald-100 bg-emerald-50/70'
           : 'border-amber-200 bg-white'
@@ -343,12 +344,12 @@ function StatCard({
 
   return (
     <Card
-      className={`min-w-[9rem] rounded-2xl px-4 py-3 backdrop-blur shadow-none ${toneClass}`}
+      className={`hz-review-panel__stat min-w-[9rem] rounded-2xl px-4 py-3 backdrop-blur shadow-none ${toneClass}`}
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
         {label}
       </p>
-      <p className="mt-1 font-serif text-2xl font-semibold tracking-tight">
+      <p className="hz-review-panel__stat-value mt-1 font-serif text-2xl font-semibold tracking-tight">
         {value}
       </p>
     </Card>

@@ -1,0 +1,26 @@
+/* Dashboard layout adaptation using the shared --hz semantic system. */
+.hz-dashboard { display: grid; gap: var(--hz-space-11); min-width: 0; color: var(--hz-color-text); }
+.hz-dashboard__header { padding-bottom: var(--hz-space-8); border-bottom: var(--hz-border-default); }
+.hz-dashboard__quick-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--hz-pricing-card-gap); }
+.hz-dashboard__quick-actions > *,
+.hz-dashboard__metric-card,
+.hz-dashboard__assigned,
+.hz-dashboard__table { border: var(--hz-border-default); border-radius: var(--hz-radius-card); background: var(--hz-color-surface); box-shadow: var(--hz-shadow-card); }
+.hz-dashboard__quick-actions > * { min-width: 0; padding: var(--hz-space-8); color: var(--hz-color-text); text-decoration: none; }
+.hz-dashboard__quick-actions > *:hover { border-color: var(--hz-color-brand); color: var(--hz-color-brand); }
+.hz-dashboard__metric-card { min-width: 0; }
+.hz-dashboard__assigned,
+.hz-dashboard__table { overflow: hidden; }
+.hz-dashboard__assigned a:hover { border-color: var(--hz-color-brand); }
+.hz-dashboard__table thead { background: var(--hz-color-surface-subtle); color: var(--hz-color-text-muted); }
+.hz-dashboard__table tbody tr { border-color: var(--hz-color-border); }
+.hz-dashboard__table tbody tr:hover { background: var(--hz-color-surface-subtle); }
+.hz-dashboard .text-slate-900,
+.hz-dashboard .text-slate-800,
+.hz-dashboard .text-slate-700 { color: var(--hz-color-text) !important; }
+.hz-dashboard .text-slate-600,
+.hz-dashboard .text-slate-500 { color: var(--hz-color-text-secondary) !important; }
+.hz-dashboard .text-slate-400 { color: var(--hz-color-text-muted) !important; }
+.hz-dashboard .text-sky-600,
+.hz-dashboard .hover\:text-sky-600:hover { color: var(--hz-color-brand) !important; }
+@media (max-width: 992px) { .hz-dashboard__quick-actions { grid-template-columns: 1fr; } }

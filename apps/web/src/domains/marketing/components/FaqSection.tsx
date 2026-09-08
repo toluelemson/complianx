@@ -87,13 +87,13 @@ export function FaqSection() {
   return (
     <section
       data-nav-theme="light"
-      className="relative overflow-hidden bg-[#f6f7fb] px-5 py-28 sm:px-8 lg:px-10"
+      className="relative overflow-hidden bg-[var(--cx-canvas)] px-5 py-28 sm:px-8 lg:px-10"
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.14),_transparent_34%)]" />
       <div className="mx-auto max-w-3xl">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.14)]">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-600">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#f3c4cb] bg-[var(--cx-brand-subtle)] px-5 py-3 text-sm font-semibold text-[var(--cx-brand)] shadow-[var(--cx-shadow-sm)]">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#d40c2e]/10 text-[var(--cx-brand)]">
               <CircleHelp className="h-3.5 w-3.5" />
             </span>
             <span>Common questions</span>
@@ -158,7 +158,7 @@ export function FaqSection() {
           <button
             type="button"
             onClick={() => setShowAll((value) => !value)}
-            className="inline-flex items-center justify-center rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black"
+            className="inline-flex items-center justify-center rounded-[var(--cx-radius)] bg-[var(--cx-brand)] px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[var(--cx-brand-hover)]"
           >
             {showAll ? 'Show fewer answers' : 'Read all Answers'}
           </button>

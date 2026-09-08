@@ -1,0 +1,20 @@
+/* Token-consistent homepage and pricing adaptation. */
+.hz-marketing-container { width: min(calc(100% - (var(--hz-page-gutter) * 2)), var(--hz-content-max)); min-width: 0; margin-inline: auto; }
+.hz-marketing-section { padding: var(--hz-space-section) 0; }
+.hz-marketing-hero { width: 100%; padding: var(--hz-space-hero-top) 0 var(--hz-space-hero-bottom); background: var(--hz-color-surface); }
+.hz-marketing-hero__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(var(--hz-hero-side-min), var(--hz-hero-side-max)); gap: var(--hz-space-hero-grid); align-items: center; }
+.hz-marketing-hero h1 { max-width: var(--hz-hero-text-max); color: var(--hz-color-text); font-size: var(--hz-hero-title-size); line-height: var(--hz-line-height-tight); letter-spacing: var(--hz-hero-letter-spacing); }
+.hz-marketing-hero p { max-width: var(--hz-hero-copy-max); color: var(--hz-color-text-secondary); }
+.hz-marketing-actions { display: flex; flex-wrap: wrap; gap: var(--hz-space-action-gap); margin-top: var(--hz-space-11); }
+.hz-marketing-card { border: var(--hz-border-default); border-radius: var(--hz-radius-card); background: var(--hz-color-surface); box-shadow: var(--hz-shadow-card); }
+.hz-pricing-blueprint { width: 100%; overflow-x: clip; padding: var(--hz-space-section) 0; background: var(--hz-color-canvas); color: var(--hz-color-text); }
+.hz-pricing-blueprint__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--hz-pricing-card-gap); align-items: stretch; }
+.hz-pricing-blueprint__card { display: flex; min-width: 0; min-height: var(--hz-pricing-card-min-height); flex-direction: column; padding: var(--hz-card-padding); border: var(--hz-border-default); border-radius: var(--hz-radius-card); background: var(--hz-color-surface); box-shadow: var(--hz-shadow-card); }
+.hz-pricing-price { min-width: 0; overflow-wrap: anywhere; }
+.hz-pricing-blueprint__card--featured { border-color: var(--hz-color-brand); box-shadow: 0 0 0 1px var(--hz-color-brand), var(--hz-shadow-card); transform: translateY(var(--hz-featured-offset)); }
+.hz-pricing-recommended { position: absolute; top: var(--hz-recommended-top); right: var(--hz-recommended-right); }
+.hz-pricing-blueprint__features { display: grid; gap: var(--hz-pricing-feature-gap); margin: var(--hz-pricing-feature-margin) 0; padding: 0; list-style: none; }
+.hz-pricing-blueprint__features li { color: var(--hz-color-text-secondary); font-size: var(--hz-font-size-md); }
+.hz-pricing-blueprint__features li::before { margin-right: var(--hz-space-3); color: var(--hz-color-success-text); content: '✓'; font-weight: var(--hz-font-weight-semibold); }
+@media (max-width: 992px) { .hz-marketing-hero__grid { grid-template-columns: 1fr; } .hz-pricing-blueprint__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hz-pricing-blueprint__card--featured { transform: none; } }
+@media (max-width: 576px) { .hz-marketing-container { width: min(calc(100% - 32px), var(--hz-content-max)); } .hz-marketing-section, .hz-pricing-blueprint { padding: var(--hz-space-mobile-section) 0; } .hz-marketing-hero { padding: var(--hz-space-mobile-hero-top) 0 var(--hz-space-mobile-section); } .hz-pricing-blueprint__grid { grid-template-columns: 1fr; } .hz-pricing-blueprint__card { min-height: 0; padding: var(--hz-pricing-card-padding-mobile); } }

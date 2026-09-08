@@ -147,81 +147,73 @@ export function PricingSection() {
     <section
       id="pricing"
       ref={sectionRef}
-      className="relative overflow-hidden bg-[#0b0f15] px-5 pb-24 pt-20 sm:px-8 lg:px-10 lg:pt-24"
+      className="hz-pricing-blueprint relative overflow-hidden px-5 pb-24 pt-20 sm:px-8 lg:px-10 lg:pt-24"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.12),_transparent_32%)]" />
-      <div className="mx-auto max-w-7xl">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,_rgba(212,12,46,0.08),_transparent_32%)]" />
+      <div className="hz-marketing-container">
         <div
           className={`text-center transition-all duration-700 ${
             inView ? 'animate-enter-up' : 'translate-y-6 opacity-0'
           }`}
         >
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-slate-200">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/15 text-amber-300">
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#f3c4cb] bg-[#fdf3f4] px-5 py-3 text-sm font-semibold text-[#d40c2e]">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#d40c2e]/10 text-[#d40c2e]">
               <BadgeEuro className="h-3.5 w-3.5" />
             </span>
             <span>Engagement models</span>
           </div>
-          <h2 className="mt-5 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+          <h2 className="mt-5 text-4xl font-semibold tracking-tight text-[#383838] sm:text-5xl">
             Choose the level of documentation depth your team actually needs
           </h2>
-          <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-slate-300">
+          <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-[#5e5e5e]">
             Start with a scoped delivery for one system, move into a deeper
             review pack, or run a full documentation workstream for regulated
             programs.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="hz-pricing-blueprint__grid mt-10">
           {PRICING_PLANS.map((plan, index) => (
             <Card
               key={plan.name}
-              className={`h-full rounded-[2rem] shadow-none transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] ${
+              className={`hz-pricing-blueprint__card h-full shadow-none transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] ${
                 plan.featured
-                  ? 'animate-float-soft border-sky-300/30 text-white'
+                  ? 'hz-pricing-blueprint__card--featured border-[#d40c2e] text-[#383838]'
                   : plan.comingSoon
-                    ? 'border-white/12 bg-white/[0.02] text-white'
-                    : 'border-white/10 bg-white/[0.03] text-white'
+                    ? 'border-[var(--cx-border)] bg-[var(--cx-surface)] text-[var(--cx-text)]'
+                    : 'border-[var(--cx-border)] bg-[var(--cx-surface)] text-[var(--cx-text)]'
               } ${inView ? 'animate-enter-scale' : 'translate-y-6 opacity-0'}`}
-              style={{
-                ...(inView ? { animationDelay: `${0.1 + index * 0.08}s` } : {}),
-                ...(plan.featured
-                  ? {
-                      background:
-                        'linear-gradient(180deg, rgba(10,37,91,0.98) 0%, rgba(8,22,52,0.98) 100%)',
-                    }
-                  : {}),
-              }}
+              style={inView ? { animationDelay: `${0.1 + index * 0.08}s` } : undefined}
             >
               <CardContent className="flex h-full flex-col p-7">
                 <div>
                   <div className="flex items-start justify-between gap-4">
                     <h3 className="text-2xl font-semibold">{plan.name}</h3>
                     {plan.featured ? (
-                      <div className="inline-flex shrink-0 items-center rounded-full border border-[#6366F1]/35 bg-[#2D2E8F] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white">
+                      <div className="hz-pricing-recommended inline-flex shrink-0 items-center rounded-full border border-[#d40c2e]/20 bg-[#fdf3f4] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#d40c2e]">
                         Most common
                       </div>
                     ) : plan.comingSoon ? (
-                      <div className="inline-flex shrink-0 items-center rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-200">
+                      <div className="inline-flex shrink-0 items-center rounded-full border border-[#dbdbdb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5e5e5e]">
                         Coming Soon
                       </div>
                     ) : null}
                   </div>
                   <p
                     className={`mt-2 text-sm ${
-                      plan.featured ? 'text-blue-100/85' : 'text-slate-400'
+                      'text-[#5e5e5e]'
                     }`}
                   >
                     {plan.tagline}
                   </p>
 
                   <div className="mt-6">
-                    <div className="text-5xl font-semibold tracking-tight">
+                    <div className="hz-pricing-price text-5xl font-semibold tracking-tight">
                       {plan.price}
                     </div>
                     <p
                       className={`mt-2 text-sm ${
-                        plan.featured ? 'text-blue-100/85' : 'text-slate-400'
+                        'text-[#5e5e5e]'
                       }`}
                     >
                       {plan.suffix}
@@ -229,7 +221,7 @@ export function PricingSection() {
                     {plan.billing ? (
                       <p
                         className={`mt-1 text-sm ${
-                          plan.featured ? 'text-blue-200/70' : 'text-slate-500'
+                          'text-[#8a8a8a]'
                         }`}
                       >
                         {plan.billing}
@@ -241,7 +233,7 @@ export function PricingSection() {
                     <Button
                       size="lg"
                       disabled
-                      className="mt-6 w-full cursor-not-allowed border border-white/12 bg-white/[0.06] text-slate-200 opacity-100"
+                      className="mt-6 w-full cursor-not-allowed border border-[#dbdbdb] bg-[#fafafa] text-[#8a8a8a] opacity-100"
                     >
                       {plan.cta}
                     </Button>
@@ -250,9 +242,7 @@ export function PricingSection() {
                       asChild
                       size="lg"
                       className={`mt-6 w-full transition duration-300 hover:scale-[1.01] ${
-                        plan.featured
-                          ? 'bg-white text-[#07296A] hover:bg-blue-50'
-                          : 'bg-slate-200 text-slate-950 hover:bg-white'
+                        'bg-[#d40c2e] text-white hover:bg-[#e21236]'
                       }`}
                     >
                       {plan.external ? (
@@ -315,16 +305,12 @@ export function PricingSection() {
                           >
                             <Check
                               className={`mt-0.5 h-4 w-4 shrink-0 ${
-                                plan.featured
-                                  ? 'text-cyan-200'
-                                  : 'text-slate-300'
+                                'text-[#17a64e]'
                               }`}
                             />
                             <span
                               className={`text-sm leading-6 ${
-                                plan.featured
-                                  ? 'text-blue-50'
-                                  : 'text-slate-300'
+                                'text-[#5e5e5e]'
                               }`}
                             >
                               {item}

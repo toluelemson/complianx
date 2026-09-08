@@ -9,21 +9,20 @@ export function CTASection() {
   return (
     <section
       data-nav-theme="light"
-      className="bg-[#f6f7fb] px-5 pb-24 text-slate-950 sm:px-8 lg:px-10"
+      className="bg-[var(--cx-canvas)] px-5 pb-24 text-[var(--cx-text)] sm:px-8 lg:px-10"
     >
       <div className="mx-auto max-w-7xl">
-        <Card className="overflow-hidden rounded-[2rem] border-[#0f172a] bg-[#0f172a] text-white shadow-[0_30px_80px_-45px_rgba(15,23,42,0.6)]">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,_rgba(125,211,252,0.16),_transparent_34%)]" />
+        <Card className="overflow-hidden rounded-[var(--cx-radius)] border-[var(--cx-border)] bg-[var(--cx-surface)] text-[var(--cx-text)] shadow-[var(--cx-shadow-sm)]">
           <CardContent className="flex flex-col gap-8 p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-300/75">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--cx-text-muted)]">
                 Service-first delivery
               </p>
-              <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+              <h2 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--cx-text)] sm:text-5xl">
                 Start the documentation workstream before the audit pressure
                 hits
               </h2>
-              <p className="mt-4 text-base leading-8 text-slate-300">
+              <p className="mt-4 text-base leading-8 text-[var(--cx-text-secondary)]">
                 Submit the system, align the scope, and move into a structured
                 review cycle with first delivery in as little as 48 hours.
               </p>
@@ -32,7 +31,7 @@ export function CTASection() {
               <Button
                 asChild
                 size="lg"
-                className="bg-white text-black hover:bg-[#F3F6FF]"
+                className="bg-[var(--cx-brand)] text-white hover:bg-[var(--cx-brand-hover)]"
               >
                 <Link
                   to={buildSubmitSystemHref({ source: 'cta_section' })}
@@ -50,7 +49,7 @@ export function CTASection() {
                 asChild
                 variant="outline"
                 size="lg"
-                className="border-white/15 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white"
+                className="border-[var(--cx-border-strong)] bg-[var(--cx-surface)] text-[var(--cx-text)] hover:border-[var(--cx-brand)] hover:bg-[var(--cx-surface-subtle)] hover:text-[var(--cx-brand)]"
               >
                 <a
                   href="https://calendly.com/neuraldocx"

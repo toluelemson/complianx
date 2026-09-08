@@ -125,6 +125,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell title="AI system portfolio">
+      <div className="hz-console-content hz-dashboard">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500">
@@ -137,22 +138,22 @@ export default function DashboardPage() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setModalOpen(true)}
-            className="rounded-lg bg-[#d40c2e] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e21236]"
+            className="hz-button hz-button--primary"
           >
             Register AI system
           </button>
           <Link
             to="/company"
-            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="hz-button hz-button--outline"
           >
             Manage workspace
           </Link>
         </div>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="hz-dashboard__quick-actions mt-4 grid gap-3 sm:grid-cols-3">
         <button
           onClick={() => setModalOpen(true)}
-          className="border border-dashed border-slate-300 bg-white p-4 text-left text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
+          className="hz-console-empty-card text-left text-sm font-semibold"
         >
           + Create a new AI system
           <p className="mt-1 text-xs font-normal text-slate-500">
@@ -178,8 +179,8 @@ export default function DashboardPage() {
           </p>
         </Link>
       </div>
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
-        <div className="border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="hz-dashboard__metrics mt-8 grid gap-4 md:grid-cols-2">
+        <div className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold text-slate-700">
             Portfolio readiness
           </p>
@@ -196,7 +197,7 @@ export default function DashboardPage() {
             />
           </div>
         </div>
-        <div className="border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700">
               Recent activity
@@ -235,7 +236,7 @@ export default function DashboardPage() {
         </div>
       </div>
       {assignedProjects.length ? (
-        <div className="mt-6 rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
+        <div className="hz-dashboard__assigned mt-6 rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700">
               Assigned reviews
@@ -267,7 +268,7 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : null}
-      <div className="mt-8 hidden overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/92 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)] md:block">
+      <div className="hz-dashboard__table mt-8 hidden overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/92 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)] md:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
@@ -440,6 +441,7 @@ export default function DashboardPage() {
           }
         }}
       />
+      </div>
     </AppShell>
   );
 }
