@@ -391,29 +391,24 @@ function QuestionField({
 }) {
   return (
     <div
-      className={`border p-5 ${
+      className={`rounded-lg border p-4 sm:p-5 ${
         invalid
           ? 'border-rose-200 bg-rose-50/60'
-          : 'border-slate-200 bg-slate-50/70'
+          : 'border-slate-200 bg-white'
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-slate-900">
               {question.label}
             </h3>
             {invalid ? (
-                <Badge
-                variant="outline"
-                className="border-slate-200 bg-white text-slate-500"
-              >
-                Required
-              </Badge>
+              <span className="text-xs font-semibold text-rose-600">Required</span>
             ) : null}
           </div>
           {question.helperText ? (
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+            <p className="max-w-3xl text-xs leading-5 text-slate-500 sm:text-sm">
               {question.helperText}
             </p>
           ) : null}
@@ -424,13 +419,13 @@ function QuestionField({
           ) : null}
         </div>
         {question.legalReferenceIds?.length ? (
-          <div className="border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <div className="shrink-0 text-xs font-medium text-slate-400">
             {question.legalReferenceIds.join(', ')}
           </div>
         ) : null}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-3">
         {question.type === 'boolean' ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {[true, false].map((option) => {
@@ -440,7 +435,7 @@ function QuestionField({
                   key={String(option)}
                   type="button"
                   onClick={() => onChange(option)}
-                  className={`border px-4 py-4 text-left transition ${
+                    className={`rounded-md border px-3 py-3 text-left transition ${
                     active
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -454,7 +449,7 @@ function QuestionField({
             })}
           </div>
         ) : question.type === 'single' && question.options ? (
-          <div className="space-y-3">
+            <div className="space-y-2">
             {question.options.map((option) => {
               const active = value === option.value;
               return (
@@ -462,7 +457,7 @@ function QuestionField({
                   key={option.key}
                   type="button"
                   onClick={() => onChange(option.value)}
-                  className={`w-full rounded-[1.25rem] border px-4 py-4 text-left transition ${
+                  className={`w-full rounded-md border px-3 py-3 text-left transition ${
                     active
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -471,7 +466,7 @@ function QuestionField({
                   <p className="text-sm font-semibold">{option.label}</p>
                   {option.helperText ? (
                     <p
-                      className={`mt-1 text-sm ${active ? 'text-slate-300' : 'text-slate-500'}`}
+                        className={`mt-1 text-xs leading-5 ${active ? 'text-slate-300' : 'text-slate-500'}`}
                     >
                       {option.helperText}
                     </p>
@@ -481,7 +476,7 @@ function QuestionField({
             })}
           </div>
         ) : question.type === 'multi' && question.options ? (
-          <div className="space-y-3">
+            <div className="space-y-2">
             {question.options.map((option) => {
               const selected = Array.isArray(value)
                 ? value.includes(option.value)
@@ -489,7 +484,7 @@ function QuestionField({
               return (
                 <label
                   key={option.key}
-                  className={`flex cursor-pointer items-start gap-3 rounded-[1.25rem] border px-4 py-4 transition ${
+                  className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 transition ${
                     selected
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -514,7 +509,7 @@ function QuestionField({
                     <p className="text-sm font-semibold">{option.label}</p>
                     {option.helperText ? (
                       <p
-                        className={`mt-1 text-sm ${selected ? 'text-slate-300' : 'text-slate-500'}`}
+                        className={`mt-1 text-xs leading-5 ${selected ? 'text-slate-300' : 'text-slate-500'}`}
                       >
                         {option.helperText}
                       </p>
