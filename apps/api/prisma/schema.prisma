@@ -14,96 +14,110 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  emailVerified Boolean  @default(false)
-  emailVerificationToken String? @unique
+  id                              String               @id @default(uuid())
+  email                           String               @unique
+  passwordHash                    String
+  emailVerified                   Boolean              @default(false)
+  emailVerificationToken          String?              @unique
   emailVerificationTokenExpiresAt DateTime?
-  passwordResetToken String? @unique
-  passwordResetTokenExpiresAt DateTime?
-  firstName    String?
-  lastName     String?
-  jobTitle     String?
-  phone        String?
-  timezone     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  role         Role     @default(USER)
-  companyId    String?
-  company      Company? @relation(fields: [companyId], references: [id])
-  defaultCompanyId String? // keep for backward compatibility; will be deprecated
-  companies    UserCompany[]
-  projects     Project[]
-  editedSections Section[] @relation("SectionLastEditor")
-  sectionComments SectionComment[]
-  sectionTemplates SectionTemplate[]
-  reminders        Reminder[]
-  projectStatusEvents ProjectStatusEvent[]
-  sectionStatusEvents SectionStatusEvent[]
-  suggestionFeedback SuggestionFeedback[]
-  invitationsSent Invitation[] @relation("UserInvitations")
-  uploadedArtifacts SectionArtifact[] @relation("ArtifactUploader")
-  reviewedArtifacts SectionArtifact[] @relation("ArtifactReviewer")
-  reviewerForProjects Project[] @relation("ProjectReviewer")
-  approverForProjects Project[] @relation("ProjectApprover")
-  notifications Notification[]
+  passwordResetToken              String?              @unique
+  passwordResetTokenExpiresAt     DateTime?
+  firstName                       String?
+  lastName                        String?
+  jobTitle                        String?
+  phone                           String?
+  timezone                        String?
+  createdAt                       DateTime             @default(now())
+  updatedAt                       DateTime             @updatedAt
+  role                            Role                 @default(USER)
+  companyId                       String?
+  company                         Company?             @relation(fields: [companyId], references: [id])
+  defaultCompanyId                String? // keep for backward compatibility; will be deprecated
+  companies                       UserCompany[]
+  projects                        Project[]
+  editedSections                  Section[]            @relation("SectionLastEditor")
+  sectionComments                 SectionComment[]
+  sectionTemplates                SectionTemplate[]
+  reminders                       Reminder[]
+  projectStatusEvents             ProjectStatusEvent[]
+  sectionStatusEvents             SectionStatusEvent[]
+  suggestionFeedback              SuggestionFeedback[]
+  invitationsSent                 Invitation[]         @relation("UserInvitations")
+  uploadedArtifacts               SectionArtifact[]    @relation("ArtifactUploader")
+  reviewedArtifacts               SectionArtifact[]    @relation("ArtifactReviewer")
+  reviewerForProjects             Project[]            @relation("ProjectReviewer")
+  approverForProjects             Project[]            @relation("ProjectApprover")
+  notifications                   Notification[]
+  assessmentsCreated              Assessment[]         @relation("AssessmentCreator")
+  ownedObligations                AiSystemObligation[] @relation("ObligationOwner")
+  ownedComplianceActions          ComplianceAction[]   @relation("ActionOwner")
+  evidenceLinks                   ObligationEvidence[] @relation("EvidenceLinker")
+  generatedReports                ReadinessReport[]     @relation("ReportGenerator")
 }
 
 model Project {
-  id         String    @id @default(uuid())
-  name       String
-  industry   String?
-  riskLevel  String?
-  status     ProjectStatus @default(DRAFT)
-  workflowStatus ProjectWorkflowStatus @default(DRAFT)
-  workflowVersion Int @default(0)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  ownerId    String
-  owner      User      @relation(fields: [ownerId], references: [id])
-  companyId  String?
-  company    Company?  @relation(fields: [companyId], references: [id])
-  reviewerId String?
-  reviewer   User?     @relation("ProjectReviewer", fields: [reviewerId], references: [id])
-  approverId String?
-  approver   User?     @relation("ProjectApprover", fields: [approverId], references: [id])
-  sections   Section[]
-  documents  Document[]
-  artifacts  SectionArtifact[]
-  reminders  Reminder[]
-  statusEvents ProjectStatusEvent[]
-  suggestionFeedback SuggestionFeedback[]
-  metrics    TrustMetric[]
+  id                   String                @id @default(uuid())
+  name                 String
+  industry             String?
+  riskLevel            String?
+  description          String?
+  intendedUse          String?
+  deploymentGeography  String?
+  operatorRoles        Json?
+  sourcePublicResultId String?
+  status               ProjectStatus         @default(DRAFT)
+  workflowStatus       ProjectWorkflowStatus @default(DRAFT)
+  workflowVersion      Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  ownerId              String
+  owner                User                  @relation(fields: [ownerId], references: [id])
+  companyId            String?
+  company              Company?              @relation(fields: [companyId], references: [id])
+  reviewerId           String?
+  reviewer             User?                 @relation("ProjectReviewer", fields: [reviewerId], references: [id])
+  approverId           String?
+  approver             User?                 @relation("ProjectApprover", fields: [approverId], references: [id])
+  sections             Section[]
+  documents            Document[]
+  artifacts            SectionArtifact[]
+  reminders            Reminder[]
+  statusEvents         ProjectStatusEvent[]
+  suggestionFeedback   SuggestionFeedback[]
+  metrics              TrustMetric[]
+  assessments          Assessment[]
+  obligations          AiSystemObligation[]
+  readinessReports     ReadinessReport[]
 }
 
 model Section {
-  id        String   @id @default(uuid())
-  name      String
-  content   Json
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-  lastEditorId String?
-  lastEditor   User?    @relation("SectionLastEditor", fields: [lastEditorId], references: [id])
-  comments     SectionComment[]
-  status       SectionStatus @default(DRAFT)
-  workflowStatus SectionWorkflowStatus @default(DRAFT)
-  statusEvents SectionStatusEvent[]
-  autosave    SectionAutosave?
+  id                 String                @id @default(uuid())
+  name               String
+  content            Json
+  projectId          String
+  project            Project               @relation(fields: [projectId], references: [id])
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @default(now()) @updatedAt
+  lastEditorId       String?
+  lastEditor         User?                 @relation("SectionLastEditor", fields: [lastEditorId], references: [id])
+  comments           SectionComment[]
+  status             SectionStatus         @default(DRAFT)
+  workflowStatus     SectionWorkflowStatus @default(DRAFT)
+  statusEvents       SectionStatusEvent[]
+  autosave           SectionAutosave?
   suggestionFeedback SuggestionFeedback[]
-  artifacts   SectionArtifact[]
-  trustMetrics TrustMetric[]
+  artifacts          SectionArtifact[]
+  trustMetrics       TrustMetric[]
 }
 
 model Document {
-  id        String   @id @default(uuid())
-  type      String
-  url       String
-  createdAt DateTime @default(now())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
+  id                 String               @id @default(uuid())
+  type               String
+  url                String
+  createdAt          DateTime             @default(now())
+  projectId          String
+  project            Project              @relation(fields: [projectId], references: [id])
+  obligationEvidence ObligationEvidence[]
 }
 
 model SectionComment {
@@ -129,15 +143,15 @@ model SectionTemplate {
 }
 
 model Reminder {
-  id         String   @id @default(uuid())
-  message    String
-  dueAt      DateTime
-  completed  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  projectId  String
-  project    Project  @relation(fields: [projectId], references: [id])
-  ownerId    String
-  owner      User     @relation(fields: [ownerId], references: [id])
+  id        String   @id @default(uuid())
+  message   String
+  dueAt     DateTime
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id])
 }
 
 model SectionAutosave {
@@ -163,21 +177,21 @@ model SuggestionFeedback {
 }
 
 model Company {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-  users     User[]
-  projects  Project[]
-  invitations Invitation[]
+  id                   String         @id @default(uuid())
+  name                 String
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @default(now()) @updatedAt
+  users                User[]
+  projects             Project[]
+  invitations          Invitation[]
   // Monetization fields
-  plan       Plan      @default(FREE)
-  billingEmail String?
-  stripeCustomerId String?
+  plan                 Plan           @default(FREE)
+  billingEmail         String?
+  stripeCustomerId     String?
   stripeSubscriptionId String?
-  trialEndsAt DateTime?
-  usage     CompanyUsage[]
-  members   UserCompany[]
+  trialEndsAt          DateTime?
+  usage                CompanyUsage[]
+  members              UserCompany[]
 }
 
 enum Plan {
@@ -187,28 +201,28 @@ enum Plan {
 }
 
 model CompanyUsage {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   companyId     String
-  company       Company  @relation(fields: [companyId], references: [id])
-  month         String   // format: YYYY-MM
-  docsGenerated Int      @default(0)
-  trustAnalyses Int      @default(0)
-  reviewsLogged Int      @default(0)
+  company       Company @relation(fields: [companyId], references: [id])
+  month         String // format: YYYY-MM
+  docsGenerated Int     @default(0)
+  trustAnalyses Int     @default(0)
+  reviewsLogged Int     @default(0)
 
   @@unique([companyId, month])
 }
 
 model Invitation {
-  id         String   @id @default(uuid())
-  email      String
-  token      String   @unique
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime @default(now())
-  acceptedAt DateTime?
+  id          String    @id @default(uuid())
+  email       String
+  token       String    @unique
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime  @default(now())
+  acceptedAt  DateTime?
   invitedById String
-  invitedBy   User     @relation("UserInvitations", fields: [invitedById], references: [id])
-  companyId  String
-  company    Company   @relation(fields: [companyId], references: [id])
+  invitedBy   User      @relation("UserInvitations", fields: [invitedById], references: [id])
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id])
 }
 
 model ProjectStatusEvent {
@@ -286,32 +300,33 @@ model UserCompany {
 }
 
 model SectionArtifact {
-  id            String   @id @default(uuid())
-  originalName  String
-  storedName    String
-  mimeType      String
-  size          Int
-  description   String?
-  createdAt     DateTime @default(now())
-  sectionId     String
-  section       Section  @relation(fields: [sectionId], references: [id])
-  projectId     String
-  project       Project  @relation(fields: [projectId], references: [id])
-  uploadedById  String
-  uploadedBy    User     @relation("ArtifactUploader", fields: [uploadedById], references: [id])
-  purpose       ArtifactPurpose @default(GENERIC)
-  version       Int      @default(1)
-  checksum      String
-  citationKey   String
-  status        ArtifactStatus @default(PENDING)
-  reviewComment String?
-  reviewedAt    DateTime?
-  reviewedById  String?
-  reviewedBy    User?    @relation("ArtifactReviewer", fields: [reviewedById], references: [id])
+  id                 String               @id @default(uuid())
+  originalName       String
+  storedName         String
+  mimeType           String
+  size               Int
+  description        String?
+  createdAt          DateTime             @default(now())
+  sectionId          String
+  section            Section              @relation(fields: [sectionId], references: [id])
+  projectId          String
+  project            Project              @relation(fields: [projectId], references: [id])
+  uploadedById       String
+  uploadedBy         User                 @relation("ArtifactUploader", fields: [uploadedById], references: [id])
+  purpose            ArtifactPurpose      @default(GENERIC)
+  version            Int                  @default(1)
+  checksum           String
+  citationKey        String
+  status             ArtifactStatus       @default(PENDING)
+  reviewComment      String?
+  reviewedAt         DateTime?
+  reviewedById       String?
+  reviewedBy         User?                @relation("ArtifactReviewer", fields: [reviewedById], references: [id])
   previousArtifactId String?
-  previousArtifact SectionArtifact? @relation("ArtifactHistory", fields: [previousArtifactId], references: [id])
-  nextVersions   SectionArtifact[] @relation("ArtifactHistory")
-  samples        TrustSample[]
+  previousArtifact   SectionArtifact?     @relation("ArtifactHistory", fields: [previousArtifactId], references: [id])
+  nextVersions       SectionArtifact[]    @relation("ArtifactHistory")
+  samples            TrustSample[]
+  obligationEvidence ObligationEvidence[]
 
   @@unique([sectionId, version])
   @@unique([citationKey])
@@ -330,91 +345,247 @@ enum ArtifactPurpose {
 }
 
 model TrustMetric {
-  id           String      @id @default(uuid())
-  projectId    String
-  project      Project     @relation(fields: [projectId], references: [id])
-  name         String
-  pillar       String
-  datasetName  String?
-  modelName    String?
-  targetMin    Float?
-  targetMax    Float?
-  unit         String
-  sectionId    String?
-  section      Section?    @relation(fields: [sectionId], references: [id])
-  createdAt    DateTime    @default(now())
-  samples      TrustSample[]
+  id          String        @id @default(uuid())
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id])
+  name        String
+  pillar      String
+  datasetName String?
+  modelName   String?
+  targetMin   Float?
+  targetMax   Float?
+  unit        String
+  sectionId   String?
+  section     Section?      @relation(fields: [sectionId], references: [id])
+  createdAt   DateTime      @default(now())
+  samples     TrustSample[]
 }
 
 model TrustSample {
-  id         String      @id @default(uuid())
+  id         String           @id @default(uuid())
   metricId   String
-  metric     TrustMetric @relation(fields: [metricId], references: [id])
+  metric     TrustMetric      @relation(fields: [metricId], references: [id])
   value      Float
   status     String
   note       String?
-  timestamp  DateTime    @default(now())
+  timestamp  DateTime         @default(now())
   artifactId String?
   artifact   SectionArtifact? @relation(fields: [artifactId], references: [id])
 }
 
 model Notification {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  type      String   @default("info")
+  user      User      @relation(fields: [userId], references: [id])
+  type      String    @default("info")
   title     String
   body      String
   meta      Json?
   readAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+}
+
+model Assessment {
+  id              String                 @id @default(uuid())
+  projectId       String
+  project         Project                @relation(fields: [projectId], references: [id])
+  packVersionId   String
+  packVersion     CompliancePackVersion  @relation(fields: [packVersionId], references: [id])
+  createdById     String
+  createdBy       User                   @relation("AssessmentCreator", fields: [createdById], references: [id])
+  status          AssessmentStatus       @default(DRAFT)
+  answers         Json
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  classifications ClassificationResult[]
+
+  @@index([projectId, createdAt])
+}
+
+model ClassificationResult {
+  id              String               @id @default(uuid())
+  assessmentId    String
+  assessment      Assessment           @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  category        String
+  confidence      Float?
+  resultSnapshot  Json
+  reasoningTrace  Json
+  legalReferences Json
+  ambiguityFlags  Json
+  createdAt       DateTime             @default(now())
+  obligations     AiSystemObligation[]
+
+  @@index([assessmentId, createdAt])
+}
+
+model Obligation {
+  id             String                @id @default(uuid())
+  packVersionId  String
+  packVersion    CompliancePackVersion @relation(fields: [packVersionId], references: [id])
+  key            String
+  title          String
+  description    String?
+  legalReference String?
+  createdAt      DateTime              @default(now())
+  systems        AiSystemObligation[]
+
+  @@unique([packVersionId, key])
+}
+
+model AiSystemObligation {
+  id                     String                @id @default(uuid())
+  projectId              String
+  project                Project               @relation(fields: [projectId], references: [id])
+  obligationId           String
+  obligation             Obligation            @relation(fields: [obligationId], references: [id])
+  classificationResultId String?
+  classificationResult   ClassificationResult? @relation(fields: [classificationResultId], references: [id])
+  applicabilityReason    String?
+  status                 ObligationStatus      @default(NOT_STARTED)
+  ownerId                String?
+  owner                  User?                 @relation("ObligationOwner", fields: [ownerId], references: [id])
+  dueAt                  DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  actions                ComplianceAction[]
+  evidence               ObligationEvidence[]
+
+  @@unique([projectId, obligationId])
+  @@index([projectId, status])
+}
+
+model ComplianceAction {
+  id           String             @id @default(uuid())
+  obligationId String
+  obligation   AiSystemObligation @relation(fields: [obligationId], references: [id])
+  title        String
+  description  String?
+  status       ActionStatus       @default(TODO)
+  ownerId      String?
+  owner        User?              @relation("ActionOwner", fields: [ownerId], references: [id])
+  dueAt        DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model ObligationEvidence {
+  id                   String             @id @default(uuid())
+  aiSystemObligationId String
+  obligation           AiSystemObligation @relation(fields: [aiSystemObligationId], references: [id], onDelete: Cascade)
+  artifactId           String?
+  artifact             SectionArtifact?   @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  documentId           String?
+  document             Document?          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  linkType             EvidenceLinkType   @default(SUPPORTING)
+  notes                String?
+  linkedById           String
+  linkedBy             User               @relation("EvidenceLinker", fields: [linkedById], references: [id])
+  createdAt            DateTime           @default(now())
+
+  @@index([aiSystemObligationId])
+  @@index([artifactId])
+  @@index([documentId])
+}
+
+model ReadinessReport {
+  id              String                 @id @default(uuid())
+  projectId       String
+  project         Project                @relation(fields: [projectId], references: [id])
+  generatedById   String
+  generatedBy     User                   @relation("ReportGenerator", fields: [generatedById], references: [id])
+  packVersionId   String?
+  packVersion     CompliancePackVersion? @relation(fields: [packVersionId], references: [id])
+  status          ReportStatus           @default(GENERATED)
+  score           Int
+  readinessStatus String
+  snapshot        Json
+  fileUrl         String?
+  createdAt       DateTime               @default(now())
+
+  @@index([projectId, createdAt])
+}
+
+enum EvidenceLinkType {
+  PRIMARY
+  SUPPORTING
+  REFERENCE
+}
+
+enum ReportStatus {
+  GENERATED
+  ARCHIVED
+}
+
+enum ObligationStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  READY
+  UNDER_REVIEW
+  COMPLETE
+  NOT_APPLICABLE
+}
+
+enum ActionStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  BLOCKED
+}
+
+enum AssessmentStatus {
+  DRAFT
+  CLASSIFIED
+  ARCHIVED
 }
 
 model CompliancePackVersion {
-  id            String            @id @default(uuid())
-  key           String
-  version       String
-  status        PackStatus        @default(DRAFT)
-  publishedAt   DateTime?
-  deprecatedAt  DateTime?
-  questionPack  Json
-  rulePack      Json
-  legalRegistry Json
-  changelog     String?
-  createdAt     DateTime          @default(now())
+  id             String                 @id @default(uuid())
+  key            String
+  version        String
+  status         PackStatus             @default(DRAFT)
+  publishedAt    DateTime?
+  deprecatedAt   DateTime?
+  questionPack   Json
+  rulePack       Json
+  legalRegistry  Json
+  changelog      String?
+  createdAt      DateTime               @default(now())
   publicSessions PublicEuAiActSession[]
   publicResults  PublicEuAiActResult[]
+  assessments    Assessment[]
+  obligations    Obligation[]
+  readinessReports ReadinessReport[]
 
   @@unique([key, version])
 }
 
 model PublicEuAiActSession {
-  id                String                @id @default(uuid())
-  sessionTokenHash  String                @unique
-  status            PublicSessionStatus   @default(DRAFT)
-  packVersionId     String
-  packVersion       CompliancePackVersion @relation(fields: [packVersionId], references: [id])
-  email             String?
-  locale            String?               @default("en")
-  startedAt         DateTime              @default(now())
-  completedAt       DateTime?
-  expiresAt         DateTime
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-  answers           PublicEuAiActAnswer[]
-  result            PublicEuAiActResult?
+  id               String                @id @default(uuid())
+  sessionTokenHash String                @unique
+  status           PublicSessionStatus   @default(DRAFT)
+  packVersionId    String
+  packVersion      CompliancePackVersion @relation(fields: [packVersionId], references: [id])
+  email            String?
+  locale           String?               @default("en")
+  startedAt        DateTime              @default(now())
+  completedAt      DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  answers          PublicEuAiActAnswer[]
+  result           PublicEuAiActResult?
 }
 
 model PublicEuAiActAnswer {
-  id             String             @id @default(uuid())
+  id             String               @id @default(uuid())
   sessionId      String
   session        PublicEuAiActSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   questionKey    String
   answerType     AnswerType
   valueJson      Json
   normalizedJson Json
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
   @@unique([sessionId, questionKey])
 }

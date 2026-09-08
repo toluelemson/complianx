@@ -1,8 +1,8 @@
 // Regulatory frameworks public result route.
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import jsPDF from 'jspdf';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowRight,
   AlertTriangle,
@@ -25,6 +25,8 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { getPublicResult } from '../api';
+import { importPublicResult } from '../api';
+import { useAuth } from '@/app/providers/AuthContext';
 import type { PublicResultResponse } from '../types';
 
 const DOCUMENT_LABELS: Record<string, string> = {
@@ -50,11 +52,17 @@ const FRAMEWORK_LABELS: Record<string, string> = {
 
 export default function PublicEuAiActResultPage() {
   const { resultId } = useParams<{ resultId: string }>();
+  const navigate = useNavigate();
+  const { token } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
   const resultQuery = useQuery({
     queryKey: ['publicEuAiActResult', resultId],
     enabled: Boolean(resultId),
     queryFn: () => getPublicResult(resultId!),
+  });
+  const importMutation = useMutation({
+    mutationFn: () => importPublicResult({ publicResultId: resultId! }),
+    onSuccess: ({ projectId }) => navigate(`/ai-systems/${projectId}`),
   });
 
   const result = resultQuery.data?.result;
@@ -63,13 +71,13 @@ export default function PublicEuAiActResultPage() {
     result?.result_kind === 'out_of_scope';
   const showStatusBadges = Boolean(
     result &&
-    (result.in_scope ||
-      result.excluded ||
-      result.prohibited ||
-      result.high_risk ||
-      result.gpai ||
-      result.gpai_systemic_risk ||
-      result.transparency_obligations?.length),
+      (result.in_scope ||
+        result.excluded ||
+        result.prohibited ||
+        result.high_risk ||
+        result.gpai ||
+        result.gpai_systemic_risk ||
+        result.transparency_obligations?.length),
   );
   const showOperatorRoles = Boolean(
     result?.operator_roles?.length && !compactResult,
@@ -85,28 +93,28 @@ export default function PublicEuAiActResultPage() {
   );
   const showTopActions = Boolean(
     result &&
-    ((buildTopActions(result).length > 0 && !compactResult) ||
-      result.result_kind === 'not_applicable' ||
-      result.result_kind === 'out_of_scope'),
+      ((buildTopActions(result).length > 0 && !compactResult) ||
+        result.result_kind === 'not_applicable' ||
+        result.result_kind === 'out_of_scope'),
   );
   const showEvidenceSection = Boolean(
     result?.missing_evidence?.length && !compactResult,
   );
   const showNeuralDocxNextStep = Boolean(
     result &&
-    !compactResult &&
-    (result.next_required_documents?.length ||
-      result.missing_evidence?.length ||
-      result.high_risk ||
-      result.prohibited ||
-      result.ambiguity_flags?.length),
+      !compactResult &&
+      (result.next_required_documents?.length ||
+        result.missing_evidence?.length ||
+        result.high_risk ||
+        result.prohibited ||
+        result.ambiguity_flags?.length),
   );
   const showLegalDetails = Boolean(
     result &&
-    ((result.reasoning_trace?.length ?? 0) > 0 ||
-      (result.obligations?.length ?? 0) > 0 ||
-      (result.next_required_documents?.length ?? 0) > 0 ||
-      (resultQuery.data?.legalReferences?.length ?? 0) > 0),
+      ((result.reasoning_trace?.length ?? 0) > 0 ||
+        (result.obligations?.length ?? 0) > 0 ||
+        (result.next_required_documents?.length ?? 0) > 0 ||
+        (resultQuery.data?.legalReferences?.length ?? 0) > 0),
   );
 
   const handleEmailResult = () => {
@@ -634,7 +642,6 @@ export default function PublicEuAiActResultPage() {
                       {showOperatorRoles ? (
                         <ResultStat
                           label="Operator Roles"
-
                           value={
                             result.operator_roles?.join(', ') ??
                             'Not identified'
@@ -742,6 +749,18 @@ export default function PublicEuAiActResultPage() {
                           </div>
                         </div>
                         <div className="flex flex-col gap-3 sm:flex-row">
+                          {token ? (
+                            <Button
+                              type="button"
+                              onClick={() => importMutation.mutate()}
+                              disabled={importMutation.isPending}
+                              className="bg-emerald-700 text-white hover:bg-emerald-800"
+                            >
+                              {importMutation.isPending
+                                ? 'Creating plan...'
+                                : 'Add to my workspace'}
+                            </Button>
+                          ) : null}
                           <Button
                             asChild
                             className="bg-slate-950 text-white hover:bg-black"
@@ -773,6 +792,12 @@ export default function PublicEuAiActResultPage() {
                             </Button>
                           )}
                         </div>
+                        {importMutation.isError ? (
+                          <p className="text-sm text-rose-600">
+                            Unable to add this result to your workspace. Please
+                            try again.
+                          </p>
+                        ) : null}
                       </CardContent>
                     </Card>
                   ) : null}

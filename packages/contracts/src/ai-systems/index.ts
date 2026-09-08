@@ -92,6 +92,11 @@ export type ProjectDetail = {
   name: string;
   industry?: string | null;
   riskLevel?: string | null;
+  description?: string | null;
+  intendedUse?: string | null;
+  deploymentGeography?: string | null;
+  operatorRoles?: string[];
+  sourcePublicResultId?: string | null;
   createdAt: string;
   updatedAt?: string;
   companyId?: string | null;
@@ -126,6 +131,11 @@ export type ProjectListItem = {
   name: string;
   industry?: string | null;
   riskLevel?: string | null;
+  description?: string | null;
+  intendedUse?: string | null;
+  deploymentGeography?: string | null;
+  operatorRoles?: string[];
+  sourcePublicResultId?: string | null;
   createdAt: string;
   updatedAt: string;
   workflowStatus?: ProjectWorkflowStatus;
@@ -182,6 +192,19 @@ export type GenerationReadiness = {
   missingCriticalFields: string[];
   weakSections: string[];
   summary: string;
+  obligationReadiness?: ObligationReadiness;
+};
+
+export type ObligationReadiness = {
+  total: number;
+  evidenced: number;
+  complete: number;
+  outstanding: Array<{
+    id: string;
+    title: string;
+    status: string;
+    evidenceCount: number;
+  }>;
 };
 
 export type SuggestionResponse = {

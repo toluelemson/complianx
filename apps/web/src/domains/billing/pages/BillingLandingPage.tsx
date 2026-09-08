@@ -1,14 +1,9 @@
 // Billing domain route.
-import { useEffect } from 'react';
 import { AppShell } from '@/app/layout/AppShell';
 
 export default function BillingLandingPage() {
-  useEffect(() => {
-    window.dispatchEvent(new Event('paywall'));
-  }, []);
-
   return (
-    <AppShell title="Billing">
+    <AppShell title="Billing" initialBillingOpen>
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center">
         <p className="text-lg font-semibold text-slate-900">
           Opening billing settings…

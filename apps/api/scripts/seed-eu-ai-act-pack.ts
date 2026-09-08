@@ -7,7 +7,10 @@ const prisma = new PrismaClient();
 const seedDir = join(
   process.cwd(),
   'src',
-  'eu-ai-act-public',
+  'domains',
+  'regulatory-frameworks',
+  'infrastructure',
+  'public-eu-ai-act',
   'seeds',
 );
 

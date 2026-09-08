@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class CreateProjectDto {
   @IsString()
@@ -11,4 +11,25 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   riskLevel?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  intendedUse?: string;
+
+  @IsOptional()
+  @IsString()
+  deploymentGeography?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  operatorRoles?: string[];
+
+  @IsOptional()
+  @IsString()
+  sourcePublicResultId?: string;
 }

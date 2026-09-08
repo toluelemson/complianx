@@ -25,15 +25,33 @@ export async function listProjects() {
   return data;
 }
 
+export async function listAiSystems() {
+  const { data } = await api.get<ProjectListItem[]>('/ai-systems');
+  return data;
+}
+
 export async function createProject(values: NewProjectFormValues) {
   const { data } = await api.post<ProjectDetail>('/projects', values);
   return data;
 }
 
+export async function createAiSystem(values: NewProjectFormValues) {
+  const { data } = await api.post<ProjectDetail>('/ai-systems', values);
+  return data;
+}
+
+export async function getAiSystem(aiSystemId: string) {
+  const { data } = await api.get<ProjectDetail>(`/ai-systems/${aiSystemId}`);
+  return data;
+}
+
 export async function cloneProject(projectId: string, name: string) {
-  const { data } = await api.post<ProjectDetail>(`/projects/${projectId}/clone`, {
-    name,
-  });
+  const { data } = await api.post<ProjectDetail>(
+    `/projects/${projectId}/clone`,
+    {
+      name,
+    },
+  );
   return data;
 }
 
@@ -49,10 +67,13 @@ export async function getProjectSections(projectId: string) {
   return data;
 }
 
-export async function saveProjectSection(projectId: string, payload: {
-  name: string;
-  content: FormValues;
-}) {
+export async function saveProjectSection(
+  projectId: string,
+  payload: {
+    name: string;
+    content: FormValues;
+  },
+) {
   const { data } = await api.post<SectionWithMeta>(
     `/projects/${projectId}/sections`,
     payload,
@@ -164,12 +185,15 @@ export async function listProjectReviewers(projectId: string) {
   return data;
 }
 
-export async function uploadArtifact(projectId: string, payload: {
-  sectionId: string;
-  file: File;
-  description?: string;
-  purpose?: 'GENERIC' | 'DATASET' | 'MODEL';
-}) {
+export async function uploadArtifact(
+  projectId: string,
+  payload: {
+    sectionId: string;
+    file: File;
+    description?: string;
+    purpose?: 'GENERIC' | 'DATASET' | 'MODEL';
+  },
+) {
   const formData = new FormData();
   formData.append('file', payload.file);
   if (payload.description) {
@@ -247,7 +271,10 @@ export async function saveSectionAutosave(payload: {
   sectionId: string;
   content: FormValues;
 }) {
-  const { data } = await api.post<AutosaveRecord>('/autosave/sections', payload);
+  const { data } = await api.post<AutosaveRecord>(
+    '/autosave/sections',
+    payload,
+  );
   return data;
 }
 
@@ -258,10 +285,13 @@ export async function getSectionAutosave(sectionId: string) {
   return data;
 }
 
-export async function addSectionComment(projectId: string, payload: {
-  sectionId: string;
-  body: string;
-}) {
+export async function addSectionComment(
+  projectId: string,
+  payload: {
+    sectionId: string;
+    body: string;
+  },
+) {
   const { data } = await api.post(
     `/projects/${projectId}/sections/${payload.sectionId}/comments`,
     { body: payload.body },

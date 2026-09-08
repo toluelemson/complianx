@@ -9,6 +9,9 @@ import { MonetizationService } from '../subscriptions/application/monetization.s
 import { FilesModule } from '../../platform/files/files.module';
 import { ReportingFoundationModule } from './reporting-foundation.module';
 import { AnalyticsModule } from './analytics.module';
+import { ReadinessReportController } from './presentation/controllers/readiness-report.controller';
+import { ReadinessReportService } from './application/readiness-report/readiness-report.service';
+import { CompanyModule } from '../organizations/company.module';
 
 @Module({
   imports: [
@@ -19,8 +22,9 @@ import { AnalyticsModule } from './analytics.module';
     FilesModule,
     ReportingFoundationModule,
     AnalyticsModule,
+    CompanyModule,
   ],
-  controllers: [GeneratorController],
-  providers: [GeneratorService, MonetizationService],
+  controllers: [GeneratorController, ReadinessReportController],
+  providers: [GeneratorService, ReadinessReportService, MonetizationService],
 })
 export class ReportingModule {}

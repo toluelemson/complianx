@@ -53,7 +53,7 @@ export function NewProjectModal({
             })}
           >
             <label className="block text-sm font-medium text-slate-700">
-              Project Name
+              AI System Name
               <Input
                 {...register('name', { required: true })}
                 className="mt-1"
@@ -81,7 +81,7 @@ export function NewProjectModal({
                 disabled={isSubmitting}
                 className="bg-slate-950 text-white hover:bg-black"
               >
-                {isSubmitting ? 'Creating...' : 'Create Project'}
+                {isSubmitting ? 'Creating...' : 'Create AI System'}
               </Button>
             </div>
           </form>

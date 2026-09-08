@@ -22,9 +22,14 @@ interface Notification {
 interface AppShellProps {
   title?: string;
   children: ReactNode;
+  initialBillingOpen?: boolean;
 }
 
-export function AppShell({ title, children }: AppShellProps) {
+export function AppShell({
+  title,
+  children,
+  initialBillingOpen = false,
+}: AppShellProps) {
   const { logout, user, activeCompanyId, setActiveCompany } = useAuth();
   const qc = useQueryClient();
   const countQuery = useQuery<{ count: number }>({
@@ -61,7 +66,7 @@ export function AppShell({ title, children }: AppShellProps) {
     },
   });
   const unread = countQuery.data?.count ?? 0;
-  const [billingOpen, setBillingOpen] = useState(false);
+  const [billingOpen, setBillingOpen] = useState(initialBillingOpen);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEffect(() => {
     const handler = (event: Event) => {

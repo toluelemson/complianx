@@ -222,6 +222,11 @@ function mapProjectDetail(
     workflowStatus: string;
     industry: string | null;
     riskLevel: string | null;
+    description: string | null;
+    intendedUse: string | null;
+    deploymentGeography: string | null;
+    operatorRoles: Prisma.JsonValue | null;
+    sourcePublicResultId: string | null;
     reviewerId: string | null;
     approverId: string | null;
     workflowVersion: number;
@@ -229,7 +234,12 @@ function mapProjectDetail(
     reviewer?: { id: string; email: string; role: string } | null;
     approver?: { id: string; email: string; role: string } | null;
     sections?: Array<Parameters<typeof mapSection>[0]>;
-    documents?: Array<{ id: string; type: string; url: string; createdAt: Date }>;
+    documents?: Array<{
+      id: string;
+      type: string;
+      url: string;
+      createdAt: Date;
+    }>;
     statusEvents?: Array<Parameters<typeof mapStatusEvent>[0]>;
   },
   viewerRole?: ProjectDetail['viewerRole'],
@@ -243,6 +253,15 @@ function mapProjectDetail(
     workflowStatus: project.workflowStatus as ProjectDetail['workflowStatus'],
     industry: project.industry,
     riskLevel: project.riskLevel,
+    description: project.description,
+    intendedUse: project.intendedUse,
+    deploymentGeography: project.deploymentGeography,
+    operatorRoles: Array.isArray(project.operatorRoles)
+      ? project.operatorRoles.filter(
+          (value): value is string => typeof value === 'string',
+        )
+      : [],
+    sourcePublicResultId: project.sourcePublicResultId,
     reviewerId: project.reviewerId,
     approverId: project.approverId,
     workflowVersion: project.workflowVersion,
@@ -344,6 +363,15 @@ export class ProjectsService {
       name: project.name,
       industry: project.industry,
       riskLevel: project.riskLevel,
+      description: project.description,
+      intendedUse: project.intendedUse,
+      deploymentGeography: project.deploymentGeography,
+      operatorRoles: Array.isArray(project.operatorRoles)
+        ? project.operatorRoles.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : [],
+      sourcePublicResultId: project.sourcePublicResultId,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
       workflowStatus: project.workflowStatus,
@@ -375,11 +403,11 @@ export class ProjectsService {
   ): Promise<ProjectDetail> {
     return this.prisma.project
       .create({
-      data: {
-        ...dto,
-        ownerId: userId,
-        companyId,
-      },
+        data: {
+          ...dto,
+          ownerId: userId,
+          companyId,
+        },
       })
       .then((project) => mapProjectDetail(project));
   }
@@ -470,6 +498,11 @@ export class ProjectsService {
           name: cloneName,
           industry: source.industry,
           riskLevel: source.riskLevel,
+          description: source.description,
+          intendedUse: source.intendedUse,
+          deploymentGeography: source.deploymentGeography,
+          operatorRoles: source.operatorRoles ?? undefined,
+          sourcePublicResultId: source.sourcePublicResultId,
           ownerId: userId,
           companyId,
         },

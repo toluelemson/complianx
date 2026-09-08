@@ -66,7 +66,22 @@ export class GeneratorService {
         },
       } as any,
     });
-    return this.readinessService.assess(sections);
+    const obligations = await this.prisma.aiSystemObligation.findMany({
+      where: { projectId },
+      include: {
+        obligation: { select: { title: true } },
+        _count: { select: { evidence: true } },
+      },
+    });
+    return this.readinessService.assess(
+      sections,
+      obligations.map((item) => ({
+        id: item.id,
+        title: item.obligation.title,
+        status: item.status,
+        evidenceCount: item._count.evidence,
+      })),
+    );
   }
 
   async generate(projectId: string, userId: string, requestedTypes?: string[]) {
@@ -95,7 +110,22 @@ export class GeneratorService {
     if (!sections.length) {
       throw new BadRequestException('Please complete at least one section.');
     }
-    const readiness = this.readinessService.assess(sections);
+    const obligations = await this.prisma.aiSystemObligation.findMany({
+      where: { projectId },
+      include: {
+        obligation: { select: { title: true } },
+        _count: { select: { evidence: true } },
+      },
+    });
+    const readiness = this.readinessService.assess(
+      sections,
+      obligations.map((item) => ({
+        id: item.id,
+        title: item.obligation.title,
+        status: item.status,
+        evidenceCount: item._count.evidence,
+      })),
+    );
     if (readiness.status === 'insufficient') {
       throw new BadRequestException({
         message:

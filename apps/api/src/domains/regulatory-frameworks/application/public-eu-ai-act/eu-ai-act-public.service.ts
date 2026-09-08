@@ -13,6 +13,7 @@ import { QuickAssessDto } from '../../presentation/dto/quick-assess.dto';
 import { GenerateDemoReportDto } from '../../presentation/dto/generate-demo-report.dto';
 import { LlmService } from '../../../../platform/ai/llm.service';
 import { renderDocumentHtml } from '../../../reporting/infrastructure/rendering/templates';
+import { EuAiActClassificationService } from '../classification/eu-ai-act-classification.service';
 
 @Injectable()
 export class EuAiActPublicService {
@@ -22,6 +23,7 @@ export class EuAiActPublicService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly llmService: LlmService,
+    private readonly classificationService: EuAiActClassificationService,
   ) {}
 
   async createSession(dto: CreatePublicSessionDto) {
@@ -59,16 +61,21 @@ export class EuAiActPublicService {
     const pack = await this.resolvePackVersion();
     const answersMap =
       dto.answers && typeof dto.answers === 'object' ? dto.answers : {};
-    const answerEntries = Object.entries(answersMap).map(([questionKey, value]) => ({
-      questionKey,
-      normalizedJson: value,
-    }));
+    const answerEntries = Object.entries(answersMap).map(
+      ([questionKey, value]) => ({
+        questionKey,
+        normalizedJson: value,
+      }),
+    );
 
     if (!answerEntries.length) {
       throw new BadRequestException('At least one answer is required');
     }
 
-    const resultPayload = this.evaluateAnswers(answerEntries);
+    const resultPayload = this.classificationService.evaluateAnswers(
+      answerEntries,
+      pack,
+    );
     const publicId = `public_${this.generateOpaqueId(10)}`;
     const sessionToken = this.generateOpaqueId(24);
     const sessionTokenHash = this.hashToken(sessionToken);
@@ -191,7 +198,10 @@ export class EuAiActPublicService {
       answers: Object.fromEntries(
         session.answers.map((answer) => [answer.questionKey, answer.valueJson]),
       ),
-      currentStep: this.getCurrentStep(session.packVersion.questionPack, session.answers),
+      currentStep: this.getCurrentStep(
+        session.packVersion.questionPack,
+        session.answers,
+      ),
       expiresAt: session.expiresAt,
     };
   }
@@ -254,7 +264,9 @@ export class EuAiActPublicService {
       return {
         resultId: session.result.publicId,
         status: session.status,
-        summary: this.buildSummary(session.result.resultSnapshot as Record<string, unknown>),
+        summary: this.buildSummary(
+          session.result.resultSnapshot as Record<string, unknown>,
+        ),
         redirectUrl: `/eu-ai-act-checker/results/${session.result.publicId}`,
       };
     }
@@ -263,7 +275,10 @@ export class EuAiActPublicService {
       throw new BadRequestException('At least one answer is required');
     }
 
-    const resultPayload = this.evaluateAnswers(session.answers);
+    const resultPayload = this.classificationService.evaluateAnswers(
+      session.answers,
+      session.packVersion,
+    );
     const publicId = `public_${this.generateOpaqueId(10)}`;
 
     const result = await this.prisma.publicEuAiActResult.create({
@@ -276,7 +291,8 @@ export class EuAiActPublicService {
         resultSnapshot: resultPayload as unknown as Prisma.InputJsonValue,
         reasoningTrace:
           resultPayload.reasoning_trace as unknown as Prisma.InputJsonValue,
-        obligations: resultPayload.obligations as unknown as Prisma.InputJsonValue,
+        obligations:
+          resultPayload.obligations as unknown as Prisma.InputJsonValue,
         evidenceChecklist:
           resultPayload.missing_evidence as unknown as Prisma.InputJsonValue,
         nextDocuments:
@@ -318,9 +334,12 @@ export class EuAiActPublicService {
     const legalRegistry =
       result.packVersion.legalRegistry &&
       typeof result.packVersion.legalRegistry === 'object' &&
-      'references' in (result.packVersion.legalRegistry as Record<string, unknown>) &&
+      'references' in
+        (result.packVersion.legalRegistry as Record<string, unknown>) &&
       Array.isArray((result.packVersion.legalRegistry as any).references)
-        ? ((result.packVersion.legalRegistry as any).references as Array<Record<string, unknown>>)
+        ? ((result.packVersion.legalRegistry as any).references as Array<
+            Record<string, unknown>
+          >)
         : [];
     const legalReferences = legalRegistry.filter((reference) =>
       legalReferenceIds.includes(String(reference.id ?? '')),
@@ -420,7 +439,10 @@ export class EuAiActPublicService {
     }));
   }
 
-  private getCurrentStep(questionPack: unknown, answers: Array<{ questionKey: string }>) {
+  private getCurrentStep(
+    questionPack: unknown,
+    answers: Array<{ questionKey: string }>,
+  ) {
     if (
       !questionPack ||
       typeof questionPack !== 'object' ||
@@ -433,7 +455,9 @@ export class EuAiActPublicService {
     const answered = new Set(answers.map((answer) => answer.questionKey));
     for (const step of (questionPack as any).steps) {
       const questions = Array.isArray(step.questions) ? step.questions : [];
-      const hasUnanswered = questions.some((question: any) => !answered.has(question.key));
+      const hasUnanswered = questions.some(
+        (question: any) => !answered.has(question.key),
+      );
       if (hasUnanswered) {
         return step.key ?? null;
       }
@@ -453,15 +477,19 @@ export class EuAiActPublicService {
       typeof map.company_role === 'string' && map.company_role.length > 0
         ? map.company_role
         : null;
-    const roles = role ? [role] : Array.isArray(map.entity_roles) ? map.entity_roles : [];
+    const roles = role
+      ? [role]
+      : Array.isArray(map.entity_roles)
+        ? map.entity_roles
+        : [];
     const prohibitedUseCases = Array.isArray(map.prohibited_use_cases)
       ? map.prohibited_use_cases
       : [];
     const highRiskContexts = Array.isArray(map.high_risk_contexts)
       ? map.high_risk_contexts
       : Array.isArray(map.annex_iii_categories)
-      ? map.annex_iii_categories
-      : [];
+        ? map.annex_iii_categories
+        : [];
     const transparencyTriggers = Array.isArray(map.transparency_triggers)
       ? map.transparency_triggers
       : [];
@@ -484,18 +512,23 @@ export class EuAiActPublicService {
     const humanOversightReady = map.human_oversight_ready !== false;
     const riskControlsReady = map.risk_controls_ready !== false;
     const documentationReady = map.documentation_ready !== false;
-    const conformityProcessReady =
-      highRisk ? map.conformity_process_ready === true : true;
+    const conformityProcessReady = highRisk
+      ? map.conformity_process_ready === true
+      : true;
     const outOfScope = !inScope;
     const resultKind = !aiSystem
       ? 'not_applicable'
       : !usedInEu
-      ? 'out_of_scope'
-      : prohibited
-      ? 'prohibited'
-      : highRisk || !humanOversightReady || !riskControlsReady || !documentationReady || !conformityProcessReady
-      ? 'action_required'
-      : 'likely_compliant';
+        ? 'out_of_scope'
+        : prohibited
+          ? 'prohibited'
+          : highRisk ||
+              !humanOversightReady ||
+              !riskControlsReady ||
+              !documentationReady ||
+              !conformityProcessReady
+            ? 'action_required'
+            : 'likely_compliant';
 
     const obligations: Array<Record<string, unknown>> = [];
     if (!outOfScope && operatorRoles.includes('provider')) {
@@ -509,13 +542,15 @@ export class EuAiActPublicService {
     if (!outOfScope && operatorRoles.includes('deployer')) {
       obligations.push({
         role: 'deployer',
-        title: 'Deployer oversight, human review, and use-context controls should be in place.',
+        title:
+          'Deployer oversight, human review, and use-context controls should be in place.',
       });
     }
     if (!outOfScope && operatorRoles.includes('importer')) {
       obligations.push({
         role: 'importer',
-        title: 'Importer checks and market-placement controls should be documented',
+        title:
+          'Importer checks and market-placement controls should be documented',
       });
     }
     if (!outOfScope && transparencyTriggers.length > 0) {
@@ -529,12 +564,27 @@ export class EuAiActPublicService {
       ? []
       : [
           'ai_system_classification_memo',
-          ...(highRisk ? ['high_risk_ai_compliance_plan', 'technical_documentation_starter_pack'] : []),
-          ...(transparencyTriggers.length > 0 ? ['transparency_disclosure_text'] : []),
-          ...(otherFrameworks.includes('nist_ai_rmf') ? ['nist_ai_rmf_gap_summary'] : []),
-          ...(otherFrameworks.includes('iso_42001') ? ['iso_42001_readiness_note'] : []),
-          ...(otherFrameworks.includes('gdpr') ? ['data_protection_control_checklist'] : []),
-          ...(otherFrameworks.includes('internal_policy') ? ['internal_governance_alignment_note'] : []),
+          ...(highRisk
+            ? [
+                'high_risk_ai_compliance_plan',
+                'technical_documentation_starter_pack',
+              ]
+            : []),
+          ...(transparencyTriggers.length > 0
+            ? ['transparency_disclosure_text']
+            : []),
+          ...(otherFrameworks.includes('nist_ai_rmf')
+            ? ['nist_ai_rmf_gap_summary']
+            : []),
+          ...(otherFrameworks.includes('iso_42001')
+            ? ['iso_42001_readiness_note']
+            : []),
+          ...(otherFrameworks.includes('gdpr')
+            ? ['data_protection_control_checklist']
+            : []),
+          ...(otherFrameworks.includes('internal_policy')
+            ? ['internal_governance_alignment_note']
+            : []),
           'audit_trail_summary',
         ];
 
@@ -552,7 +602,9 @@ export class EuAiActPublicService {
       missingEvidence.push('High-risk conformity and registration readiness');
     }
     if (!outOfScope && prohibited) {
-      missingEvidence.push('Prohibited-use escalation record and remediation plan');
+      missingEvidence.push(
+        'Prohibited-use escalation record and remediation plan',
+      );
     }
 
     const legalReferences = [
@@ -587,14 +639,14 @@ export class EuAiActPublicService {
         summary: !aiSystem
           ? 'The checker stops here because the submitted functionality is not being treated as an AI system.'
           : !usedInEu
-          ? 'The checker stops here because no EU use or market connection was identified.'
-          : prohibited
-          ? 'A prohibited-use trigger was selected.'
-          : highRisk
-          ? 'A high-risk trigger was selected.'
-          : transparencyTriggers.length > 0
-          ? 'A transparency-only trigger was selected.'
-          : 'No prohibited or high-risk trigger was selected in this quick audit.',
+            ? 'The checker stops here because no EU use or market connection was identified.'
+            : prohibited
+              ? 'A prohibited-use trigger was selected.'
+              : highRisk
+                ? 'A high-risk trigger was selected.'
+                : transparencyTriggers.length > 0
+                  ? 'A transparency-only trigger was selected.'
+                  : 'No prohibited or high-risk trigger was selected in this quick audit.',
       },
       {
         step: 4,
@@ -606,10 +658,9 @@ export class EuAiActPublicService {
       {
         step: 5,
         code: 'readiness',
-        summary:
-          outOfScope
-            ? 'No further readiness assessment was required for this result.'
-            : missingEvidence.length > 0
+        summary: outOfScope
+          ? 'No further readiness assessment was required for this result.'
+          : missingEvidence.length > 0
             ? 'The audit found missing controls or missing documentation that should be fixed.'
             : 'No major readiness gap was identified from the submitted answers.',
       },
@@ -618,12 +669,12 @@ export class EuAiActPublicService {
     const summarySentence = !aiSystem
       ? 'This quick checker is not applicable because the submitted functionality was not identified as an AI system.'
       : !usedInEu
-      ? 'This quick checker did not identify an EU-facing compliance trigger because no EU use or market connection was selected.'
-      : prohibited
-      ? 'This result indicates a likely non-compliant or prohibited use that should be escalated immediately.'
-      : highRisk || missingEvidence.length > 0
-      ? 'This result indicates compliance work is still needed before the system should be treated as aligned.'
-      : 'This result indicates no major compliance trigger or evidence gap was identified from the submitted answers.';
+        ? 'This quick checker did not identify an EU-facing compliance trigger because no EU use or market connection was selected.'
+        : prohibited
+          ? 'This result indicates a likely non-compliant or prohibited use that should be escalated immediately.'
+          : highRisk || missingEvidence.length > 0
+            ? 'This result indicates compliance work is still needed before the system should be treated as aligned.'
+            : 'This result indicates no major compliance trigger or evidence gap was identified from the submitted answers.';
 
     return {
       result_kind: resultKind,
@@ -654,7 +705,9 @@ export class EuAiActPublicService {
       high_risk: result.high_risk === true,
       prohibited: result.prohibited === true,
       gpai: result.gpai === true,
-      operator_roles: Array.isArray(result.operator_roles) ? result.operator_roles : [],
+      operator_roles: Array.isArray(result.operator_roles)
+        ? result.operator_roles
+        : [],
     };
   }
 

@@ -25,7 +25,8 @@ const EuAiActGeneratorDemoPage = lazy(
   () => import('@/domains/reports/pages/EuAiActGeneratorDemoPage'),
 );
 const PublicEuAiActCheckerPage = lazy(
-  () => import('@/domains/regulatory-frameworks/pages/PublicEuAiActCheckerPage'),
+  () =>
+    import('@/domains/regulatory-frameworks/pages/PublicEuAiActCheckerPage'),
 );
 const PublicEuAiActResultPage = lazy(
   () => import('@/domains/regulatory-frameworks/pages/PublicEuAiActResultPage'),
@@ -33,7 +34,9 @@ const PublicEuAiActResultPage = lazy(
 const DashboardPage = lazy(
   () => import('@/domains/ai-systems/pages/DashboardPage'),
 );
-const ProjectPage = lazy(() => import('@/domains/ai-systems/pages/ProjectPage'));
+const ProjectPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectPage'),
+);
 const ProjectTrustPage = lazy(
   () => import('@/domains/assessments/pages/ProjectTrustPage'),
 );
@@ -93,6 +96,14 @@ function App() {
         />
         <Route
           path="/projects/:projectId"
+          element={
+            <ProtectedRoute>
+              <ProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-systems/:projectId"
           element={
             <ProtectedRoute>
               <ProjectPage />
