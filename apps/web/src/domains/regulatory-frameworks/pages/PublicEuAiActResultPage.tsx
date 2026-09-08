@@ -491,8 +491,8 @@ export default function PublicEuAiActResultPage() {
   return (
     <>
       <SiteHeader />
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="min-h-screen bg-[#f6f7f8] px-4 py-8 sm:px-6 lg:py-10">
+        <div className="mx-auto max-w-5xl space-y-6">
           <div className="max-w-3xl">
             <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
               Your EU AI Act screening result
@@ -529,6 +529,9 @@ export default function PublicEuAiActResultPage() {
                       <CardDescription className="mt-3 max-w-3xl text-sm leading-7">
                         {buildVerdict(result).description}
                       </CardDescription>
+                      <p className="mt-3 text-sm font-medium text-slate-700">
+                        {buildVerdict(result).action}
+                      </p>
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                         <Button
                           type="button"
@@ -551,30 +554,11 @@ export default function PublicEuAiActResultPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <div className="rounded-[1.6rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_24px_50px_-34px_rgba(15,23,42,0.18)]">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                          Result
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${buildVerdict(result).badgeClass}`}
-                          >
-                            {buildVerdict(result).label}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                        {buildVerdict(result).action}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div className="border-l-2 border-[#d40c2e] pl-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                       Plain-English Explanation
                     </p>
-                    <p className="mt-3 text-sm leading-7 text-slate-700">
+                    <p className="mt-2 text-sm leading-7 text-slate-700">
                       {buildResultExplanation(result)}
                     </p>
                   </div>
@@ -689,7 +673,7 @@ export default function PublicEuAiActResultPage() {
               {showEvidenceSection || showComplianxNextStep ? (
                 <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                   {showEvidenceSection ? (
-                    <Card className="border-slate-200/90 bg-white/95">
+                    <Card className="border-slate-200 bg-white">
                       <CardHeader>
                         <CardTitle className="text-2xl">
                           Missing evidence checklist
@@ -703,7 +687,7 @@ export default function PublicEuAiActResultPage() {
                         {result.missing_evidence?.map((entry) => (
                           <div
                             key={entry}
-                            className="flex items-start gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-4"
+                            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                           >
                             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                             <span className="text-sm text-slate-800">
@@ -716,7 +700,7 @@ export default function PublicEuAiActResultPage() {
                   ) : null}
 
                   {showComplianxNextStep ? (
-                    <Card className="border-slate-200/90 bg-white/95">
+                    <Card className="border-slate-200 bg-white">
                       <CardHeader>
                         <CardTitle className="text-2xl">
                           Move to the Right Service
@@ -727,7 +711,7 @@ export default function PublicEuAiActResultPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-5 py-5">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
                           <div className="flex items-start gap-3">
                             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-slate-900" />
                             <div>
@@ -1087,7 +1071,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
         'Based on your answers, this does not appear to be an AI system for the purpose of this check.',
       action:
         'You do not need to continue this check unless the product changes.',
-      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
     };
   }
   if (result.result_kind === 'out_of_scope') {
@@ -1098,7 +1081,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
         'Based on your answers, there is no EU use or market connection in this case.',
       action:
         'Run this check again if the system is later used in the EU or placed on the EU market.',
-      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
     };
   }
   if (result.prohibited) {
@@ -1108,7 +1090,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
       description:
         'One of your answers matched a prohibited or clearly unacceptable use case.',
       action: 'Stop and review this use case immediately.',
-      badgeClass: 'bg-rose-100 text-rose-700 border border-rose-200',
     };
   }
   if (result.high_risk || (result.missing_evidence?.length ?? 0) > 0) {
@@ -1118,7 +1099,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
       description:
         'Your answers show missing controls, missing evidence, or a higher-risk use case that still needs work.',
       action: 'Fix the open gaps before treating this system as compliant.',
-      badgeClass: 'bg-amber-100 text-amber-800 border border-amber-200',
     };
   }
   if ((result.ambiguity_flags?.length ?? 0) > 0) {
@@ -1129,7 +1109,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
         'The answers do not support a clear conclusion, so someone should review this manually.',
       action:
         'Do not rely on this result until the unclear points are resolved.',
-      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
     };
   }
   return {
@@ -1139,7 +1118,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
       'Based on your answers, this check did not find a major compliance problem.',
     action:
       'Keep your documents current and review again when the system changes.',
-    badgeClass: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
   };
 }
 
