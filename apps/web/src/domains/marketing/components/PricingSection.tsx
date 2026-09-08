@@ -123,6 +123,7 @@ const PRICING_PLANS: PricingPlan[] = [
 export function PricingSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const [inView, setInView] = useState(false);
+  const [openPlan, setOpenPlan] = useState<string | null>(null);
   const servicePlans = PRICING_PLANS.filter((plan) => !plan.comingSoon);
 
   useEffect(() => {
@@ -252,53 +253,58 @@ export function PricingSection() {
                   )}
                 </div>
 
-                <details className="mt-8 group">
-                  <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--cx-text)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-brand)] hover:decoration-[var(--cx-brand)]">
-                    <span className="flex items-center justify-between">
-                      View features
-                      <span className="text-base text-[var(--cx-text-muted)] transition group-open:rotate-180">⌄</span>
+                <div className="mt-8">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenPlan((current) =>
+                        current === plan.name ? null : plan.name,
+                      )
+                    }
+                    aria-expanded={openPlan === plan.name}
+                    className="flex w-full items-center justify-between text-left text-sm font-semibold text-[var(--cx-text)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-brand)] hover:decoration-[var(--cx-brand)]"
+                  >
+                    View features
+                    <span
+                      className={`text-base text-[var(--cx-text-muted)] transition ${
+                        openPlan === plan.name ? 'rotate-180' : ''
+                      }`}
+                    >
+                      ⌄
                     </span>
-                  </summary>
-                  <div className="mt-5 space-y-7">
-                  {plan.sections.map((section, sectionIndex) => (
-                    <div key={section.title}>
-                      <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--cx-text-muted)]">
-                        {section.title}
-                      </h4>
-                      <div className="mt-3 space-y-3">
-                        {section.items.map((item, itemIndex) => (
-                          <div
-                            key={item}
-                            className={`flex items-start gap-3 ${
-                              inView ? 'animate-enter-fade' : 'opacity-0'
-                            }`}
-                            style={
-                              inView
-                                ? {
-                                    animationDelay: `${0.2 + index * 0.08 + sectionIndex * 0.06 + itemIndex * 0.04}s`,
-                                  }
-                                : undefined
-                            }
-                          >
-                            <Check
-                              className={`mt-0.5 h-4 w-4 shrink-0 ${
-                                'text-[#17a64e]'
-                              }`}
-                            />
-                            <span
-                              className={`text-sm leading-6 ${
-                                'text-[#5e5e5e]'
-                              }`}
-                            >
-                              {item}
-                            </span>
+                  </button>
+                  {openPlan === plan.name ? (
+                    <div className="mt-5 space-y-7">
+                      {plan.sections.map((section, sectionIndex) => (
+                        <div key={section.title}>
+                          <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--cx-text-muted)]">
+                            {section.title}
+                          </h4>
+                          <div className="mt-3 space-y-3">
+                            {section.items.map((item, itemIndex) => (
+                              <div
+                                key={item}
+                                className="flex items-start gap-3 animate-enter-fade"
+                                style={
+                                  inView
+                                    ? {
+                                        animationDelay: `${0.2 + index * 0.08 + sectionIndex * 0.06 + itemIndex * 0.04}s`,
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#17a64e]" />
+                                <span className="text-sm leading-6 text-[#5e5e5e]">
+                                  {item}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  </div>
-                </details>
+                  ) : null}
+                </div>
               </CardContent>
             </Card>
           ))}
