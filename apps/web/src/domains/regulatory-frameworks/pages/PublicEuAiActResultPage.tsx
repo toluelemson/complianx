@@ -90,12 +90,6 @@ export default function PublicEuAiActResultPage() {
   const showFrameworks = Boolean(
     result?.other_frameworks?.length && !compactResult,
   );
-  const showTopActions = Boolean(
-    result &&
-      ((buildTopActions(result).length > 0 && !compactResult) ||
-        result.result_kind === 'not_applicable' ||
-        result.result_kind === 'out_of_scope'),
-  );
   const showEvidenceSection = Boolean(
     result?.missing_evidence?.length && !compactResult,
   );
@@ -647,24 +641,6 @@ export default function PublicEuAiActResultPage() {
                       </div>
                     </div>
                   ) : null}
-                  {showTopActions ? (
-                    <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                        Next Steps
-                      </p>
-                      <div className="mt-3 space-y-3">
-                        {buildTopActions(result).map((entry: string) => (
-                          <div
-                            key={entry}
-                            className="flex items-start gap-3 text-sm text-slate-800"
-                          >
-                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                            <span>{entry}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
                     </div>
                   </details>
                 </CardContent>
@@ -942,9 +918,6 @@ export default function PublicEuAiActResultPage() {
                   ) : null}
                 </Card>
               ) : null}
-              <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 px-5 py-4 text-sm leading-7 text-slate-700 shadow-[0_20px_40px_-34px_rgba(15,23,42,0.2)]">
-                {buildClosingSummary(result)}
-              </div>
             </>
           )}
         </div>
