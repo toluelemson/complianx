@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
@@ -36,7 +36,7 @@ const PRICING_PLANS: PricingPlan[] = [
     price: 'EUR500 - EUR1,500',
     suffix: 'per engagement',
     billing: '2–4 day turnaround',
-    cta: 'Get Starter Audit',
+    cta: 'Choose Starter',
     packageInterest: 'starter',
     source: 'pricing_starter',
     sections: [
@@ -57,7 +57,7 @@ const PRICING_PLANS: PricingPlan[] = [
     price: 'EUR2,000 - EUR5,000',
     suffix: 'per engagement',
     billing: 'Most common engagement',
-    cta: 'Talk About Professional',
+    cta: 'Choose Professional',
     packageInterest: 'professional',
     source: 'pricing_professional',
     featured: true,
@@ -79,7 +79,7 @@ const PRICING_PLANS: PricingPlan[] = [
     price: 'EUR8,000 - EUR20,000+',
     suffix: 'custom scope',
     billing: 'Talk to sales',
-    cta: 'Book Enterprise Review',
+    cta: 'Talk to us',
     href: 'https://calendly.com/neuraldocx',
     external: true,
     source: 'pricing_enterprise',
@@ -150,7 +150,6 @@ export function PricingSection() {
       ref={sectionRef}
       className="hz-pricing-blueprint relative overflow-hidden px-5 pb-24 pt-20 sm:px-8 lg:px-10 lg:pt-24"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,_rgba(212,12,46,0.08),_transparent_32%)]" />
       <div className="hz-marketing-container">
         <div
           className={`text-center transition-all duration-700 ${
@@ -158,7 +157,7 @@ export function PricingSection() {
           }`}
         >
           <h2 className="text-4xl font-semibold tracking-tight text-[#383838] sm:text-5xl">
-            Start with the right level of support
+            Compliance support, sized to the work
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#5e5e5e]">
             One system, a deeper review, or a complete workstream.
@@ -178,25 +177,12 @@ export function PricingSection() {
               } ${inView ? 'animate-enter-scale' : 'translate-y-6 opacity-0'}`}
               style={inView ? { animationDelay: `${0.1 + index * 0.08}s` } : undefined}
             >
-              <CardContent className="flex h-full flex-col p-7">
+              <CardContent className="flex h-full flex-col p-6">
                 <div>
                   <div className="flex items-start justify-between gap-4">
                     <h3 className="text-2xl font-semibold">{plan.name}</h3>
-                    {plan.featured ? (
-                      <div className="hz-pricing-recommended inline-flex shrink-0 items-center rounded-full border border-[#d40c2e]/20 bg-[#fdf3f4] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#d40c2e]">
-                        Most common
-                      </div>
-                    ) : plan.comingSoon ? (
-                      <div className="inline-flex shrink-0 items-center rounded-full border border-[#dbdbdb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5e5e5e]">
-                        Coming Soon
-                      </div>
-                    ) : null}
                   </div>
-                  <p
-                    className={`mt-2 text-sm ${
-                      'text-[#5e5e5e]'
-                    }`}
-                  >
+                  <p className="mt-2 text-sm text-[#5e5e5e]">
                     {plan.tagline}
                   </p>
 
@@ -204,19 +190,11 @@ export function PricingSection() {
                     <div className="hz-pricing-price text-5xl font-semibold tracking-tight">
                       {plan.price}
                     </div>
-                    <p
-                      className={`mt-2 text-sm ${
-                        'text-[#5e5e5e]'
-                      }`}
-                    >
+                    <p className="mt-2 text-sm text-[#5e5e5e]">
                       {plan.suffix}
                     </p>
                     {plan.billing ? (
-                      <p
-                        className={`mt-1 text-sm ${
-                          'text-[#8a8a8a]'
-                        }`}
-                      >
+                      <p className="mt-1 text-sm text-[#8a8a8a]">
                         {plan.billing}
                       </p>
                     ) : null}
@@ -284,9 +262,8 @@ export function PricingSection() {
                   <div className="mt-5 space-y-7">
                   {plan.sections.map((section, sectionIndex) => (
                     <div key={section.title}>
-                      <h4 className="flex items-center gap-2 text-base font-semibold">
+                      <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--cx-text-muted)]">
                         {section.title}
-                        <ArrowRight className="h-4 w-4 text-slate-400" />
                       </h4>
                       <div className="mt-3 space-y-3">
                         {section.items.map((item, itemIndex) => (
