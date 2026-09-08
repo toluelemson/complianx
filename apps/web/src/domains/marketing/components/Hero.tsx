@@ -10,7 +10,7 @@ export function Hero() {
       id="product"
       className="hz-marketing-hero relative z-10 w-full"
     >
-      <div className="hz-marketing-container min-w-0">
+      <div className="hz-marketing-container grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-center lg:gap-16">
         <div className="min-w-0 max-w-3xl animate-enter-up">
           <h1 className="animate-enter-up animation-delay-100 max-w-[680px] text-4xl font-medium tracking-[-0.04em] text-[#383838] sm:text-6xl lg:text-[4rem] lg:leading-[1.02]">
             Keep every AI system ready for review.
@@ -62,6 +62,24 @@ export function Hero() {
                   </div>
                 ),
               )}
+            </div>
+          </div>
+        </div>
+        <div className="relative mx-auto hidden h-72 w-full max-w-sm items-center justify-center lg:flex" aria-hidden="true">
+          <div className="absolute h-56 w-64 -translate-x-5 translate-y-5 rotate-[-6deg] rounded-md border border-[#e8e8e8] bg-[#fafafa]" />
+          <div className="absolute h-60 w-64 translate-x-4 translate-y-2 rotate-[5deg] rounded-md border border-[#e8e8e8] bg-white shadow-[0_16px_40px_rgba(56,56,56,0.08)]" />
+          <div className="relative h-64 w-64 rounded-md border border-[#dbdbdb] bg-white p-6 shadow-[0_18px_45px_rgba(56,56,56,0.12)]">
+            <div className="flex items-center justify-between border-b border-[#e8e8e8] pb-4">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a8a8a]">Readiness record</span>
+              <span className="h-2 w-2 rounded-full bg-[#17a64e]" />
+            </div>
+            <div className="mt-5 space-y-4">
+              {[['System context', 'Complete'], ['Obligations', 'Mapped'], ['Evidence', 'In progress']].map(([label, status]) => (
+                <div key={label} className="flex items-center justify-between gap-3 border-b border-[#f0f0f0] pb-3 text-xs">
+                  <span className="text-[#5e5e5e]">{label}</span>
+                  <span className="font-medium text-[#383838]">{status}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
