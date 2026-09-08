@@ -169,7 +169,7 @@ export function PricingSection() {
           {servicePlans.map((plan, index) => (
             <Card
               key={plan.name}
-              className={`hz-pricing-blueprint__card h-full shadow-none transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] ${
+                className={`hz-pricing-blueprint__card shadow-none transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] ${
                 plan.featured
                   ? 'hz-pricing-blueprint__card--featured border-[#d40c2e] text-[#383838]'
                   : plan.comingSoon
@@ -178,7 +178,7 @@ export function PricingSection() {
               } ${inView ? 'animate-enter-scale' : 'translate-y-6 opacity-0'}`}
               style={inView ? { animationDelay: `${0.1 + index * 0.08}s` } : undefined}
             >
-              <CardContent className="flex h-full flex-col p-6">
+              <CardContent className="flex flex-col p-6">
                 <div>
                   <div className="flex items-start justify-between gap-4">
                     <h3 className="text-2xl font-semibold">{plan.name}</h3>
