@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CircleHelp, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 const FAQ_ITEMS = [
   {
@@ -82,7 +82,7 @@ const FAQ_ITEMS = [
 export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [showAll, setShowAll] = useState(false);
-  const visibleItems = showAll ? FAQ_ITEMS : FAQ_ITEMS.slice(0, 4);
+  const visibleItems = showAll ? FAQ_ITEMS : FAQ_ITEMS.slice(0, 3);
 
   return (
     <section
@@ -91,18 +91,9 @@ export function FaqSection() {
     >
       <div className="mx-auto max-w-3xl">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#f3c4cb] bg-[var(--cx-brand-subtle)] px-5 py-3 text-sm font-semibold text-[var(--cx-brand)] shadow-[var(--cx-shadow-sm)]">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#d40c2e]/10 text-[var(--cx-brand)]">
-              <CircleHelp className="h-3.5 w-3.5" />
-            </span>
-            <span>Common questions</span>
-          </div>
-          <h2 className="animate-enter-up mt-5 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-            Common questions, answered clearly
+          <h2 className="animate-enter-up text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
+            Questions?
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">
-            A quick overview of scope, turnaround, deliverables, and next steps.
-          </p>
         </div>
 
         <div className="mt-10 space-y-3">
@@ -158,7 +149,7 @@ export function FaqSection() {
             onClick={() => setShowAll((value) => !value)}
             className="inline-flex items-center justify-center rounded-[var(--cx-radius)] bg-[var(--cx-brand)] px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[var(--cx-brand-hover)]"
           >
-            {showAll ? 'Show fewer answers' : 'Read all answers'}
+            {showAll ? 'Show fewer' : 'More questions'}
           </button>
         </div>
       </div>

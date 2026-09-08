@@ -163,12 +163,10 @@ export function PricingSection() {
             <span>Engagement models</span>
           </div>
           <h2 className="mt-5 text-4xl font-semibold tracking-tight text-[#383838] sm:text-5xl">
-            Choose the level of documentation depth your team actually needs
+            Choose your level of support
           </h2>
-          <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-[#5e5e5e]">
-            Start with a scoped delivery for one system, move into a deeper
-            review pack, or run a full documentation workstream for regulated
-            programs.
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#5e5e5e]">
+            Start with one system or scale to a full governance workstream.
           </p>
         </div>
 

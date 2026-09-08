@@ -12,8 +12,7 @@ export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:flex-row lg:items-center">
           <div className="max-w-xs shrink-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8a8a8a]">See the workflow</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#383838]">From intake to audit-ready records.</h2>
-            <p className="mt-2 text-sm leading-6 text-[#5e5e5e]">A short walkthrough of the workspace your team uses to keep evidence and review decisions together.</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#383838]">See it in action.</h2>
           </div>
           <div className="animate-enter-up min-w-0 flex-1 overflow-hidden rounded-[6px] border border-[#dbdbdb] bg-[#0f141a] p-1 shadow-[0_1px_3px_rgba(0,0,0,.1),0_1px_2px_rgba(0,0,0,.06)]">
           <div className="relative overflow-hidden rounded-[4px] bg-[#0f141a]">

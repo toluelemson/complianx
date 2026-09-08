@@ -21,8 +21,7 @@ export function Hero() {
             Keep every AI system ready for review.
           </h1>
           <p className="animate-enter-up animation-delay-300 mt-6 max-w-xl text-base leading-7 text-[#5e5e5e] sm:text-lg sm:leading-8">
-            Register the system, map its obligations, attach evidence, and
-            produce a defensible readiness record for your team.
+            Register systems, organize evidence, and stay ready for review.
           </p>
 
           <div className="hz-marketing-actions animate-enter-up animation-delay-400 mt-8 flex flex-col justify-start gap-3 sm:flex-row sm:flex-wrap">
@@ -66,7 +65,6 @@ export function Hero() {
               </div>
             ))}
           </div>
-          <div className="mt-7 border-t border-[#e8e8e8] pt-5 text-sm text-[#8a8a8a]">A clear starting point for your next compliance decision.</div>
         </div>
       </div>
     </section>

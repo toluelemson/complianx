@@ -19,12 +19,10 @@ export function CTASection() {
                 Service-first delivery
               </p>
               <h2 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--cx-text)] sm:text-5xl">
-                Start the documentation workstream before the audit pressure
-                hits
+                Get audit-ready before you need to be.
               </h2>
               <p className="mt-4 text-base leading-8 text-[var(--cx-text-secondary)]">
-                Submit the system, align the scope, and move into a structured
-                review cycle with first delivery in as little as 48 hours.
+                Submit your system and receive a clear path forward.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
