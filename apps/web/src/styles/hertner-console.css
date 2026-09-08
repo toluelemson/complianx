@@ -57,6 +57,6 @@
 .hz-console-tabs [aria-current='page'], .hz-console-tabs .active { color: var(--ndx-color-brand-primary); border-bottom: 2px solid var(--ndx-color-brand-primary); }
 
 button, input, select, textarea { transition: var(--ndx-transition-standard); }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--ndx-color-brand-primary); outline-offset: 2px; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--ndx-color-brand-primary); outline-offset: 2px; }
 @media (max-width: 1024px) { .hz-console-project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .hz-console-content { padding-inline: 0; } .hz-console-page-header { align-items: flex-start; flex-direction: column; } .hz-console-project-grid { grid-template-columns: 1fr; } .hz-main { padding: 20px 16px 48px; } }

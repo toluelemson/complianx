@@ -254,8 +254,8 @@ export function AppShell({
           <div className="flex items-center justify-between gap-3">
             <BrandLink
               className="flex items-center gap-3"
-              brandClassName="whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-slate-900"
-              iconClassName="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-900/10 bg-white"
+              brandClassName="whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-[#383838]"
+              iconClassName="flex h-8 w-8 items-center justify-center rounded-lg border border-[#383838]/10 bg-white"
               imageClassName="h-8 w-8 rounded-lg p-1"
             />
             <div className="flex items-center gap-3 lg:hidden">

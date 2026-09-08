@@ -61,10 +61,10 @@ const SUBMIT_SYSTEM_CONTEXT: Partial<
   },
   pricing_professional: {
     eyebrow: 'Professional package intake',
-    title: 'Tell us about the system that needs deeper review',
+    title: 'Tell us about your AI system',
     description:
-      'We will use this intake to scope the deeper risk, controls, and governance documentation pack your team likely needs.',
-    timelineLabel: 'Best first response: 48 hours',
+      'Share the details we need to scope your review and documentation package.',
+    timelineLabel: 'We respond within 48 hours',
   },
   trial_modal_exit: {
     eyebrow: 'Fastest next step',
@@ -174,95 +174,18 @@ export default function SubmitSystemPage() {
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">
           <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-400">
-              {pageContext.eyebrow}
-            </p>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
               {pageContext.title}
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-500">
               {pageContext.description}
             </p>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-              {pageContext.timelineLabel}.{' '}
-              Larger or more regulated deployment?{' '}
-              <a
-                href="https://calendly.com/neuraldocx"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-slate-700 transition hover:text-slate-950"
-              >
-                Book an enterprise demo
-              </a>
-              .
-            </p>
           </div>
 
           <Card className="mt-10 rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.2)]">
             <CardContent className="p-8 sm:p-10">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Step 1
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    Submit your system
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Step 2
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    Get a quote
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Step 3
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    Receive documents
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Starter
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    EUR500 - EUR1,500
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    2-4 day turnaround
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Professional
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    EUR2,000 - EUR5,000
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Most common engagement
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Enterprise
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    EUR8,000 - EUR20,000+
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">Custom scope</p>
-                </div>
-              </div>
-
               <form
-                className="mt-8 space-y-5"
+                className="space-y-5"
                 onSubmit={handleSubmit((values) => {
                   trackMarketingEvent('marketing_submit_form_submitted', {
                     package_interest: values.packageInterest,

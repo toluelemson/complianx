@@ -80,14 +80,6 @@ textarea {
   box-shadow: none;
 }
 
-input:not([type='checkbox']):not([type='radio']):not([type='hidden']):focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--cx-brand);
-  box-shadow: 0 0 0 1px var(--cx-brand);
-}
-
 #root {
   min-height: 100vh;
 }

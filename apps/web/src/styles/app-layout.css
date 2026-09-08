@@ -21,7 +21,6 @@
 .hz-main { min-width: 0; width: 100%; max-width: var(--hz-layout-content-max); margin: 0 auto; padding: 40px var(--hz-layout-page-gutter) 64px; }
 .hz-page-title { margin-bottom: var(--hz-layout-section-gap); border-bottom: 1px solid var(--cx-border); padding: 0 0 24px; }
 .hz-top-header__inner > div { min-height: var(--hz-layout-header-height); }
-.hz-top-header a:hover { color: var(--cx-brand); }
 .hz-sidebar__link:focus-visible { outline: 2px solid var(--cx-brand); outline-offset: -2px; }
 .hz-mobile-nav { display: none; }
 

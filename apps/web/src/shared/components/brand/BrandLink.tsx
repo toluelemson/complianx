@@ -19,7 +19,7 @@ export function BrandLink({
     <Link to="/" className={className}>
       <div className={iconClassName}>
         <img
-          src="/compliance-icon.svg"
+          src="/neuraldocx-mark.svg"
           alt={label}
           className={imageClassName}
         />

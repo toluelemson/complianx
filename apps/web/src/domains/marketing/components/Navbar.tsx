@@ -14,13 +14,13 @@ export function Navbar() {
 
   const headerClassName = 'animate-enter-fade sticky top-0 z-30 border-b border-[#e8e8e8] bg-white';
 
-  const logoShellClassName = 'flex h-8 w-8 items-center justify-center rounded-md border border-[#dbdbdb] bg-white';
+  const logoShellClassName = 'flex h-8 w-8 items-center justify-center rounded-lg border border-[#383838]/10 bg-white';
 
   const brandTextClassName = 'text-base font-semibold tracking-tight text-[#383838]';
 
   const navLinkClassName = 'text-sm font-medium text-[#383838] transition hover:text-[#d40c2e]';
 
-  const utilityLinkClassName = 'text-sm font-medium text-[#d40c2e] transition hover:text-[#e21236]';
+  const utilityLinkClassName = navLinkClassName;
 
   const loginButtonClassName = 'hidden text-[#383838] hover:text-[#d40c2e] sm:inline-flex';
 
