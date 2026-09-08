@@ -121,6 +121,20 @@ export class EuAiActClassificationService {
         'Prohibited-use escalation record and remediation plan',
       );
 
+    const nextRequiredDocuments: string[] = [];
+    if (inScope) {
+      nextRequiredDocuments.push('ai_system_classification_memo');
+    }
+    if (highRisk) {
+      nextRequiredDocuments.push('high_risk_ai_compliance_plan');
+    }
+    if (!outOfScope && !documentationReady) {
+      nextRequiredDocuments.push('technical_documentation_starter_pack');
+    }
+    if (!outOfScope && transparencyTriggers.length > 0) {
+      nextRequiredDocuments.push('transparency_disclosure_text');
+    }
+
     const legalReferences = [
       ...(inScope ? ['art-2-scope', 'art-3-ai-system'] : []),
       ...(prohibited ? ['art-5'] : []),
@@ -177,6 +191,7 @@ export class EuAiActClassificationService {
       considered_provider: false,
       obligations,
       missing_evidence: Array.from(new Set(missingEvidence)),
+      next_required_documents: Array.from(new Set(nextRequiredDocuments)),
       legal_references: Array.from(new Set(legalReferences)),
       reasoning_trace: reasoningTrace,
       ambiguity_flags: [],
