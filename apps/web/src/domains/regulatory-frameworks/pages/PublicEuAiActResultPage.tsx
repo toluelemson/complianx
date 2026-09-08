@@ -10,7 +10,6 @@ import {
   Download,
   FileText,
   Mail,
-  Scale,
   ShieldCheck,
 } from 'lucide-react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
@@ -494,27 +493,16 @@ export default function PublicEuAiActResultPage() {
       <SiteHeader />
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-7xl space-y-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <Badge
-                variant="outline"
-                className="w-fit border-slate-300 bg-white/80 text-slate-700"
-              >
-                Screening result
-              </Badge>
-              <div>
-                <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Your initial compliance position
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                  A clear answer, the likely service path, and the best next
-                  step based on your answers.
-                </p>
-              </div>
-            </div>
-            <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-800 shadow-[0_20px_45px_-32px_rgba(120,53,15,0.25)]">
-              Not legal advice.
-            </div>
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
+              Your EU AI Act screening result
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+              A clear starting point and the most useful next step for your system.
+            </p>
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Screening only — not legal advice.
+            </p>
           </div>
 
           {resultQuery.isLoading ? (
@@ -560,12 +548,6 @@ export default function PublicEuAiActResultPage() {
                         </Button>
                       </div>
                     </div>
-                    <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <Scale className="h-4 w-4" />
-                        <span>Pack {resultQuery.data!.packVersion}</span>
-                      </div>
-                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
@@ -597,6 +579,11 @@ export default function PublicEuAiActResultPage() {
                     </p>
                   </div>
 
+                  <details className="border-t border-slate-100 pt-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4">
+                      View supporting details
+                    </summary>
+                    <div className="mt-5 space-y-5">
                   {showStatusBadges ? (
                     <div className="flex flex-wrap gap-2">
                       {result.in_scope ? (
@@ -694,6 +681,8 @@ export default function PublicEuAiActResultPage() {
                       </div>
                     </div>
                   ) : null}
+                    </div>
+                  </details>
                 </CardContent>
               </Card>
 
