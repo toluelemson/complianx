@@ -262,7 +262,7 @@ export function PricingSection() {
                       )
                     }
                     aria-expanded={openPlan === plan.name}
-                    className="flex w-full items-center justify-between text-left text-sm font-semibold text-[var(--cx-text)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-brand)] hover:decoration-[var(--cx-brand)]"
+                    className="flex w-full items-center justify-between text-left text-sm font-semibold text-[var(--cx-text)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[#5e5e5e] hover:decoration-[var(--cx-border-strong)]"
                   >
                     View features
                     <span
@@ -317,7 +317,7 @@ export function PricingSection() {
               packageInterest: 'not_sure',
               source: 'pricing_saas',
             })}
-            className="font-semibold text-[var(--cx-text)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-brand)] hover:decoration-[var(--cx-brand)]"
+            className="font-semibold text-[var(--cx-text)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[#5e5e5e] hover:decoration-[var(--cx-border-strong)]"
           >
             Join the early access list
           </Link>

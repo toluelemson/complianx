@@ -47,7 +47,7 @@ export function CTASection() {
                 href="https://calendly.com/neuraldocx"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center px-2 py-3 text-sm font-semibold text-[var(--cx-text-secondary)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-brand)] hover:decoration-[var(--cx-brand)]"
+            className="inline-flex items-center px-2 py-3 text-sm font-semibold text-[var(--cx-text-secondary)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-text)] hover:decoration-[var(--cx-border-strong)]"
               >
                 Enterprise demo
               </a>

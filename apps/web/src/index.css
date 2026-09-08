@@ -66,7 +66,7 @@ button:focus-visible,
 a:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--cx-brand);
+  outline: 2px solid var(--cx-text);
   outline-offset: 2px;
 }
 

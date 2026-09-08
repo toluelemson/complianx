@@ -38,7 +38,7 @@ export function Hero() {
             </Button>
             <Link
               to="/eu-ai-act-checker"
-              className="inline-flex items-center justify-center px-2 py-3 text-sm font-semibold text-[#5e5e5e] underline decoration-[#dbdbdb] underline-offset-4 transition hover:text-[#d40c2e] hover:decoration-[#d40c2e] sm:justify-start"
+              className="inline-flex items-center justify-center px-2 py-3 text-sm font-semibold text-[#5e5e5e] underline decoration-[#dbdbdb] underline-offset-4 transition hover:text-[#383838] hover:decoration-[#383838] sm:justify-start"
             >
               Run compliance check first
             </Link>

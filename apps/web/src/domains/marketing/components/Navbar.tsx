@@ -18,17 +18,17 @@ export function Navbar() {
 
   const brandTextClassName = 'text-base font-semibold tracking-tight text-[#383838]';
 
-  const navLinkClassName = 'text-sm font-medium text-[#383838] transition hover:text-[#d40c2e]';
+  const navLinkClassName = 'text-sm font-medium text-[#383838] transition hover:text-[#5e5e5e]';
 
   const utilityLinkClassName = navLinkClassName;
 
-  const loginButtonClassName = 'hidden text-[#383838] hover:text-[#d40c2e] sm:inline-flex';
+  const loginButtonClassName = 'hidden text-[#383838] hover:text-[#5e5e5e] sm:inline-flex';
 
-  const mobileToggleClassName = 'h-8 w-8 rounded-md border border-[#dbdbdb] bg-white p-0 text-[#383838] hover:bg-[#fafafa] hover:text-[#d40c2e] lg:hidden';
+  const mobileToggleClassName = 'h-8 w-8 rounded-md border border-[#dbdbdb] bg-white p-0 text-[#383838] hover:bg-[#fafafa] hover:text-[#5e5e5e] lg:hidden';
 
   const mobilePanelClassName = 'border-t border-[#e8e8e8] bg-white px-5 py-4 sm:px-8 lg:hidden';
 
-  const mobileLinkClassName = 'rounded-md border border-[#e8e8e8] bg-[#fafafa] px-4 py-3 text-sm font-medium text-[#383838] transition hover:border-[#d40c2e] hover:text-[#d40c2e]';
+  const mobileLinkClassName = 'rounded-md border border-[#e8e8e8] bg-[#fafafa] px-4 py-3 text-sm font-medium text-[#383838] transition hover:border-[#dbdbdb] hover:text-[#5e5e5e]';
 
   const mobileGhostClassName = 'justify-start rounded-md text-slate-700 hover:text-slate-950';
 
