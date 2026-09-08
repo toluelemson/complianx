@@ -1,3 +1,5 @@
+import { Check } from 'lucide-react';
+
 interface VideoSectionProps {
   onOpenTrial: () => void;
   videoSrc?: string;
@@ -7,12 +9,23 @@ export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
   const isGif = videoSrc?.toLowerCase().endsWith('.gif');
 
   return (
-    <section id="solutions" className="hidden w-full border-y border-[#e8e8e8] bg-[#fafafa] py-10 md:block">
+    <section id="solutions" className="hidden w-full border-y border-[#e8e8e8] bg-[#fafafa] py-14 md:block">
       <div className="px-6 lg:px-10">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 lg:flex-row lg:items-center">
-          <div className="max-w-xs shrink-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8a8a8a]">See the workflow</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#383838]">See it in action.</h2>
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 lg:flex-row lg:items-center lg:gap-12">
+          <div className="max-w-sm shrink-0 lg:w-[31%]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8a8a8a]">Audit-ready records</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#383838]">Everything needed for the next review.</h2>
+            <p className="mt-4 text-sm leading-6 text-[#5e5e5e]">Keep the system story, evidence, and decisions together from intake to sign-off.</p>
+            <div className="mt-6 space-y-3">
+              {['System context', 'Obligations and evidence', 'Review history'].map((item) => (
+                <div key={item} className="flex items-center gap-3 text-sm font-medium text-[#383838]">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e9fcf0] text-[#17a64e]">
+                    <Check className="h-3 w-3" />
+                  </span>
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
           <div className="animate-enter-up min-w-0 flex-1 overflow-hidden rounded-[6px] border border-[#dbdbdb] bg-[#0f141a] p-1 shadow-[0_1px_3px_rgba(0,0,0,.1),0_1px_2px_rgba(0,0,0,.06)]">
           <div className="relative overflow-hidden rounded-[4px] bg-[#0f141a]">
@@ -39,14 +52,6 @@ export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
                   </video>
                 )}
 
-                <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between p-4 sm:p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div />
-                    <div className="animate-enter-fade rounded-full border border-white/20 bg-transparent px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-white shadow-[0_18px_50px_-24px_rgba(15,23,42,0.7)] backdrop-blur-md">
-                      Audit-ready records
-                    </div>
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="mx-auto w-full max-w-[1100px]">
@@ -62,9 +67,6 @@ export function VideoSection({ onOpenTrial, videoSrc }: VideoSectionProps) {
                       >
                         <span className="ml-1 text-3xl">▶</span>
                       </button>
-                      <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-slate-300">
-                        NeuralDocx product walkthrough
-                      </div>
                     </div>
                   </div>
                 </div>
