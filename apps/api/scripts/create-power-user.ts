@@ -7,12 +7,41 @@ const DEFAULT_EMAIL = 'power@neuraldocx.local';
 const DEFAULT_PASSWORD = 'PowerUser123!';
 const DEFAULT_COMPANY = 'NeuralDocx Dev Workspace';
 
+function requiredProductionValue(name: string, value: string | undefined) {
+  if (process.env.NODE_ENV === 'production' && !value) {
+    throw new Error(`${name} must be set when creating a power user in production`);
+  }
+
+  return value;
+}
+
 async function main() {
   const [, , rawEmail, rawPassword, rawCompanyName] = process.argv;
 
-  const email = (rawEmail ?? DEFAULT_EMAIL).trim().toLowerCase();
-  const password = (rawPassword ?? DEFAULT_PASSWORD).trim();
-  const companyName = (rawCompanyName ?? DEFAULT_COMPANY).trim();
+  const email = (
+    requiredProductionValue('POWER_USER_EMAIL', process.env.POWER_USER_EMAIL) ??
+    process.env.POWER_USER_EMAIL ??
+    rawEmail ??
+    DEFAULT_EMAIL
+  )
+    .trim()
+    .toLowerCase();
+  const password = (
+    requiredProductionValue('POWER_USER_PASSWORD', process.env.POWER_USER_PASSWORD) ??
+    process.env.POWER_USER_PASSWORD ??
+    rawPassword ??
+    DEFAULT_PASSWORD
+  ).trim();
+  const companyName = (
+    process.env.POWER_USER_COMPANY ?? rawCompanyName ?? DEFAULT_COMPANY
+  ).trim();
+
+  if (!email) {
+    throw new Error('POWER_USER_EMAIL cannot be empty');
+  }
+  if (password.length < 12) {
+    throw new Error('POWER_USER_PASSWORD must be at least 12 characters long');
+  }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
@@ -76,9 +105,8 @@ async function main() {
     },
   });
 
-  console.log('Dev power user ready');
+  console.log('Power user ready');
   console.log(`Email: ${email}`);
-  console.log(`Password: ${password}`);
   console.log(`Company: ${company.name}`);
   console.log(`Company ID: ${company.id}`);
   console.log(`User ID: ${user.id}`);
