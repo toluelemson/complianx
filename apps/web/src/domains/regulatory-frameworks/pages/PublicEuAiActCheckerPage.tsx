@@ -6,16 +6,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Scale,
 } from 'lucide-react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { buildSubmitSystemHref } from '@/domains/marketing/lib/submit-system';
-import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui/card';
@@ -201,27 +198,16 @@ export default function PublicEuAiActCheckerPage() {
       <SiteHeader />
       <main className="min-h-screen bg-[#f6f7f8] px-4 py-8 sm:px-6 lg:py-12">
         <div className="mx-auto max-w-6xl space-y-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <Badge
-                variant="outline"
-                className="w-fit border-slate-300 bg-white/80 text-slate-700"
-              >
-                EU AI Act readiness
-              </Badge>
-              <div>
-                <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Establish your starting position
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                  A short, evidence-led screening to identify the obligations
-                  your AI system may need to address.
-                </p>
-              </div>
-            </div>
-            <div className="border-l-2 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
+              EU AI Act readiness checker
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+              Answer a few questions to identify the obligations your system may need to address.
+            </p>
+            <p className="mt-2 text-xs font-medium text-amber-700">
               Screening only — not legal advice.
-            </div>
+            </p>
           </div>
 
           {loading ? (
@@ -240,11 +226,10 @@ export default function PublicEuAiActCheckerPage() {
           ) : questionPack && currentStep ? (
             <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
               <Card className="border-slate-200/90 bg-white/95 xl:sticky xl:top-24 xl:h-fit">
-                <CardHeader className="border-b border-slate-100">
-                  <CardTitle className="text-xl">Assessment progress</CardTitle>
-                  <CardDescription>One focused step at a time.</CardDescription>
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <CardTitle className="text-lg">Progress</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5">
+                <CardContent className="space-y-4 p-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                         <span>Completion</span>
@@ -266,7 +251,7 @@ export default function PublicEuAiActCheckerPage() {
                           key={step.key}
                           type="button"
                           onClick={() => setCurrentIndex(index)}
-                          className={`w-full rounded-[1.25rem] border px-4 py-4 text-left transition ${
+                          className={`w-full rounded-lg border px-3 py-3 text-left transition ${
                             active
                               ? 'border-slate-900 bg-slate-900 text-white'
                               : complete
@@ -315,25 +300,12 @@ export default function PublicEuAiActCheckerPage() {
 
                 <Card className="border-slate-200 bg-white shadow-sm">
                   <CardHeader>
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <Badge
-                          variant="outline"
-                          className="border-slate-200 bg-slate-50 text-slate-600"
-                        >
-                          Section {currentIndex + 1}
-                        </Badge>
-                        <CardTitle className="mt-3 text-2xl">
-                          {currentStep.title}
-                        </CardTitle>
-                      </div>
-                      <div className="hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 lg:block">
-                        <div className="flex items-center gap-2">
-                          <Scale className="h-4 w-4" />
-                        <span>EU AI Act · {packVersion}</span>
-                        </div>
-                      </div>
-                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Step {currentIndex + 1} of {visibleSteps.length}
+                    </p>
+                    <CardTitle className="mt-2 text-2xl">
+                      {currentStep.title}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-5">
                     {currentStep.questions.map((question) => (
@@ -354,7 +326,7 @@ export default function PublicEuAiActCheckerPage() {
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-slate-500">
-                    Your answers are used to create a focused next-step view.
+                    {packVersion ? `Assessment version ${packVersion}` : null}
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <Button
