@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BadgeEuro, Check } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
@@ -32,10 +32,10 @@ type PricingPlan = {
 const PRICING_PLANS: PricingPlan[] = [
   {
     name: 'Starter',
-    tagline: 'For early teams that need a fast first pack',
+    tagline: 'A focused first compliance pack',
     price: 'EUR500 - EUR1,500',
     suffix: 'per engagement',
-    billing: 'Turnaround: 2-4 days',
+    billing: '2–4 day turnaround',
     cta: 'Get Starter Audit',
     packageInterest: 'starter',
     source: 'pricing_starter',
@@ -53,7 +53,7 @@ const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: 'Professional',
-    tagline: 'For growing teams preparing for diligence or audit',
+    tagline: 'Deeper coverage for diligence or audit',
     price: 'EUR2,000 - EUR5,000',
     suffix: 'per engagement',
     billing: 'Most common engagement',
@@ -75,7 +75,7 @@ const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: 'Enterprise',
-    tagline: 'For banks, fintechs, and regulated AI programs',
+    tagline: 'A complete workstream for regulated programs',
     price: 'EUR8,000 - EUR20,000+',
     suffix: 'custom scope',
     billing: 'Talk to sales',
@@ -123,6 +123,7 @@ const PRICING_PLANS: PricingPlan[] = [
 export function PricingSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const [inView, setInView] = useState(false);
+  const servicePlans = PRICING_PLANS.filter((plan) => !plan.comingSoon);
 
   useEffect(() => {
     const node = sectionRef.current;
@@ -156,22 +157,16 @@ export function PricingSection() {
             inView ? 'animate-enter-up' : 'translate-y-6 opacity-0'
           }`}
         >
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#f3c4cb] bg-[#fdf3f4] px-5 py-3 text-sm font-semibold text-[#d40c2e]">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#d40c2e]/10 text-[#d40c2e]">
-              <BadgeEuro className="h-3.5 w-3.5" />
-            </span>
-            <span>Engagement models</span>
-          </div>
-          <h2 className="mt-5 text-4xl font-semibold tracking-tight text-[#383838] sm:text-5xl">
-            Choose your level of support
+          <h2 className="text-4xl font-semibold tracking-tight text-[#383838] sm:text-5xl">
+            Start with the right level of support
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#5e5e5e]">
-            Start with one system or scale to a full governance workstream.
+            One system, a deeper review, or a complete workstream.
           </p>
         </div>
 
-        <div className="hz-pricing-blueprint__grid mt-10">
-          {PRICING_PLANS.map((plan, index) => (
+        <div className="hz-pricing-blueprint__grid mx-auto mt-10 max-w-6xl">
+          {servicePlans.map((plan, index) => (
             <Card
               key={plan.name}
               className={`hz-pricing-blueprint__card h-full shadow-none transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] ${
@@ -330,6 +325,19 @@ export function PricingSection() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        <div className="mx-auto mt-8 flex max-w-6xl flex-col gap-2 border-t border-[var(--cx-border)] pt-5 text-sm text-[var(--cx-text-secondary)] sm:flex-row sm:items-center sm:justify-between">
+          <span>Self-serve workspace coming soon.</span>
+          <Link
+            to={buildSubmitSystemHref({
+              packageInterest: 'not_sure',
+              source: 'pricing_saas',
+            })}
+            className="font-semibold text-[var(--cx-text)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-brand)] hover:decoration-[var(--cx-brand)]"
+          >
+            Join the early access list
+          </Link>
         </div>
       </div>
     </section>
