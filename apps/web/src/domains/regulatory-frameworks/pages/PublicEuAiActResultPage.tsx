@@ -562,35 +562,6 @@ export default function PublicEuAiActResultPage() {
                       View supporting details
                     </summary>
                     <div className="mt-5 space-y-5">
-                  {showStatusBadges ? (
-                    <div className="flex flex-wrap gap-2">
-                      {result.in_scope ? (
-                        <Badge variant="success">In Scope</Badge>
-                      ) : (
-                        <Badge variant="outline">Out of Scope</Badge>
-                      )}
-                      {result.excluded ? (
-                        <Badge variant="warning">Excluded</Badge>
-                      ) : null}
-                      {result.prohibited ? (
-                        <Badge variant="danger">Prohibited</Badge>
-                      ) : null}
-                      {result.high_risk ? (
-                        <Badge variant="warning">High-Risk</Badge>
-                      ) : null}
-                      {result.gpai ? (
-                        <Badge variant="outline">GPAI</Badge>
-                      ) : null}
-                      {result.gpai_systemic_risk ? (
-                        <Badge variant="danger">GPAI with Systemic Risk</Badge>
-                      ) : null}
-                      {result.transparency_obligations?.length ? (
-                        <Badge variant="outline">
-                          Transparency Obligations
-                        </Badge>
-                      ) : null}
-                    </div>
-                  ) : null}
                   {showOperatorRoles ||
                   showDocuments ||
                   showEvidenceGaps ||
@@ -647,7 +618,11 @@ export default function PublicEuAiActResultPage() {
               </Card>
 
               {showEvidenceSection || showComplianxNextStep ? (
-                <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+                <details className="border-t border-slate-200 pt-5">
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4">
+                    View recommended actions and evidence
+                  </summary>
+                  <div className="mt-5 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                   {showEvidenceSection ? (
                     <Card className="border-slate-200 bg-white">
                       <CardHeader>
@@ -750,7 +725,8 @@ export default function PublicEuAiActResultPage() {
                       </CardContent>
                     </Card>
                   ) : null}
-                </div>
+                  </div>
+                </details>
               ) : null}
 
               {showLegalDetails ? (
