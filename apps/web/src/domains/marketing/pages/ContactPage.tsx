@@ -85,7 +85,7 @@ export default function ContactPage() {
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full bg-slate-950 text-white hover:bg-black"
+                className="w-full bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 {mutation.isPending ? 'Sending...' : 'Contact sales'}
               </Button>

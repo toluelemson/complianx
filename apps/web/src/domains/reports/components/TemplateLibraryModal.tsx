@@ -210,7 +210,7 @@ const TemplateLibraryModal = ({
             <Button
               type="button"
               onClick={executeBulkAction}
-              className="bg-slate-950 text-white hover:bg-black"
+              className="bg-primary text-primary-foreground hover:bg-[#e21236]"
             >
               Apply
             </Button>

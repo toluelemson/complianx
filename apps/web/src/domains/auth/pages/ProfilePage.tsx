@@ -213,7 +213,7 @@ export default function ProfilePage() {
               <Button
                 type="submit"
                 disabled={updateMutation.isPending}
-                className="bg-slate-950 text-white hover:bg-black"
+                className="bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 {updateMutation.isPending ? 'Saving…' : 'Save changes'}
               </Button>

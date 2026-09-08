@@ -124,62 +124,62 @@ export default function DashboardPage() {
   }
 
   return (
-    <AppShell title="Your AI Systems">
+    <AppShell title="AI system portfolio">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500">
-            Track each AI system and its compliance documentation in one place.
+            Monitor ownership, readiness, evidence, and review status across your AI systems.
           </p>
           <p className="text-xs text-slate-400">
-            Use the quick actions to jump into the work you handle most often.
+            Keep the next compliance decision visible and actionable.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setModalOpen(true)}
-            className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-black"
+            className="rounded-lg bg-[#d40c2e] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e21236]"
           >
-            New AI System
+            Register AI system
           </button>
           <Link
             to="/company"
             className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
-            Manage organization
+            Manage workspace
           </Link>
         </div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <button
           onClick={() => setModalOpen(true)}
-          className="rounded-[1.5rem] border border-dashed border-slate-200 bg-white/92 p-4 text-left text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)] transition hover:border-slate-300 hover:text-slate-900"
+          className="border border-dashed border-slate-300 bg-white p-4 text-left text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
         >
           + Create a new AI system
           <p className="mt-1 text-xs font-normal text-slate-500">
-            Launch the guided wizard to capture high-level project details.
+            Capture the system context needed for assessment.
           </p>
         </button>
         <Link
           to="/company"
-          className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)] transition hover:border-slate-300 hover:text-slate-900"
+          className="border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
         >
           Review team access
           <p className="mt-1 text-xs font-normal text-slate-500">
-            Invite reviewers or adjust member permissions.
+            Assign owners and reviewers for the workspace.
           </p>
         </Link>
         <Link
           to="/demo/eu-ai-act-report"
-          className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)] transition hover:border-slate-300 hover:text-slate-900"
+          className="border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
         >
           Open demo tool
           <p className="mt-1 text-xs font-normal text-slate-500">
-            Launch the editable EU AI Act report demo for live calls.
+            Explore a completed report workflow.
           </p>
         </Link>
       </div>
       <div className="mt-8 grid gap-4 md:grid-cols-2">
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
+        <div className="border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold text-slate-700">
             Portfolio readiness
           </p>
@@ -187,22 +187,22 @@ export default function DashboardPage() {
             {averageReadiness}%
           </p>
           <p className="text-sm text-slate-500">
-            Average completion across {ownedProjects.length || '0'} AI systems
+            Average readiness across {ownedProjects.length || '0'} registered systems
           </p>
           <div className="mt-4 h-3 w-full rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
+              className="h-full rounded-full bg-[#d40c2e] transition-all"
               style={{ width: `${averageReadiness}%` }}
             />
           </div>
         </div>
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
+        <div className="border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700">
               Recent activity
             </p>
             <span className="text-xs text-slate-400">
-              Last {recentDocuments.length || 0} docs
+              {recentDocuments.length || 0} recent records
             </span>
           </div>
           <div className="mt-4 space-y-3">

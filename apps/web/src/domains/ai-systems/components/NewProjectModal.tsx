@@ -32,11 +32,11 @@ export function NewProjectModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-lg rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.45)]">
+      <Card className="w-full max-w-lg rounded-xl border-slate-200 bg-white shadow-2xl">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold tracking-[-0.02em] text-slate-900">
-              New AI System
+              Register an AI system
             </h2>
             <button
               onClick={onClose}
@@ -52,21 +52,25 @@ export function NewProjectModal({
               reset();
             })}
           >
+            <p className="max-w-md text-sm leading-6 text-slate-500">
+              Start with the system context. You can add detailed controls,
+              evidence, owners, and obligations after registration.
+            </p>
             <label className="block text-sm font-medium text-slate-700">
-              AI System Name
+              System name
               <Input
                 {...register('name', { required: true })}
                 className="mt-1"
               />
             </label>
             <label className="block text-sm font-medium text-slate-700">
-              Industry
+              Operating domain
               <Input {...register('industry')} className="mt-1" />
             </label>
             <label className="block text-sm font-medium text-slate-700">
-              Risk Level
+              Initial risk indication
               <Select {...register('riskLevel')} className="mt-1">
-                <option value="">Select</option>
+                <option value="">Not assessed</option>
                 <option value="minimal">Minimal</option>
                 <option value="limited">Limited</option>
                 <option value="high">High</option>
@@ -79,9 +83,9 @@ export function NewProjectModal({
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-slate-950 text-white hover:bg-black"
+                className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
               >
-                {isSubmitting ? 'Creating...' : 'Create AI System'}
+                {isSubmitting ? 'Registering...' : 'Register system'}
               </Button>
             </div>
           </form>

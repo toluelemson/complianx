@@ -103,7 +103,7 @@ export default function SignupPage() {
               <div className="mt-6 space-y-3">
                 <Button
                   asChild
-                  className="w-full bg-slate-950 text-white hover:bg-black"
+                  className="w-full bg-primary text-primary-foreground hover:bg-[#e21236]"
                 >
                   <Link to="/login">Go to login</Link>
                 </Button>
@@ -211,7 +211,7 @@ export default function SignupPage() {
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full bg-slate-950 text-white hover:bg-black"
+                className="w-full bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 {mutation.isPending ? 'Creating account...' : 'Sign Up'}
               </Button>

@@ -1,0 +1,33 @@
+:root {
+  --hz-layout-content-max: 1280px;
+  --hz-layout-page-gutter: 25px;
+  --hz-layout-card-gap: 20px;
+  --hz-layout-section-gap: 32px;
+  --hz-layout-sidebar-width: 224px;
+  --hz-layout-header-height: 64px;
+  --hz-z-header: 30;
+  --hz-z-dropdown: 40;
+}
+
+.hz-shell { min-height: 100vh; background: var(--cx-canvas); }
+.hz-top-header { position: sticky; top: 0; z-index: var(--hz-z-header); background: var(--cx-surface); border-bottom: 1px solid var(--cx-border); }
+.hz-top-header__inner { min-height: var(--hz-layout-header-height); }
+.hz-shell__body { display: grid; grid-template-columns: var(--hz-layout-sidebar-width) minmax(0, 1fr); min-height: calc(100vh - var(--hz-layout-header-height)); }
+.hz-sidebar { position: sticky; top: var(--hz-layout-header-height); align-self: start; height: calc(100vh - var(--hz-layout-header-height)); overflow-y: auto; padding: 20px 14px; background: var(--cx-surface); border-right: 1px solid var(--cx-border); }
+.hz-sidebar__section { display: grid; gap: 4px; }
+.hz-sidebar__label { margin: 16px 10px 4px; color: var(--cx-text-muted); font: 500 12px/1.25 var(--cx-font-control); text-transform: uppercase; }
+.hz-sidebar__link { display: flex; align-items: center; min-height: 40px; padding: 0 10px; border-radius: var(--cx-radius); color: var(--cx-text-secondary); font-size: 14px; font-weight: 500; text-decoration: none; transition: background var(--cx-motion-fast) var(--cx-motion-ease), color var(--cx-motion-fast) var(--cx-motion-ease); }
+.hz-sidebar__link:hover, .hz-sidebar__link[aria-current='page'] { background: var(--cx-surface-subtle); color: var(--cx-brand); }
+.hz-main { min-width: 0; width: 100%; max-width: var(--hz-layout-content-max); margin: 0 auto; padding: var(--hz-layout-section-gap) var(--hz-layout-page-gutter) 48px; }
+.hz-page-title { margin-bottom: var(--hz-layout-section-gap); border-bottom: 1px solid var(--cx-border); padding: 0 0 20px; }
+.hz-mobile-nav { display: none; }
+
+@media (max-width: 992px) {
+  .hz-shell__body { display: block; }
+  .hz-sidebar { display: none; }
+  .hz-mobile-nav { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 var(--hz-layout-page-gutter); background: var(--cx-surface); border-bottom: 1px solid var(--cx-border); }
+}
+
+@media (max-width: 576px) {
+  .hz-main { padding-right: 16px; padding-left: 16px; }
+}

@@ -1555,8 +1555,8 @@ export default function ProjectPage() {
       <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold text-slate-600">
-              Project health
+              <span className="text-sm font-semibold text-slate-600">
+                System workspace
             </span>
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-800">
               <span
@@ -1571,18 +1571,18 @@ export default function ProjectPage() {
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">
-                Readiness
+                Documentation readiness
               </p>
               <p className="text-xl font-semibold text-slate-900">
                 {Math.round(completionRate)}%
               </p>
               <p className="text-xs text-slate-500">
-                {completedCount} / {TRACKABLE_STEP_COUNT} sections complete
+                {completedCount} / {TRACKABLE_STEP_COUNT} control areas complete
               </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">
-                Primary contact
+                System owner
               </p>
               <p className="text-sm font-semibold text-slate-900">
                 {projectQuery.data?.owner?.email ?? '—'}
@@ -1596,7 +1596,7 @@ export default function ProjectPage() {
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">
-                Next milestone
+                Next action
               </p>
               <p className="text-sm font-semibold text-slate-900">
                 {remindersQuery.data?.[0]?.message ?? 'No reminders'}
@@ -1611,7 +1611,7 @@ export default function ProjectPage() {
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Quick actions
+              Work queue
           </p>
           <div className="mt-4 grid gap-3">
             <button
@@ -1619,18 +1619,18 @@ export default function ProjectPage() {
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="rounded-lg border border-slate-200 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
             >
-              Continue documentation
+              Continue control review
               <span className="block text-xs font-normal text-slate-500">
-                Jump back into the active step.
+                Return to the current control area.
               </span>
             </button>
             <Link
               to={`/projects/${projectId}/trust`}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
             >
-              Open trust workspace
+              Open assurance workspace
               <span className="block text-xs font-normal text-slate-500">
-                Review metrics, fairness, and evidence.
+                Review metrics, testing, and evidence.
               </span>
             </Link>
             <button
@@ -1642,9 +1642,9 @@ export default function ProjectPage() {
               }
               className="rounded-lg border border-slate-200 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
             >
-              Generate documentation
+              Prepare deliverables
               <span className="block text-xs font-normal text-slate-500">
-                Select frameworks and trigger exports.
+                Check readiness before generating exports.
               </span>
             </button>
           </div>

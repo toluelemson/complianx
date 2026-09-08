@@ -134,7 +134,7 @@ export default function CompanyPage() {
             type="button"
             onClick={() => createCompanyMutation.mutate(createName)}
             disabled={createCompanyMutation.isPending}
-            className="bg-slate-950 text-white hover:bg-black"
+            className="bg-primary text-primary-foreground hover:bg-[#e21236]"
           >
             {createCompanyMutation.isPending
               ? 'Creating...'
@@ -220,7 +220,7 @@ export default function CompanyPage() {
                   <Button
                     type="submit"
                     disabled={renameMutation.isPending}
-                    className="bg-slate-950 text-white hover:bg-black"
+                    className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                   >
                     Rename
                   </Button>

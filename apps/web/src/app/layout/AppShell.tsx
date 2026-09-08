@@ -117,6 +117,17 @@ export function AppShell({
         ))}
       </div>
     ));
+  const renderSidebarNav = () =>
+    navSections.map((section) => (
+      <div key={section.title} className="hz-sidebar__section">
+        <p className="hz-sidebar__label">{section.title}</p>
+        {section.links.map((link) => (
+          <Link key={link.to} to={link.to} className="hz-sidebar__link">
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    ));
   const renderMobileNav = () =>
     navSections.map((section) => (
       <div key={section.title} className="space-y-2">
@@ -237,15 +248,15 @@ export function AppShell({
     </div>
   );
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_24%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-          <div className="flex items-center justify-between gap-3 py-4">
+    <div className="hz-shell">
+      <header className="hz-top-header">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10 hz-top-header__inner">
+          <div className="flex items-center justify-between gap-3">
             <BrandLink
               className="flex items-center gap-3"
               brandClassName="whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-slate-900"
-              iconClassName="flex h-8 w-8 items-center justify-center rounded-2xl border border-slate-900/10 bg-white shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)]"
-              imageClassName="h-8 w-8 rounded-2xl p-1"
+              iconClassName="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-900/10 bg-white"
+              imageClassName="h-8 w-8 rounded-lg p-1"
             />
             <div className="flex items-center gap-3 lg:hidden">
               <Button
@@ -426,20 +437,25 @@ export function AppShell({
           </div>
         )}
       </header>
-      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
+      <div className="hz-shell__body">
+        <aside className="hz-sidebar">
+          <nav aria-label="Workspace navigation">{renderSidebarNav()}</nav>
+        </aside>
+        <main className="hz-main">
         <BillingModal
           isOpen={billingOpen}
           onClose={() => setBillingOpen(false)}
         />
         {title && (
-          <div className="mb-6 rounded-[1.75rem] border border-slate-200/90 bg-white/92 px-6 py-5 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.25)] backdrop-blur">
+          <div className="hz-page-title">
             <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
               {title}
             </h1>
           </div>
         )}
         {children}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

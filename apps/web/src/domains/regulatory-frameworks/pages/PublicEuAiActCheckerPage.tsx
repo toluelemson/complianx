@@ -199,28 +199,28 @@ export default function PublicEuAiActCheckerPage() {
   return (
     <>
       <SiteHeader />
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <main className="min-h-screen bg-[#f6f7f8] px-4 py-8 sm:px-6 lg:py-12">
+        <div className="mx-auto max-w-6xl space-y-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
               <Badge
                 variant="outline"
                 className="w-fit border-slate-300 bg-white/80 text-slate-700"
               >
-                Pre-quote check
+                EU AI Act readiness
               </Badge>
               <div>
                 <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Check your compliance fit first
+                  Establish your starting position
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                  Answer a few questions to see which NeuralDocx service path
-                  fits your AI system before you request a quote.
+                  A short, evidence-led screening to identify the obligations
+                  your AI system may need to address.
                 </p>
               </div>
             </div>
-            <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-800 shadow-[0_20px_45px_-32px_rgba(120,53,15,0.25)]">
-              Not legal advice.
+            <div className="border-l-2 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Screening only — not legal advice.
             </div>
           </div>
 
@@ -240,19 +240,19 @@ export default function PublicEuAiActCheckerPage() {
           ) : questionPack && currentStep ? (
             <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
               <Card className="border-slate-200/90 bg-white/95 xl:sticky xl:top-24 xl:h-fit">
-                <CardHeader>
-                  <CardTitle className="text-xl">Assessment Progress</CardTitle>
-                  <CardDescription>Short pre-quote check.</CardDescription>
+                <CardHeader className="border-b border-slate-100">
+                  <CardTitle className="text-xl">Assessment progress</CardTitle>
+                  <CardDescription>One focused step at a time.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      <span>Progress</span>
+                        <span>Completion</span>
                       <span>{Math.round(progress)}%</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className="h-full rounded-full bg-slate-900 transition-all duration-300"
+                        className="h-full rounded-full bg-[#d40c2e] transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -313,7 +313,7 @@ export default function PublicEuAiActCheckerPage() {
                   </Card>
                 ) : null}
 
-                <Card className="border-slate-200/90 bg-white/95">
+                <Card className="border-slate-200 bg-white shadow-sm">
                   <CardHeader>
                     <div className="flex items-center justify-between gap-4">
                       <div>
@@ -321,7 +321,7 @@ export default function PublicEuAiActCheckerPage() {
                           variant="outline"
                           className="border-slate-200 bg-slate-50 text-slate-600"
                         >
-                          Step {currentIndex + 1}
+                          Section {currentIndex + 1}
                         </Badge>
                         <CardTitle className="mt-3 text-2xl">
                           {currentStep.title}
@@ -330,7 +330,7 @@ export default function PublicEuAiActCheckerPage() {
                       <div className="hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 lg:block">
                         <div className="flex items-center gap-2">
                           <Scale className="h-4 w-4" />
-                          <span>Pack {packVersion}</span>
+                        <span>EU AI Act · {packVersion}</span>
                         </div>
                       </div>
                     </div>
@@ -354,8 +354,7 @@ export default function PublicEuAiActCheckerPage() {
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-slate-500">
-                    Finish the check, then submit your system for the right
-                    quote.
+                    Your answers are used to create a focused next-step view.
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <Button
@@ -372,9 +371,9 @@ export default function PublicEuAiActCheckerPage() {
                         type="button"
                         onClick={handleNext}
                         disabled={submitting}
-                        className="bg-slate-950 text-white hover:bg-black"
+                        className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
                       >
-                        Next step
+                        Continue
                         <ChevronRight className="ml-2 h-4 w-4" />
                       </Button>
                     ) : (
@@ -382,9 +381,9 @@ export default function PublicEuAiActCheckerPage() {
                         type="button"
                         onClick={handleFinalize}
                         disabled={submitting}
-                        className="bg-slate-950 text-white hover:bg-black"
+                        className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
                       >
-                        {submitting ? 'Finalizing...' : 'See my fit'}
+                        {submitting ? 'Preparing...' : 'View assessment'}
                       </Button>
                     )}
                   </div>
@@ -395,14 +394,14 @@ export default function PublicEuAiActCheckerPage() {
                     to={buildSubmitSystemHref({ source: 'checker_skip' })}
                     className="font-medium text-slate-700 transition-colors hover:text-slate-950"
                   >
-                    Skip the check and submit your system
+                    Continue without screening
                   </Link>
                 </div>
               </div>
             </div>
           ) : null}
         </div>
-      </div>
+      </main>
     </>
   );
 }
@@ -420,7 +419,7 @@ function QuestionField({
 }) {
   return (
     <div
-      className={`rounded-[1.5rem] border p-5 ${
+      className={`border p-5 ${
         invalid
           ? 'border-rose-200 bg-rose-50/60'
           : 'border-slate-200 bg-slate-50/70'
@@ -433,7 +432,7 @@ function QuestionField({
               {question.label}
             </h3>
             {invalid ? (
-              <Badge
+                <Badge
                 variant="outline"
                 className="border-slate-200 bg-white text-slate-500"
               >
@@ -453,7 +452,7 @@ function QuestionField({
           ) : null}
         </div>
         {question.legalReferenceIds?.length ? (
-          <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <div className="border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             {question.legalReferenceIds.join(', ')}
           </div>
         ) : null}
@@ -469,7 +468,7 @@ function QuestionField({
                   key={String(option)}
                   type="button"
                   onClick={() => onChange(option)}
-                  className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${
+                  className={`border px-4 py-4 text-left transition ${
                     active
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'

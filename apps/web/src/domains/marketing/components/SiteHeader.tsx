@@ -56,7 +56,7 @@ export function SiteHeader() {
           <Button
             asChild
             size="sm"
-            className="hidden sm:inline-flex bg-slate-950 text-white hover:bg-black"
+            className="hidden sm:inline-flex bg-[#d40c2e] text-white hover:bg-[#e21236]"
           >
             <MarketingSubmitSystemLink source="site_header">
               Submit your system
@@ -130,7 +130,7 @@ export function SiteHeader() {
             </Link>
             <MarketingSubmitSystemLink
               source="site_header"
-              className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-black"
+              className="rounded-lg bg-[#d40c2e] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e21236]"
               onClick={() => setMobileMenuOpen(false)}
             >
               Submit your system

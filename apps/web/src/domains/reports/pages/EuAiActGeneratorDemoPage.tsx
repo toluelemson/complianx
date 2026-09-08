@@ -717,7 +717,7 @@ export default function EuAiActGeneratorDemoPage() {
                   type="button"
                   onClick={handleGenerate}
                   disabled={submitting}
-                  className="bg-slate-950 text-white hover:bg-black"
+                  className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
                   {submitting

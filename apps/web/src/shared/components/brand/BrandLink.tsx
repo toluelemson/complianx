@@ -13,7 +13,7 @@ export function BrandLink({
   className = 'flex items-center gap-3',
   iconClassName,
   imageClassName = 'h-6 w-6 rounded-xl',
-  label = 'NeuralDocx',
+  label = 'ComplianX',
 }: BrandLinkProps) {
   return (
     <Link to="/" className={className}>

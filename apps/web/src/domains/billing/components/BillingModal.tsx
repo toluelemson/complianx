@@ -178,7 +178,7 @@ export default function BillingModal({ isOpen, onClose }: Props) {
                       onClick={() => checkoutMutation.mutate({ plan: 'PRO' })}
                       disabled={checkoutMutation.isPending}
                       size="sm"
-                      className="bg-slate-950 text-white hover:bg-black"
+                      className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                     >
                       {checkoutMutation.isPending
                         ? 'Redirecting…'

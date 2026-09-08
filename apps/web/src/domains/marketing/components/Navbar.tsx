@@ -49,45 +49,43 @@ export function Navbar() {
     };
   }, []);
 
-  const headerClassName = isLightSection
-    ? 'animate-enter-fade sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl'
-    : 'animate-enter-fade sticky top-0 z-30 border-b border-white/10 bg-[#0a0c10]/82 backdrop-blur-xl';
+  const headerClassName = 'animate-enter-fade sticky top-0 z-30 border-b border-[#e8e8e8] bg-white';
 
   const logoShellClassName = isLightSection
-    ? 'flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white'
-    : 'flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]';
+    ? 'flex h-8 w-8 items-center justify-center rounded-md border border-[#dbdbdb] bg-white'
+    : 'flex h-8 w-8 items-center justify-center rounded-md border border-[#dbdbdb] bg-white';
 
   const brandTextClassName = isLightSection
-    ? 'text-base font-semibold tracking-tight text-slate-950'
-    : 'text-base font-semibold tracking-tight text-white';
+    ? 'text-base font-semibold tracking-tight text-[#383838]'
+    : 'text-base font-semibold tracking-tight text-[#383838]';
 
   const navLinkClassName = isLightSection
-    ? 'text-sm font-medium text-slate-600 transition hover:text-slate-950'
-    : 'text-sm font-medium text-slate-300 transition hover:text-white';
+    ? 'text-sm font-medium text-[#383838] transition hover:text-[#d40c2e]'
+    : 'text-sm font-medium text-[#383838] transition hover:text-[#d40c2e]';
 
   const utilityLinkClassName = isLightSection
-    ? 'text-sm font-medium text-slate-900 transition hover:text-black'
-    : 'text-sm font-medium text-slate-200 transition hover:text-white';
+    ? 'text-sm font-medium text-[#d40c2e] transition hover:text-[#e21236]'
+    : 'text-sm font-medium text-[#d40c2e] transition hover:text-[#e21236]';
 
   const loginButtonClassName = isLightSection
-    ? 'hidden text-slate-700 hover:text-slate-950 sm:inline-flex'
-    : 'hidden text-slate-200 hover:text-white sm:inline-flex';
+    ? 'hidden text-[#383838] hover:text-[#d40c2e] sm:inline-flex'
+    : 'hidden text-[#383838] hover:text-[#d40c2e] sm:inline-flex';
 
   const enterpriseButtonClassName = isLightSection
-    ? 'hidden border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-black sm:inline-flex'
-    : 'hidden border-white/15 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08] hover:text-white sm:inline-flex';
+    ? 'hidden border-[#dbdbdb] bg-white text-[#383838] hover:bg-[#fafafa] hover:text-[#d40c2e] sm:inline-flex'
+    : 'hidden border-[#dbdbdb] bg-white text-[#383838] hover:bg-[#fafafa] hover:text-[#d40c2e] sm:inline-flex';
 
   const mobileToggleClassName = isLightSection
-    ? 'h-9 w-9 rounded-full border border-slate-200 bg-white p-0 text-slate-700 hover:bg-slate-50 hover:text-slate-950 lg:hidden'
-    : 'h-9 w-9 rounded-full border border-white/10 bg-white/[0.03] p-0 text-slate-100 hover:bg-white/[0.08] hover:text-white lg:hidden';
+    ? 'h-8 w-8 rounded-md border border-[#dbdbdb] bg-white p-0 text-[#383838] hover:bg-[#fafafa] hover:text-[#d40c2e] lg:hidden'
+    : 'h-8 w-8 rounded-md border border-[#dbdbdb] bg-white p-0 text-[#383838] hover:bg-[#fafafa] hover:text-[#d40c2e] lg:hidden';
 
   const mobilePanelClassName = isLightSection
-    ? 'border-t border-slate-200 bg-white/96 px-5 py-4 sm:px-8 lg:hidden'
-    : 'border-t border-white/10 bg-[#0a0c10]/96 px-5 py-4 sm:px-8 lg:hidden';
+    ? 'border-t border-[#e8e8e8] bg-white px-5 py-4 sm:px-8 lg:hidden'
+    : 'border-t border-[#e8e8e8] bg-white px-5 py-4 sm:px-8 lg:hidden';
 
   const mobileLinkClassName = isLightSection
-    ? 'rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950'
-    : 'rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/[0.06] hover:text-white';
+    ? 'rounded-md border border-[#e8e8e8] bg-[#fafafa] px-4 py-3 text-sm font-medium text-[#383838] transition hover:border-[#d40c2e] hover:text-[#d40c2e]'
+    : 'rounded-md border border-[#e8e8e8] bg-[#fafafa] px-4 py-3 text-sm font-medium text-[#383838] transition hover:border-[#d40c2e] hover:text-[#d40c2e]';
 
   const mobileGhostClassName = isLightSection
     ? 'justify-start rounded-2xl text-slate-700 hover:text-slate-950'
@@ -175,7 +173,7 @@ export function Navbar() {
           <Button
             asChild
             size="sm"
-            className="bg-white text-black hover:bg-[#F3F6FF]"
+            className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
           >
             <MarketingSubmitSystemLink source="navbar">
               Submit your system
@@ -228,7 +226,7 @@ export function Navbar() {
             </Button>
             <Button
               asChild
-              className="justify-start rounded-2xl bg-white text-black hover:bg-[#F3F6FF]"
+              className="justify-start rounded-md bg-[#d40c2e] text-white hover:bg-[#e21236]"
             >
               <MarketingSubmitSystemLink
                 source="navbar"

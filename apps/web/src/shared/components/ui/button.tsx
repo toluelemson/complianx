@@ -4,22 +4,22 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/utilities/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-[6px] font-[Montserrat,Inter,sans-serif] text-sm font-medium tracking-[-0.015em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground shadow-[0_12px_30px_-18px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 hover:bg-primary/92',
+          'bg-primary text-primary-foreground shadow-sm hover:bg-[#e21236]',
         secondary:
-          'bg-secondary text-secondary-foreground hover:-translate-y-0.5 hover:bg-secondary/85',
+          'bg-secondary text-secondary-foreground hover:bg-[#e8e8e8]',
         outline:
-          'border border-input bg-background/85 text-foreground shadow-[0_10px_24px_-18px_rgba(15,23,42,0.35)] hover:-translate-y-0.5 hover:bg-accent hover:text-accent-foreground',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
+          'border border-input bg-white text-foreground shadow-none hover:bg-[#fafafa] hover:text-accent-foreground',
+        ghost: 'hover:bg-[#fafafa] hover:text-accent-foreground',
       },
       size: {
-        default: 'h-11 px-5 py-2.5',
-        sm: 'h-9 px-4',
-        lg: 'h-12 px-6',
+        default: 'h-11 px-4',
+        sm: 'h-8 px-3 text-[13px]',
+        lg: 'h-12 px-5',
       },
     },
     defaultVariants: {

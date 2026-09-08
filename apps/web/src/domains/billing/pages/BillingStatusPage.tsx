@@ -69,7 +69,7 @@ export default function BillingStatusPage({ variant }: BillingStatusPageProps) {
               <Button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event('paywall'))}
-                className="bg-slate-950 text-white hover:bg-black"
+                className="bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 Manage billing
               </Button>
@@ -77,7 +77,7 @@ export default function BillingStatusPage({ variant }: BillingStatusPageProps) {
               <Button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event('paywall'))}
-                className="bg-slate-950 text-white hover:bg-black"
+                className="bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 Retry checkout
               </Button>

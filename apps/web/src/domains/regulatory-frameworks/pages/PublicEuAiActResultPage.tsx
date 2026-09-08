@@ -100,7 +100,7 @@ export default function PublicEuAiActResultPage() {
   const showEvidenceSection = Boolean(
     result?.missing_evidence?.length && !compactResult,
   );
-  const showNeuralDocxNextStep = Boolean(
+  const showComplianxNextStep = Boolean(
     result &&
       !compactResult &&
       (result.next_required_documents?.length ||
@@ -119,7 +119,7 @@ export default function PublicEuAiActResultPage() {
 
   const handleEmailResult = () => {
     if (!result) return;
-    const subject = encodeURIComponent(`NeuralDocx audit check result`);
+    const subject = encodeURIComponent(`ComplianX audit check result`);
     const body = encodeURIComponent(
       buildEmailBody(result, resultQuery.data?.packVersion),
     );
@@ -150,7 +150,7 @@ export default function PublicEuAiActResultPage() {
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(15, 23, 42);
     pdf.setFontSize(11);
-    pdf.text('NeuralDocx', margin + 48, y + 12);
+    pdf.text('ComplianX', margin + 48, y + 12);
     pdf.setFontSize(24);
     pdf.text('Audit Check Result', margin + 48, y + 34);
 
@@ -373,7 +373,7 @@ export default function PublicEuAiActResultPage() {
         drawInfoCard(
           'Recommended Documents',
           splitLines(
-            'These are the documents NeuralDocx would typically prepare next based on this result.',
+            'These are the deliverables typically prepared next based on this result.',
           ),
         );
         drawBulletList(
@@ -434,7 +434,7 @@ export default function PublicEuAiActResultPage() {
     }
 
     drawSectionHeading(
-      'Continue with NeuralDocx',
+      'Continue with ComplianX',
       'If you want us to turn this result into actual documents, use the path below.',
     );
     drawInfoCard(
@@ -460,7 +460,7 @@ export default function PublicEuAiActResultPage() {
     pdf.setFontSize(10);
     pdf.setTextColor(100, 116, 139);
     const disclaimerLines = pdf.splitTextToSize(
-      'This summary is provided by NeuralDocx to support documentation and compliance preparation. It is not legal advice.',
+      'This summary is provided by ComplianX to support documentation and compliance preparation. It is not legal advice.',
       contentWidth,
     ) as string[];
     disclaimerLines.forEach((line) => {
@@ -470,7 +470,7 @@ export default function PublicEuAiActResultPage() {
     y += 12;
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(15, 23, 42);
-    pdf.text('Prepared by NeuralDocx', margin, y);
+    pdf.text('Prepared by ComplianX', margin, y);
     y += 16;
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(100, 116, 139);
@@ -500,11 +500,11 @@ export default function PublicEuAiActResultPage() {
                 variant="outline"
                 className="w-fit border-slate-300 bg-white/80 text-slate-700"
               >
-                Pre-quote result
+                Screening result
               </Badge>
               <div>
                 <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Your compliance fit result
+                  Your initial compliance position
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
                   A clear answer, the likely service path, and the best next
@@ -545,7 +545,7 @@ export default function PublicEuAiActResultPage() {
                         <Button
                           type="button"
                           onClick={handleDownloadPdf}
-                          className="bg-slate-950 text-white hover:bg-black"
+                          className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                         >
                           <Download className="mr-2 h-4 w-4" />
                           Download PDF
@@ -697,7 +697,7 @@ export default function PublicEuAiActResultPage() {
                 </CardContent>
               </Card>
 
-              {showEvidenceSection || showNeuralDocxNextStep ? (
+              {showEvidenceSection || showComplianxNextStep ? (
                 <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                   {showEvidenceSection ? (
                     <Card className="border-slate-200/90 bg-white/95">
@@ -726,7 +726,7 @@ export default function PublicEuAiActResultPage() {
                     </Card>
                   ) : null}
 
-                  {showNeuralDocxNextStep ? (
+                  {showComplianxNextStep ? (
                     <Card className="border-slate-200/90 bg-white/95">
                       <CardHeader>
                         <CardTitle className="text-2xl">
@@ -763,7 +763,7 @@ export default function PublicEuAiActResultPage() {
                           ) : null}
                           <Button
                             asChild
-                            className="bg-slate-950 text-white hover:bg-black"
+                            className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                           >
                             <Link
                               to={buildSubmitSystemHref({
@@ -1030,7 +1030,7 @@ function buildEmailBody(
   packVersion?: string,
 ) {
   const lines = [
-    'NeuralDocx audit check result',
+    'ComplianX audit check result',
     '',
     `Verdict: ${buildVerdict(result).label}`,
     `Summary: ${buildClosingSummary(result).replace(/^Summary:\s*/, '')}`,
@@ -1065,7 +1065,7 @@ function buildEmailBody(
     '',
     `Pack: ${packVersion ?? 'current'}`,
     '',
-    'Prepared by NeuralDocx',
+    'Prepared by ComplianX',
     'https://neuraldocx.com',
   );
 
