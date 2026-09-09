@@ -10,15 +10,12 @@ export default function VerifyEmailPage() {
   const [message, setMessage] = useState<string | undefined>();
   const [status, setStatus] = useState<
     'idle' | 'pending' | 'success' | 'error'
-  >('idle');
+  >('pending');
 
   useEffect(() => {
     if (!token) {
-      setStatus('error');
-      setMessage('Missing verification token.');
       return;
     }
-    setStatus('pending');
     api
       .post('/auth/verify-email', { token })
       .then(() => {
@@ -34,6 +31,9 @@ export default function VerifyEmailPage() {
       });
   }, [token]);
 
+  const effectiveStatus = token ? status : 'error';
+  const effectiveMessage = token ? message : 'Missing verification token.';
+
   return (
     <>
       <SiteHeader />
@@ -43,11 +43,11 @@ export default function VerifyEmailPage() {
             Email verification
           </h1>
           <p className="mt-4 text-sm text-slate-500">
-            {status === 'pending'
+            {effectiveStatus === 'pending'
               ? 'Validating your confirmation link...'
-              : message}
+              : effectiveMessage}
           </p>
-          {status !== 'pending' && (
+          {effectiveStatus !== 'pending' && (
             <Link
               to="/login"
               className="mt-6 inline-flex rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400"
