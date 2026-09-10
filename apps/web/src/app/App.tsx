@@ -40,6 +40,9 @@ const ReviewsPage = lazy(
 const DocumentsPage = lazy(
   () => import('@/domains/ai-systems/pages/DocumentsPage'),
 );
+const CompliancePackagePage = lazy(
+  () => import('@/domains/ai-systems/pages/CompliancePackagePage'),
+);
 const ProjectPage = lazy(
   () => import('@/domains/ai-systems/pages/ProjectPage'),
 );
@@ -121,6 +124,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/compliance-package"
+          element={
+            <ProtectedRoute>
+              <CompliancePackagePage />
             </ProtectedRoute>
           }
         />

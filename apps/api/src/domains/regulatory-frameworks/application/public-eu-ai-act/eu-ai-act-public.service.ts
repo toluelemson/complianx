@@ -341,9 +341,13 @@ export class EuAiActPublicService {
             Record<string, unknown>
           >)
         : [];
-    const legalReferences = legalRegistry.filter((reference) =>
-      legalReferenceIds.includes(String(reference.id ?? '')),
-    );
+    const legalReferences = legalRegistry.filter((reference) => {
+      const referenceId = reference.id;
+      return (
+        (typeof referenceId === 'string' || typeof referenceId === 'number') &&
+        legalReferenceIds.includes(String(referenceId))
+      );
+    });
 
     return {
       resultId: result.publicId,

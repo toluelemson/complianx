@@ -26,11 +26,11 @@ const projectDetailInclude = Prisma.validator<Prisma.ProjectInclude>()({
   sections: {
     include: {
       lastEditor: { select: { id: true, email: true } },
-  comments: {
-    include: {
-      author: { select: { id: true, email: true } },
-      resolvedBy: { select: { id: true, email: true } },
-    },
+      comments: {
+        include: {
+          author: { select: { id: true, email: true } },
+          resolvedBy: { select: { id: true, email: true } },
+        },
         orderBy: { createdAt: 'asc' },
       },
       statusEvents: {
@@ -121,7 +121,9 @@ function mapSectionComment(comment: {
     linkedEntityType: comment.linkedEntityType,
     linkedEntityId: comment.linkedEntityId,
     mentions: Array.isArray(comment.mentions)
-      ? comment.mentions.filter((value): value is string => typeof value === 'string')
+      ? comment.mentions.filter(
+          (value): value is string => typeof value === 'string',
+        )
       : undefined,
   };
 }
@@ -148,6 +150,10 @@ function mapArtifact(artifact: {
   id: string;
   originalName: string;
   description?: string | null;
+  source?: string | null;
+  expiresAt?: Date | null;
+  externalUrl?: string | null;
+  provenanceNote?: string | null;
   createdAt: Date;
   size: number;
   mimeType: string;
@@ -170,6 +176,10 @@ function mapArtifact(artifact: {
     id: artifact.id,
     originalName: artifact.originalName,
     description: artifact.description ?? undefined,
+    source: artifact.source ?? undefined,
+    expiresAt: toIso(artifact.expiresAt),
+    externalUrl: artifact.externalUrl ?? undefined,
+    provenanceNote: artifact.provenanceNote ?? undefined,
     createdAt: artifact.createdAt.toISOString(),
     size: artifact.size,
     mimeType: artifact.mimeType,

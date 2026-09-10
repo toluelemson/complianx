@@ -7,7 +7,10 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
-import type { BillingPlan, BillingUsage } from '@complianx/contracts/ai-systems';
+import type {
+  BillingPlan,
+  BillingUsage,
+} from '@complianx/contracts/ai-systems';
 import { JwtAuthGuard } from '../../../platform/auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../../../platform/auth/authenticated-request.type';
 import { PrismaService } from '../../../platform/database/prisma.service';

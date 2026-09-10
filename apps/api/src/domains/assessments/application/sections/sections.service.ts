@@ -90,7 +90,9 @@ function mapComment(comment: {
     linkedEntityType: comment.linkedEntityType ?? null,
     linkedEntityId: comment.linkedEntityId ?? null,
     mentions: Array.isArray(comment.mentions)
-      ? comment.mentions.filter((value): value is string => typeof value === 'string')
+      ? comment.mentions.filter(
+          (value): value is string => typeof value === 'string',
+        )
       : undefined,
   };
 }
@@ -116,6 +118,10 @@ function mapSection(section: {
     id: string;
     originalName: string;
     description?: string | null;
+    source?: string | null;
+    expiresAt?: Date | null;
+    externalUrl?: string | null;
+    provenanceNote?: string | null;
     createdAt: Date;
     size: number;
     mimeType: string;
@@ -156,6 +162,10 @@ function mapSection(section: {
       id: artifact.id,
       originalName: artifact.originalName,
       description: artifact.description ?? undefined,
+      source: artifact.source ?? undefined,
+      expiresAt: toIso(artifact.expiresAt),
+      externalUrl: artifact.externalUrl ?? undefined,
+      provenanceNote: artifact.provenanceNote ?? undefined,
       createdAt: artifact.createdAt.toISOString(),
       size: artifact.size,
       mimeType: artifact.mimeType,
@@ -194,11 +204,13 @@ export class SectionsService {
       allowApprover: true,
       allowCompanyMember: true,
     });
-    return this.prisma.section.findMany({
-      where: { projectId },
-      orderBy: { name: 'asc' },
-      include: sectionDetailInclude,
-    }).then((sections) => sections.map(mapSection));
+    return this.prisma.section
+      .findMany({
+        where: { projectId },
+        orderBy: { name: 'asc' },
+        include: sectionDetailInclude,
+      })
+      .then((sections) => sections.map(mapSection));
   }
 
   async save(
@@ -241,15 +253,17 @@ export class SectionsService {
       }
       return updated;
     }
-    return this.prisma.section.create({
-      data: {
-        ...dto,
-        content: dto.content as Prisma.InputJsonValue,
-        projectId,
-        lastEditorId: userId,
-      },
-      include: sectionDetailInclude,
-    }).then(mapSection);
+    return this.prisma.section
+      .create({
+        data: {
+          ...dto,
+          content: dto.content as Prisma.InputJsonValue,
+          projectId,
+          lastEditorId: userId,
+        },
+        include: sectionDetailInclude,
+      })
+      .then(mapSection);
   }
 
   async update(
@@ -316,6 +330,66 @@ export class SectionsService {
     if (!section || section.projectId !== projectId) {
       throw new NotFoundException('Section not found');
     }
+    const mentionTokens = Array.from(
+      new Set((dto.mentions ?? []).filter((token) => token !== userId)),
+    );
+    const mentionedMembers = mentionTokens.length
+      ? await this.prisma.userCompany.findMany({
+          where: {
+            companyId: workspaceId,
+            OR: [
+              { userId: { in: mentionTokens } },
+              { user: { email: { in: mentionTokens } } },
+            ],
+          },
+          select: { userId: true, user: { select: { email: true } } },
+        })
+      : [];
+    if (mentionedMembers.length !== mentionTokens.length) {
+      if (mentionTokens.length) {
+        throw new NotFoundException('One or more mentioned users not found');
+      }
+    }
+    const mentionedIds = Array.from(
+      new Set(mentionedMembers.map((member) => member.userId)),
+    );
+    if (dto.linkedEntityType && dto.linkedEntityId) {
+      const linkedEntityExists =
+        dto.linkedEntityType === 'SECTION'
+          ? Boolean(
+              await this.prisma.section.findFirst({
+                where: { id: dto.linkedEntityId, projectId },
+                select: { id: true },
+              }),
+            )
+          : dto.linkedEntityType === 'ARTIFACT'
+            ? Boolean(
+                await this.prisma.sectionArtifact.findFirst({
+                  where: { id: dto.linkedEntityId, projectId },
+                  select: { id: true },
+                }),
+              )
+            : dto.linkedEntityType === 'DOCUMENT'
+              ? Boolean(
+                  await this.prisma.document.findFirst({
+                    where: { id: dto.linkedEntityId, projectId },
+                    select: { id: true },
+                  }),
+                )
+              : dto.linkedEntityType === 'REQUIREMENT'
+                ? Boolean(
+                    await this.prisma.aiSystemObligation.findFirst({
+                      where: { id: dto.linkedEntityId, projectId },
+                      select: { id: true },
+                    }),
+                  )
+                : false;
+      if (!linkedEntityExists) {
+        throw new NotFoundException('Linked project entity not found');
+      }
+    } else if (dto.linkedEntityType || dto.linkedEntityId) {
+      throw new NotFoundException('Both linked entity fields are required');
+    }
     const comment = await this.prisma.sectionComment.create({
       data: {
         body: dto.body,
@@ -354,6 +428,9 @@ export class SectionsService {
           recipients.add(project.approverId);
         }
       }
+      for (const recipientId of mentionedIds) {
+        recipients.add(recipientId);
+      }
       for (const recipientId of recipients) {
         await this.notifications.create({
           userId: recipientId,
@@ -384,13 +461,15 @@ export class SectionsService {
     if (!section || section.projectId !== projectId) {
       throw new NotFoundException('Section not found');
     }
-    return this.prisma.sectionComment.findMany({
-      where: { sectionId },
-      include: {
-        author: { select: { id: true, email: true } },
-      },
-      orderBy: { createdAt: 'asc' },
-    }).then((comments) => comments.map(mapComment));
+    return this.prisma.sectionComment
+      .findMany({
+        where: { sectionId },
+        include: {
+          author: { select: { id: true, email: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+      .then((comments) => comments.map(mapComment));
   }
 
   async setCommentResolved(

@@ -156,8 +156,68 @@ export class DocumentsService {
         },
         obligations: {
           include: {
-            obligation: { select: { key: true, title: true, legalReference: true } },
-            evidence: { select: { artifactId: true, documentId: true, linkType: true } },
+            obligation: {
+              select: { key: true, title: true, legalReference: true },
+            },
+            evidence: {
+              select: { artifactId: true, documentId: true, linkType: true },
+            },
+          },
+        },
+        sections: {
+          select: {
+            id: true,
+            name: true,
+            updatedAt: true,
+            comments: {
+              select: {
+                id: true,
+                body: true,
+                createdAt: true,
+                resolvedAt: true,
+                linkedEntityType: true,
+                linkedEntityId: true,
+                mentions: true,
+                author: { select: { id: true, email: true } },
+                resolvedBy: { select: { id: true, email: true } },
+              },
+            },
+            artifacts: {
+              select: {
+                id: true,
+                originalName: true,
+                source: true,
+                expiresAt: true,
+                externalUrl: true,
+                provenanceNote: true,
+                version: true,
+                checksum: true,
+                citationKey: true,
+                status: true,
+              },
+            },
+          },
+        },
+        assessments: {
+          orderBy: { updatedAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            answers: true,
+            updatedAt: true,
+            classifications: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                category: true,
+                reviewStatus: true,
+                confidence: true,
+                missingInformation: true,
+                regulatoryContentVersion: true,
+                ruleSetVersion: true,
+              },
+            },
           },
         },
       },
@@ -197,6 +257,29 @@ export class DocumentsService {
             approvalState: item.approvalState,
             dueAt: item.dueAt,
             evidence: item.evidence,
+          })),
+          assessment: project.assessments[0]
+            ? {
+                id: project.assessments[0].id,
+                status: project.assessments[0].status,
+                answers: project.assessments[0].answers,
+                updatedAt: project.assessments[0].updatedAt,
+                classification:
+                  project.assessments[0].classifications[0] ?? null,
+              }
+            : null,
+          evidence: project.sections.flatMap((section) =>
+            section.artifacts.map((artifact) => ({
+              ...artifact,
+              sectionId: section.id,
+              sectionName: section.name,
+            })),
+          ),
+          sections: project.sections.map((section) => ({
+            id: section.id,
+            name: section.name,
+            updatedAt: section.updatedAt,
+            comments: section.comments,
           })),
           auditTrail: project.statusEvents,
         },

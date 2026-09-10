@@ -37,11 +37,12 @@ export class ImportPublicResultService {
         answer.normalizedJson,
       ]),
     );
+    const importedName = answers.system_name ?? answers.ai_system_name;
     const systemName =
       requestedName?.trim() ||
-      String(
-        answers.system_name ?? answers.ai_system_name ?? 'Imported AI System',
-      );
+      (typeof importedName === 'string' || typeof importedName === 'number'
+        ? String(importedName)
+        : 'Imported AI System');
     const roles = Array.isArray(result.operator_roles)
       ? result.operator_roles.filter(
           (value: unknown): value is string => typeof value === 'string',

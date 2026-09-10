@@ -27,6 +27,8 @@ import {
   linkObligationEvidence,
   listObligationEvidence,
   listProjectReviewers,
+  listAssessmentAnswers,
+  saveAssessmentAnswers,
   updateProjectObligation,
   listTemplates,
   reviewClassification,
@@ -38,6 +40,7 @@ import {
   updateTemplate,
   unlinkObligationEvidence,
 } from '@/domains/ai-systems/api';
+import type { ObligationEvidenceLink } from '@/domains/ai-systems/api';
 import type {
   DocumentItem,
   ArtifactStatus,
@@ -259,25 +262,80 @@ export default function ProjectPage() {
         getApiErrorMessage(error) ?? 'Unable to save classification review',
       ),
   });
+  const assessmentId = classificationQuery.data?.assessmentId;
+  const answersQuery = useQuery({
+    queryKey: ['assessmentAnswers', projectId, assessmentId, activeCompanyId],
+    enabled: Boolean(projectId && assessmentId && activeCompanyId),
+    queryFn: () => listAssessmentAnswers(projectId, assessmentId ?? ''),
+  });
+  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<
+    Record<string, unknown>
+  >({});
+  const answersSaveMutation = useMutation({
+    mutationFn: (answers: Record<string, unknown>) =>
+      saveAssessmentAnswers(projectId, assessmentId ?? '', answers),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['assessmentAnswers', projectId, assessmentId],
+      });
+      toast.success('Questionnaire saved');
+    },
+    onError: () => toast.error('Unable to save questionnaire'),
+  });
+  useEffect(() => {
+    if (!answersQuery.data) return;
+    setQuestionnaireAnswers(
+      Object.fromEntries(
+        answersQuery.data.map((answer) => [
+          answer.questionKey,
+          answer.valueJson,
+        ]),
+      ),
+    );
+  }, [answersQuery.data]);
   const obligationsQuery = useQuery({
     queryKey: ['obligations', projectId, activeCompanyId],
     enabled: Boolean(projectId && activeCompanyId),
     queryFn: () => listProjectObligations(projectId),
   });
   const [obligationFilter, setObligationFilter] = useState('ALL');
+  const [obligationOwnerFilter, setObligationOwnerFilter] = useState('ALL');
+  const [obligationPriorityFilter, setObligationPriorityFilter] =
+    useState('ALL');
+  const [obligationApprovalFilter, setObligationApprovalFilter] =
+    useState('ALL');
   const obligationUpdateMutation = useMutation({
-    mutationFn: (payload: { obligationId: string; field: string; value: string }) =>
+    mutationFn: (payload: {
+      obligationId: string;
+      field: string;
+      value: string;
+    }) =>
       updateProjectObligation(projectId, payload.obligationId, {
         [payload.field]: payload.value,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['obligations', projectId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['obligations', projectId],
+      });
     },
     onError: () => toast.error('Unable to update requirement'),
   });
   const visibleObligations = (obligationsQuery.data ?? []).filter(
-    (item) => obligationFilter === 'ALL' || item.status === obligationFilter,
+    (item) =>
+      (obligationFilter === 'ALL' || item.status === obligationFilter) &&
+      (obligationOwnerFilter === 'ALL' ||
+        item.owner?.id === obligationOwnerFilter) &&
+      (obligationPriorityFilter === 'ALL' ||
+        item.priority === obligationPriorityFilter) &&
+      (obligationApprovalFilter === 'ALL' ||
+        item.approvalState === obligationApprovalFilter),
   );
+  const activeObligationFilterCount = [
+    obligationFilter,
+    obligationOwnerFilter,
+    obligationPriorityFilter,
+    obligationApprovalFilter,
+  ].filter((value) => value !== 'ALL').length;
   const obligationEvidenceQueries = useQueries({
     queries: (obligationsQuery.data ?? []).map((item) => ({
       queryKey: ['obligationEvidence', projectId, item.id, activeCompanyId],
@@ -305,7 +363,18 @@ export default function ProjectPage() {
       ),
     [sectionsQuery.data],
   );
-  const evidenceLinkMutation = useMutation({
+  const [evidenceNow] = useState(() => Date.now());
+  const evidenceLinkMutation = useMutation<
+    ObligationEvidenceLink | { success: boolean },
+    unknown,
+    {
+      action: 'link' | 'unlink';
+      obligationId: string;
+      artifactId?: string;
+      documentId?: string;
+      linkId?: string;
+    }
+  >({
     mutationFn: (payload: {
       action: 'link' | 'unlink';
       obligationId: string;
@@ -646,8 +715,11 @@ export default function ProjectPage() {
   };
 
   const commentMutation = useMutation({
-    mutationFn: (payload: { sectionId: string; body: string; mentions?: string[] }) =>
-      addSectionComment(projectId, payload),
+    mutationFn: (payload: {
+      sectionId: string;
+      body: string;
+      mentions?: string[];
+    }) => addSectionComment(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Comment added');
@@ -1279,6 +1351,93 @@ export default function ProjectPage() {
                   ) : null}
                 </div>
               ) : null}
+              {classificationQuery.data?.assessmentId ? (
+                <div className="sm:col-span-3 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        Classification questionnaire
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Answers are stored with their author and timestamp.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        answersSaveMutation.mutate(questionnaireAnswers)
+                      }
+                      disabled={answersSaveMutation.isPending || !isOwner}
+                      className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      {answersSaveMutation.isPending
+                        ? 'Saving…'
+                        : 'Save answers'}
+                    </button>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={
+                          questionnaireAnswers.uses_sensitive_data === true
+                        }
+                        onChange={(event) =>
+                          setQuestionnaireAnswers((answers) => ({
+                            ...answers,
+                            uses_sensitive_data: event.target.checked,
+                          }))
+                        }
+                        disabled={!isOwner}
+                      />
+                      Does the system use sensitive or personal data?
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={
+                          questionnaireAnswers.human_oversight_required === true
+                        }
+                        onChange={(event) =>
+                          setQuestionnaireAnswers((answers) => ({
+                            ...answers,
+                            human_oversight_required: event.target.checked,
+                          }))
+                        }
+                        disabled={!isOwner}
+                      />
+                      Is human oversight required for decisions?
+                    </label>
+                    {questionnaireAnswers.uses_sensitive_data === true ? (
+                      <label className="text-sm text-slate-700 md:col-span-2">
+                        Sensitive data categories
+                        <input
+                          value={String(
+                            questionnaireAnswers.sensitive_data_types ?? '',
+                          )}
+                          onChange={(event) =>
+                            setQuestionnaireAnswers((answers) => ({
+                              ...answers,
+                              sensitive_data_types: event.target.value,
+                            }))
+                          }
+                          disabled={!isOwner}
+                          placeholder="Health, biometrics, financial data…"
+                          className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                  {answersQuery.data?.length ? (
+                    <p className="mt-3 text-[11px] text-slate-400">
+                      Last updated by {answersQuery.data[0].answeredBy.email} ·{' '}
+                      {new Date(
+                        answersQuery.data[0].updatedAt,
+                      ).toLocaleString()}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               {obligationsQuery.data?.length ? (
                 <div
                   id="requirements"
@@ -1308,6 +1467,65 @@ export default function ProjectPage() {
                       <option value="READY_FOR_REVIEW">Ready for review</option>
                       <option value="SATISFIED">Satisfied</option>
                     </select>
+                    <select
+                      aria-label="Filter requirement owner"
+                      value={obligationOwnerFilter}
+                      onChange={(event) =>
+                        setObligationOwnerFilter(event.target.value)
+                      }
+                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                    >
+                      <option value="ALL">All owners</option>
+                      {availableReviewers.map((reviewer) => (
+                        <option key={reviewer.id} value={reviewer.id}>
+                          {reviewer.email}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Filter requirement priority"
+                      value={obligationPriorityFilter}
+                      onChange={(event) =>
+                        setObligationPriorityFilter(event.target.value)
+                      }
+                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                    >
+                      <option value="ALL">All priorities</option>
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                      <option value="CRITICAL">Critical</option>
+                    </select>
+                    <select
+                      aria-label="Filter requirement approval state"
+                      value={obligationApprovalFilter}
+                      onChange={(event) =>
+                        setObligationApprovalFilter(event.target.value)
+                      }
+                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                    >
+                      <option value="ALL">All approval states</option>
+                      <option value="DRAFT">Draft</option>
+                      <option value="READY_FOR_REVIEW">Ready for review</option>
+                      <option value="APPROVED">Approved</option>
+                      <option value="CHANGES_REQUESTED">
+                        Changes requested
+                      </option>
+                    </select>
+                    {activeObligationFilterCount ? (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-slate-500 hover:text-slate-900"
+                        onClick={() => {
+                          setObligationFilter('ALL');
+                          setObligationOwnerFilter('ALL');
+                          setObligationPriorityFilter('ALL');
+                          setObligationApprovalFilter('ALL');
+                        }}
+                      >
+                        Clear filters ({activeObligationFilterCount})
+                      </button>
+                    ) : null}
                   </div>
                   <ul className="mt-3 grid gap-2 md:grid-cols-2">
                     {visibleObligations.map((item) => (
@@ -1349,9 +1567,13 @@ export default function ProjectPage() {
                                   className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
                                 >
                                   <option value="LOW">Low priority</option>
-                                  <option value="MEDIUM">Medium priority</option>
+                                  <option value="MEDIUM">
+                                    Medium priority
+                                  </option>
                                   <option value="HIGH">High priority</option>
-                                  <option value="CRITICAL">Critical priority</option>
+                                  <option value="CRITICAL">
+                                    Critical priority
+                                  </option>
                                 </select>
                                 <select
                                   aria-label={`Approval state for ${item.obligation.title}`}
@@ -1366,9 +1588,13 @@ export default function ProjectPage() {
                                   className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
                                 >
                                   <option value="DRAFT">Draft</option>
-                                  <option value="READY_FOR_REVIEW">Ready for review</option>
+                                  <option value="READY_FOR_REVIEW">
+                                    Ready for review
+                                  </option>
                                   <option value="APPROVED">Approved</option>
-                                  <option value="CHANGES_REQUESTED">Changes requested</option>
+                                  <option value="CHANGES_REQUESTED">
+                                    Changes requested
+                                  </option>
                                 </select>
                                 <select
                                   aria-label={`Owner for ${item.obligation.title}`}
@@ -1386,7 +1612,10 @@ export default function ProjectPage() {
                                 >
                                   <option value="">Unassigned</option>
                                   {availableReviewers.map((reviewer) => (
-                                    <option key={reviewer.id} value={reviewer.id}>
+                                    <option
+                                      key={reviewer.id}
+                                      value={reviewer.id}
+                                    >
                                       {reviewer.email}
                                     </option>
                                   ))}
@@ -1394,7 +1623,9 @@ export default function ProjectPage() {
                                 <input
                                   type="date"
                                   aria-label={`Due date for ${item.obligation.title}`}
-                                  value={item.dueAt ? item.dueAt.slice(0, 10) : ''}
+                                  value={
+                                    item.dueAt ? item.dueAt.slice(0, 10) : ''
+                                  }
                                   onChange={(event) =>
                                     obligationUpdateMutation.mutate({
                                       obligationId: item.id,
@@ -1421,7 +1652,9 @@ export default function ProjectPage() {
                               >
                                 <span className="truncate">
                                   {link.artifact?.originalName ??
-                                    DOCUMENT_LABELS[link.document?.type ?? ''] ??
+                                    DOCUMENT_LABELS[
+                                      link.document?.type ?? ''
+                                    ] ??
                                     'Linked document'}
                                   {link.artifact
                                     ? ` · v${link.artifact.version}`
@@ -1468,20 +1701,30 @@ export default function ProjectPage() {
                             {projectArtifacts
                               .filter(
                                 (artifact) =>
-                                  !(evidenceByObligation.get(item.id) ?? []).some(
+                                  !(
+                                    evidenceByObligation.get(item.id) ?? []
+                                  ).some(
                                     (link) => link.artifact?.id === artifact.id,
                                   ),
                               )
                               .map((artifact) => (
                                 <option key={artifact.id} value={artifact.id}>
-                                  {artifact.originalName} · {artifact.sectionName}
+                                  {artifact.originalName} ·{' '}
+                                  {artifact.sectionName}
                                 </option>
                               ))}
-                            {(projectQuery.data?.documents ?? []).map((document) => (
-                              <option key={`doc:${document.id}`} value={`doc:${document.id}`}>
-                                {DOCUMENT_LABELS[document.type] ?? document.type} · package
-                              </option>
-                            ))}
+                            {(projectQuery.data?.documents ?? []).map(
+                              (document) => (
+                                <option
+                                  key={`doc:${document.id}`}
+                                  value={`doc:${document.id}`}
+                                >
+                                  {DOCUMENT_LABELS[document.type] ??
+                                    document.type}{' '}
+                                  · package
+                                </option>
+                              ),
+                            )}
                           </select>
                         ) : null}
                       </li>
@@ -1833,6 +2076,45 @@ export default function ProjectPage() {
                     id="evidence"
                     className="mt-8 rounded-2xl border border-slate-200 bg-white p-4"
                   >
+                    {projectArtifacts.length ? (
+                      <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Project evidence register
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {projectArtifacts.length} item
+                            {projectArtifacts.length === 1 ? '' : 's'} ·{' '}
+                            {
+                              projectArtifacts.filter(
+                                (artifact) =>
+                                  artifact.expiresAt &&
+                                  new Date(artifact.expiresAt).getTime() <
+                                    evidenceNow,
+                              ).length
+                            }{' '}
+                            expired
+                          </p>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {projectArtifacts.map((artifact) => {
+                            const expired =
+                              artifact.expiresAt &&
+                              new Date(artifact.expiresAt).getTime() <
+                                evidenceNow;
+                            return (
+                              <span
+                                key={artifact.id}
+                                className={`rounded-full px-2 py-1 text-[11px] ${expired ? 'bg-rose-100 text-rose-700' : 'bg-white text-slate-600'}`}
+                              >
+                                {artifact.originalName}
+                                {expired ? ' · expired' : ''}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <h4 className="text-sm font-semibold text-slate-900">
@@ -1924,7 +2206,9 @@ export default function ProjectPage() {
                               <input
                                 type="text"
                                 value={artifactSource}
-                                onChange={(event) => setArtifactSource(event.target.value)}
+                                onChange={(event) =>
+                                  setArtifactSource(event.target.value)
+                                }
                                 placeholder="Source or system of record"
                                 disabled={!isOwner}
                                 className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50"
@@ -1932,7 +2216,9 @@ export default function ProjectPage() {
                               <input
                                 type="date"
                                 value={artifactExpiresAt}
-                                onChange={(event) => setArtifactExpiresAt(event.target.value)}
+                                onChange={(event) =>
+                                  setArtifactExpiresAt(event.target.value)
+                                }
                                 aria-label="Evidence expiry date"
                                 disabled={!isOwner}
                                 className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50"
@@ -1940,14 +2226,18 @@ export default function ProjectPage() {
                               <input
                                 type="url"
                                 value={artifactExternalUrl}
-                                onChange={(event) => setArtifactExternalUrl(event.target.value)}
+                                onChange={(event) =>
+                                  setArtifactExternalUrl(event.target.value)
+                                }
                                 placeholder="External evidence link"
                                 disabled={!isOwner}
                                 className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50 sm:col-span-2"
                               />
                               <textarea
                                 value={artifactProvenanceNote}
-                                onChange={(event) => setArtifactProvenanceNote(event.target.value)}
+                                onChange={(event) =>
+                                  setArtifactProvenanceNote(event.target.value)
+                                }
                                 placeholder="Provenance note"
                                 rows={2}
                                 disabled={!isOwner}
@@ -2316,7 +2606,9 @@ export default function ProjectPage() {
                                 className={`rounded-xl border bg-white p-3 text-sm ${comment.resolvedAt ? 'border-emerald-200 opacity-75' : 'border-slate-200'}`}
                               >
                                 <div className="flex items-start justify-between gap-3">
-                                  <p className={`text-slate-700 ${comment.resolvedAt ? 'line-through' : ''}`}>
+                                  <p
+                                    className={`text-slate-700 ${comment.resolvedAt ? 'line-through' : ''}`}
+                                  >
                                     {comment.body}
                                   </p>
                                   {isOwner || canReviewEvidence ? (
@@ -2331,7 +2623,9 @@ export default function ProjectPage() {
                                         })
                                       }
                                     >
-                                      {comment.resolvedAt ? 'Reopen' : 'Resolve'}
+                                      {comment.resolvedAt
+                                        ? 'Reopen'
+                                        : 'Resolve'}
                                     </button>
                                   ) : null}
                                 </div>
@@ -2439,25 +2733,42 @@ export default function ProjectPage() {
                     disableAssignmentFields={disableAssignmentFields}
                     userId={user?.id}
                   />
-                  <details className="rounded-2xl border border-slate-200 bg-white p-4" open>
+                  <details
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                    open
+                  >
                     <summary className="cursor-pointer text-sm font-semibold text-slate-900">
                       Project audit history
                     </summary>
                     <div className="mt-3 space-y-2">
                       {projectQuery.data?.statusEvents?.length ? (
                         projectQuery.data.statusEvents.map((event) => (
-                          <div key={event.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                          <div
+                            key={event.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600"
+                          >
                             <span>
-                              <strong className="text-slate-800">{PROJECT_STATUS_LABELS[event.status] ?? event.status}</strong>
-                              {event.actor?.email ? ` · ${event.actor.email}` : ''}
+                              <strong className="text-slate-800">
+                                {PROJECT_STATUS_LABELS[event.status] ??
+                                  event.status}
+                              </strong>
+                              {event.actor?.email
+                                ? ` · ${event.actor.email}`
+                                : ''}
                               {event.note ? ` · ${event.note}` : ''}
-                              {event.signature ? ` · Signed: ${event.signature}` : ''}
+                              {event.signature
+                                ? ` · Signed: ${event.signature}`
+                                : ''}
                             </span>
-                            <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleString()}</time>
+                            <time dateTime={event.createdAt}>
+                              {new Date(event.createdAt).toLocaleString()}
+                            </time>
                           </div>
                         ))
                       ) : (
-                        <p className="text-xs text-slate-500">No project status changes recorded yet.</p>
+                        <p className="text-xs text-slate-500">
+                          No project status changes recorded yet.
+                        </p>
                       )}
                     </div>
                   </details>

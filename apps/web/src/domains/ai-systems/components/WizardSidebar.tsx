@@ -8,7 +8,6 @@ import type {
   SectionWithMeta,
 } from '@complianx/contracts/ai-systems';
 import { useAnimatedNumber } from '@/shared/hooks/useAnimatedNumber';
-import { Link, useParams } from 'react-router-dom';
 
 interface WizardSidebarProps {
   completionRate: number;
@@ -30,7 +29,7 @@ export function WizardSidebar({
   setActiveStepId,
   projectQuery,
 }: WizardSidebarProps) {
-  const { projectId } = useParams<{ projectId: string }>();
+  const projectId = projectQuery.data?.id;
   const animatedCompletionRate = useAnimatedNumber(completionRate, {
     duration: 700,
   });
@@ -52,17 +51,17 @@ export function WizardSidebar({
             ['Requirements', 'requirements'],
             ['Evidence', 'evidence'],
             ['Documents', 'documents'],
-            ['Compliance package', 'documents'],
+            ['Compliance package', 'compliance-package'],
             ['Messages', 'messages'],
             ['Review & approval', 'review-approval'],
           ].map(([label, id]) => (
-            <Link
+            <a
               key={`${id}-${label}`}
-              to={projectId ? `/projects/${projectId}/${id}` : `#${id}`}
+              href={projectId ? `/projects/${projectId}/${id}` : `#${id}`}
               className="rounded-md px-2 py-1.5 text-slate-600 hover:bg-slate-50 hover:text-sky-700"
             >
               {label}
-            </Link>
+            </a>
           ))}
         </div>
       </nav>

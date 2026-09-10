@@ -11,6 +11,7 @@ import {
 import { CompanyService } from '../../application/companies/company.service';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
 import { CompanyContextService } from '../../application/membership/company-context.service';
+import { UpdateCompanyProfileDto } from '../dto/update-company-profile.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('company')
@@ -49,13 +50,11 @@ export class CompanyController {
   }
 
   @Patch('profile')
-  updateProfile(@Request() req, @Body() profile: {
-    legalName?: string;
-    website?: string;
-    industry?: string;
-    address?: string;
-    contactEmail?: string;
-  }) {
+  updateProfile(
+    @Request() req,
+    @Body()
+    profile: UpdateCompanyProfileDto,
+  ) {
     return this.companyService.updateProfile(
       req.user.userId,
       this.resolveCompanyId(req),

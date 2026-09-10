@@ -39,34 +39,36 @@ export class TrustService {
       allowReviewer: true,
       allowApprover: true,
     });
-    return this.prisma.trustMetric.findMany({
-      where: { projectId },
-      include: {
-        samples: {
-          orderBy: { timestamp: 'desc' },
-          take: 6,
+    return this.prisma.trustMetric
+      .findMany({
+        where: { projectId },
+        include: {
+          samples: {
+            orderBy: { timestamp: 'desc' },
+            take: 6,
+          },
         },
-      },
-    }).then((metrics) =>
-      metrics.map((metric) => ({
-        id: metric.id,
-        name: metric.name,
-        pillar: metric.pillar,
-        unit: metric.unit,
-        datasetName: metric.datasetName ?? undefined,
-        modelName: metric.modelName ?? undefined,
-        targetMin: metric.targetMin ?? undefined,
-        targetMax: metric.targetMax ?? undefined,
-        sectionId: metric.sectionId ?? undefined,
-        samples: metric.samples.map((sample) => ({
-          id: sample.id,
-          value: sample.value,
-          status: sample.status,
-          note: sample.note ?? undefined,
-          timestamp: sample.timestamp.toISOString(),
+      })
+      .then((metrics) =>
+        metrics.map((metric) => ({
+          id: metric.id,
+          name: metric.name,
+          pillar: metric.pillar,
+          unit: metric.unit,
+          datasetName: metric.datasetName ?? undefined,
+          modelName: metric.modelName ?? undefined,
+          targetMin: metric.targetMin ?? undefined,
+          targetMax: metric.targetMax ?? undefined,
+          sectionId: metric.sectionId ?? undefined,
+          samples: metric.samples.map((sample) => ({
+            id: sample.id,
+            value: sample.value,
+            status: sample.status,
+            note: sample.note ?? undefined,
+            timestamp: sample.timestamp.toISOString(),
+          })),
         })),
-      })),
-    );
+      );
   }
 
   async create(

@@ -111,6 +111,18 @@ export class AssessmentsController {
     );
   }
 
+  @Get(':assessmentId/answers')
+  listAnswers(
+    @Param('assessmentId') assessmentId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.listAnswers(
+      assessmentId,
+      req.user.userId,
+      this.companyId(req),
+    );
+  }
+
   @Post(':assessmentId/classify')
   classify(
     @Param('assessmentId') assessmentId: string,

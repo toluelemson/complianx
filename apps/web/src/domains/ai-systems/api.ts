@@ -26,13 +26,15 @@ export async function listProjects() {
 }
 
 export async function getOrganizationProfile() {
-  const { data } = await api.get<{ company: {
-    legalName?: string | null;
-    website?: string | null;
-    industry?: string | null;
-    address?: string | null;
-    contactEmail?: string | null;
-  } }>('/company');
+  const { data } = await api.get<{
+    company: {
+      legalName?: string | null;
+      website?: string | null;
+      industry?: string | null;
+      address?: string | null;
+      contactEmail?: string | null;
+    };
+  }>('/company');
   return data.company;
 }
 
@@ -76,6 +78,35 @@ export async function getPreliminaryClassification(projectId: string) {
   } | null;
 }
 
+export async function listAssessmentAnswers(
+  projectId: string,
+  assessmentId: string,
+) {
+  const { data } = await api.get<
+    Array<{
+      id: string;
+      questionKey: string;
+      valueJson: unknown;
+      createdAt: string;
+      updatedAt: string;
+      answeredBy: { id: string; email: string };
+    }>
+  >(`/ai-systems/${projectId}/assessments/${assessmentId}/answers`);
+  return data;
+}
+
+export async function saveAssessmentAnswers(
+  projectId: string,
+  assessmentId: string,
+  answers: Record<string, unknown>,
+) {
+  const { data } = await api.put(
+    `/ai-systems/${projectId}/assessments/${assessmentId}/answers`,
+    { answers },
+  );
+  return data;
+}
+
 export async function reviewClassification(
   projectId: string,
   classificationId: string,
@@ -98,7 +129,11 @@ export async function listProjectObligations(projectId: string) {
       id: string;
       status: string;
       priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-      approvalState: 'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED';
+      approvalState:
+        | 'DRAFT'
+        | 'READY_FOR_REVIEW'
+        | 'APPROVED'
+        | 'CHANGES_REQUESTED';
       applicabilityReason?: string | null;
       owner?: { id: string; email: string } | null;
       dueAt?: string | null;
@@ -109,7 +144,15 @@ export async function listProjectObligations(projectId: string) {
       actions: Array<{ id: string; status: string }>;
     }>
   >(`/ai-systems/${projectId}/obligations`);
-  return data;
+  return data.map((item) => ({
+    ...item,
+    status:
+      item.status === 'READY'
+        ? 'READY_FOR_REVIEW'
+        : item.status === 'COMPLETE'
+          ? 'SATISFIED'
+          : item.status,
+  }));
 }
 
 export async function updateProjectObligation(
@@ -367,7 +410,8 @@ export async function uploadArtifact(
   if (payload.source) formData.append('source', payload.source);
   if (payload.expiresAt) formData.append('expiresAt', payload.expiresAt);
   if (payload.externalUrl) formData.append('externalUrl', payload.externalUrl);
-  if (payload.provenanceNote) formData.append('provenanceNote', payload.provenanceNote);
+  if (payload.provenanceNote)
+    formData.append('provenanceNote', payload.provenanceNote);
   const { data } = await api.post<SectionArtifactItem>(
     `/projects/${projectId}/sections/${payload.sectionId}/artifacts`,
     formData,
@@ -463,7 +507,12 @@ export async function addSectionComment(
 ) {
   const { data } = await api.post(
     `/projects/${projectId}/sections/${payload.sectionId}/comments`,
-    { body: payload.body },
+    {
+      body: payload.body,
+      mentions: payload.mentions,
+      linkedEntityType: payload.linkedEntityType,
+      linkedEntityId: payload.linkedEntityId,
+    },
   );
   return data;
 }

@@ -64,7 +64,10 @@ export class CompanyService {
     return this.prisma.company.update({
       where: { id: companyId },
       data: Object.fromEntries(
-        Object.entries(profile).map(([key, value]) => [key, value?.trim() || null]),
+        Object.entries(profile).map(([key, value]) => [
+          key,
+          value?.trim() || null,
+        ]),
       ),
     });
   }

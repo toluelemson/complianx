@@ -56,13 +56,62 @@ export class AssessmentsService {
       userId,
       companyId,
     );
-    return this.prisma.assessment.update({
-      where: { id: assessment.id },
-      data: {
-        answers: answers as Prisma.InputJsonValue,
-        status: AssessmentStatus.DRAFT,
+    const entries = Object.entries(answers).filter(([questionKey]) =>
+      /^[a-zA-Z0-9_.-]{1,120}$/.test(questionKey),
+    );
+    if (entries.length !== Object.keys(answers).length) {
+      throw new NotFoundException('Invalid assessment question key');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.assessment.update({
+        where: { id: assessment.id },
+        data: {
+          answers: answers as Prisma.InputJsonValue,
+          status: AssessmentStatus.DRAFT,
+        },
+        include: { packVersion: { select: { version: true } } },
+      });
+      for (const [questionKey, valueJson] of entries) {
+        await tx.assessmentAnswer.upsert({
+          where: {
+            assessmentId_questionKey: {
+              assessmentId: assessment.id,
+              questionKey,
+            },
+          },
+          create: {
+            assessmentId: assessment.id,
+            questionKey,
+            valueJson: valueJson as Prisma.InputJsonValue,
+            answeredById: userId,
+          },
+          update: {
+            valueJson: valueJson as Prisma.InputJsonValue,
+            answeredById: userId,
+          },
+        });
+      }
+      return updated;
+    });
+  }
+
+  async listAnswers(assessmentId: string, userId: string, companyId: string) {
+    const assessment = await this.getAuthorized(
+      assessmentId,
+      userId,
+      companyId,
+    );
+    return this.prisma.assessmentAnswer.findMany({
+      where: { assessmentId: assessment.id },
+      select: {
+        id: true,
+        questionKey: true,
+        valueJson: true,
+        createdAt: true,
+        updatedAt: true,
+        answeredBy: { select: { id: true, email: true } },
       },
-      include: { packVersion: { select: { version: true } } },
+      orderBy: { questionKey: 'asc' },
     });
   }
 
@@ -251,6 +300,27 @@ export class AssessmentsService {
       where: { id: obligationId, projectId },
     });
     if (!existing) throw new NotFoundException('Obligation not found');
+    if (dto.ownerId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { companyId: true, ownerId: true },
+      });
+      const ownerMembership = project?.companyId
+        ? await this.prisma.userCompany.findUnique({
+            where: {
+              userId_companyId: {
+                userId: dto.ownerId,
+                companyId: project.companyId,
+              },
+            },
+            select: { userId: true },
+          })
+        : project?.ownerId === dto.ownerId
+          ? { userId: dto.ownerId }
+          : null;
+      if (!ownerMembership)
+        throw new NotFoundException('Requirement owner not found');
+    }
     return this.prisma.aiSystemObligation.update({
       where: { id: obligationId },
       data: {
