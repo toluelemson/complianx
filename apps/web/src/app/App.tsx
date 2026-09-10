@@ -64,6 +64,9 @@ const ProjectEvidencePage = lazy(
 const ProjectReviewPage = lazy(
   () => import('@/domains/ai-systems/pages/ProjectReviewPage'),
 );
+const ProjectQuestionnairePage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectQuestionnairePage'),
+);
 const ProjectTrustPage = lazy(
   () => import('@/domains/assessments/pages/ProjectTrustPage'),
 );
@@ -141,7 +144,7 @@ function App() {
           path="/projects/:projectId"
           element={
             <ProtectedRoute>
-              <ProjectPage />
+              <ProjectOverviewPage />
             </ProtectedRoute>
           }
         />
@@ -173,7 +176,7 @@ function App() {
           path="/projects/:projectId/organization-profile"
           element={
             <ProtectedRoute>
-              <ProjectProfilePage />
+              <ProjectProfilePage organization />
             </ProtectedRoute>
           }
         />
@@ -206,6 +209,22 @@ function App() {
           element={
             <ProtectedRoute>
               <ProjectReviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/classification"
+          element={
+            <ProtectedRoute>
+              <ProjectQuestionnairePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/compliance-workspace"
+          element={
+            <ProtectedRoute>
+              <ProjectPage />
             </ProtectedRoute>
           }
         />

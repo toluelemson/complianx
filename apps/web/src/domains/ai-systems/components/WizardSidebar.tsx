@@ -3,10 +3,7 @@ import {
   TRACKABLE_STEP_COUNT,
   type StepField,
 } from '@/domains/ai-systems/constants/steps';
-import type {
-  ProjectDetail,
-  SectionWithMeta,
-} from '@complianx/contracts/ai-systems';
+import type { SectionWithMeta } from '@complianx/contracts/ai-systems';
 import { useAnimatedNumber } from '@/shared/hooks/useAnimatedNumber';
 
 interface WizardSidebarProps {
@@ -17,7 +14,8 @@ interface WizardSidebarProps {
   incompleteFieldsByStep: Map<string, StepField[]>;
   activeStepId: string;
   setActiveStepId: (id: string) => void;
-  projectQuery: { data?: ProjectDetail };
+  /** Kept for story/test compatibility; workspace navigation lives in AppShell. */
+  projectQuery?: unknown;
 }
 
 export function WizardSidebar({
@@ -27,44 +25,12 @@ export function WizardSidebar({
   incompleteFieldsByStep,
   activeStepId,
   setActiveStepId,
-  projectQuery,
 }: WizardSidebarProps) {
-  const projectId = projectQuery.data?.id;
   const animatedCompletionRate = useAnimatedNumber(completionRate, {
     duration: 700,
   });
   return (
     <aside className="space-y-4">
-      <nav
-        aria-label="Project workspace sections"
-        className="rounded-xl border border-slate-200 bg-white p-3"
-      >
-        <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Project workspace
-        </p>
-        <div className="grid gap-1 text-sm">
-          {[
-            ['Overview', 'overview'],
-            ['Organization profile', 'organization-profile'],
-            ['AI system profile', 'ai-system-profile'],
-            ['Applicability & classification', 'classification'],
-            ['Requirements', 'requirements'],
-            ['Evidence', 'evidence'],
-            ['Documents', 'documents'],
-            ['Compliance package', 'compliance-package'],
-            ['Messages', 'messages'],
-            ['Review & approval', 'review-approval'],
-          ].map(([label, id]) => (
-            <a
-              key={`${id}-${label}`}
-              href={projectId ? `/projects/${projectId}/${id}` : `#${id}`}
-              className="rounded-md px-2 py-1.5 text-slate-600 hover:bg-slate-50 hover:text-sky-700"
-            >
-              {label}
-            </a>
-          ))}
-        </div>
-      </nav>
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-900">Wizard Progress</p>
         <p className="mt-2 text-3xl font-semibold text-slate-900">
@@ -94,17 +60,6 @@ export function WizardSidebar({
             />
           ))}
         </ul>
-      </div>
-      <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-        <p className="font-semibold text-slate-900">Project metadata</p>
-        <p className="mt-2">Industry: {projectQuery.data?.industry ?? '—'}</p>
-        <p className="mt-1">Classification: Preliminary review</p>
-        <p className="mt-1">
-          Created:{' '}
-          {projectQuery.data
-            ? new Date(projectQuery.data.createdAt).toLocaleDateString()
-            : '—'}
-        </p>
       </div>
     </aside>
   );

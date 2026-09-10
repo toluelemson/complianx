@@ -13,12 +13,52 @@
 .hz-top-header { position: sticky; top: 0; z-index: var(--hz-z-header); background: var(--cx-surface); border-bottom: 1px solid var(--cx-border); }
 .hz-top-header__inner { min-height: var(--hz-layout-header-height); }
 .hz-shell__body { display: grid; grid-template-columns: var(--hz-layout-sidebar-width) minmax(0, 1fr); min-height: calc(100vh - var(--hz-layout-header-height)); }
-.hz-sidebar { position: sticky; top: var(--hz-layout-header-height); align-self: start; height: calc(100vh - var(--hz-layout-header-height)); overflow-y: auto; padding: 20px 14px; background: var(--cx-surface); border-right: 1px solid var(--cx-border); }
-.hz-sidebar__section { display: grid; gap: 4px; }
-.hz-sidebar__label { margin: 16px 10px 4px; color: var(--cx-text-muted); font: 500 12px/1.25 var(--cx-font-control); text-transform: uppercase; }
-.hz-sidebar__link { display: flex; align-items: center; min-height: 40px; padding: 0 10px; border-radius: var(--cx-radius); color: var(--cx-text-secondary); font-size: 14px; font-weight: 500; text-decoration: none; transition: background var(--cx-motion-fast) var(--cx-motion-ease), color var(--cx-motion-fast) var(--cx-motion-ease); }
+.hz-sidebar { position: sticky; top: var(--hz-layout-header-height); align-self: start; height: calc(100vh - var(--hz-layout-header-height)); overflow-y: auto; padding: 16px 12px; background: var(--cx-surface); border-right: 1px solid var(--cx-border); }
+.hz-sidebar__section { display: grid; gap: 2px; }
+.hz-sidebar__label { margin: 14px 8px 3px; color: var(--cx-text-muted); font: 500 11px/1.25 var(--cx-font-control); text-transform: uppercase; }
+.hz-sidebar__link { display: flex; align-items: center; min-height: 36px; padding: 0 8px; border-radius: var(--cx-radius); color: var(--cx-text-secondary); font-size: 14px; font-weight: 500; text-decoration: none; transition: background var(--cx-motion-fast) var(--cx-motion-ease), color var(--cx-motion-fast) var(--cx-motion-ease); }
 .hz-sidebar__link:hover, .hz-sidebar__link[aria-current='page'] { background: var(--cx-surface-subtle); color: var(--cx-text); }
 .hz-main { min-width: 0; width: 100%; max-width: var(--hz-layout-content-max); margin: 0 auto; padding: 40px var(--hz-layout-page-gutter) 64px; }
+.hz-main--project { padding-top: 28px; }
+.hz-main--project .shadow-sm { box-shadow: none; }
+.hz-main--project .rounded-2xl { border-radius: var(--cx-radius-card); }
+.hz-main--project .hz-console-content { max-width: 1080px; }
+.hz-main--project .hz-console-content > div:first-child h1 { display: none; }
+.hz-main--project .hz-console-content.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 20px; }
+.hz-main--project .p-6 { padding: 1rem; }
+.hz-main--project .p-5 { padding: 1rem; }
+.hz-main--project .p-4 { padding: 0.75rem; }
+.hz-main--project .gap-6 { gap: 1rem; }
+.hz-main--project .gap-4 { gap: 0.75rem; }
+.hz-main--project input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+.hz-main--project select,
+.hz-main--project textarea {
+  border-color: var(--hz-color-border-strong);
+  border-radius: var(--hz-radius-card);
+  background: var(--hz-color-surface);
+  color: var(--hz-color-text);
+}
+.hz-main--project input:not([type='checkbox']):not([type='radio']):not([type='hidden']):focus,
+.hz-main--project select:focus,
+.hz-main--project textarea:focus {
+  border-color: var(--hz-color-brand);
+  outline: 2px solid color-mix(in srgb, var(--hz-color-brand) 18%, transparent);
+  outline-offset: 0;
+}
+.hz-main--project form > label {
+  border-color: var(--hz-color-border) !important;
+  background: var(--hz-color-surface-subtle);
+}
+.hz-main--project .bg-sky-50 { background: var(--hz-color-brand-subtle); }
+.hz-main--project button.bg-slate-900,
+.hz-main--project a.bg-slate-900 {
+  background: var(--hz-color-brand);
+}
+.hz-main--project button.bg-slate-900:hover,
+.hz-main--project a.bg-slate-900:hover {
+  background: var(--hz-color-brand-hover);
+}
+.hz-main--project .hz-console-content > section { border-color: var(--cx-border); }
 .hz-page-title { margin-bottom: var(--hz-layout-section-gap); border-bottom: 1px solid var(--cx-border); padding: 0 0 24px; }
 .hz-top-header__inner > div { min-height: var(--hz-layout-header-height); }
 .hz-sidebar__link:focus-visible { outline: 2px solid var(--cx-text); outline-offset: -2px; }

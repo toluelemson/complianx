@@ -84,7 +84,7 @@ export function AppShell({
       { label: 'Dashboard', to: '/dashboard', show: true },
       { label: 'AI systems', to: '/dashboard#systems', show: true },
       { label: 'Reviews', to: '/reviews', show: true },
-      { label: 'Documents', to: '/documents', show: true },
+      { label: 'All documents', to: '/documents', show: !projectId },
       { label: 'Organization', to: '/company', show: Boolean(user) },
       { label: 'Settings', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
@@ -96,11 +96,31 @@ export function AppShell({
       : [];
     if (projectId) {
       sections.push({
-        title: 'Project workspace',
+        title: 'This project',
         links: [
           {
             label: 'Overview',
             to: `/projects/${projectId}/overview`,
+            show: true,
+          },
+          {
+            label: 'Organization profile',
+            to: `/projects/${projectId}/organization-profile`,
+            show: true,
+          },
+          {
+            label: 'AI system profile',
+            to: `/projects/${projectId}/ai-system-profile`,
+            show: true,
+          },
+          {
+            label: 'Classification',
+            to: `/projects/${projectId}/classification`,
+            show: true,
+          },
+          {
+            label: 'Guided assessment',
+            to: `/projects/${projectId}/compliance-workspace`,
             show: true,
           },
           {
@@ -114,12 +134,17 @@ export function AppShell({
             show: true,
           },
           {
-            label: 'Compliance package',
+            label: 'Messages',
+            to: `/projects/${projectId}/messages`,
+            show: true,
+          },
+          {
+            label: 'Package',
             to: `/projects/${projectId}/compliance-package`,
             show: true,
           },
           {
-            label: 'Review & approval',
+            label: 'Review',
             to: `/projects/${projectId}/review-approval`,
             show: true,
           },
@@ -405,7 +430,7 @@ export function AppShell({
         <aside className="hz-sidebar">
           <nav aria-label="Workspace navigation">{renderSidebarNav()}</nav>
         </aside>
-        <main className="hz-main">
+        <main className={`hz-main${projectId ? ' hz-main--project' : ''}`}>
           <BillingModal
             isOpen={billingOpen}
             onClose={() => setBillingOpen(false)}

@@ -1782,7 +1782,6 @@ export default function ProjectPage() {
               incompleteFieldsByStep={incompleteFieldsByStep}
               activeStepId={activeStepId}
               setActiveStepId={setActiveStepId}
-              projectQuery={projectQuery}
             />
           </div>
 

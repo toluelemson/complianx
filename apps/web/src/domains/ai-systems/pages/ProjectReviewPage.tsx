@@ -72,10 +72,10 @@ export default function ProjectReviewPage() {
         </section>
         <div className="flex justify-end">
           <Link
-            to={`/projects/${projectId}/review_generate`}
+            to={`/projects/${projectId}/compliance-workspace`}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
           >
-            Open workflow controls
+            Open guided assessment
           </Link>
         </div>
       </div>

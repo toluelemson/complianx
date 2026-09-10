@@ -38,6 +38,13 @@ export async function getOrganizationProfile() {
   return data.company;
 }
 
+export async function updateOrganizationProfile(
+  profile: Record<string, string>,
+) {
+  const { data } = await api.patch('/company/profile', profile);
+  return data;
+}
+
 export async function listAiSystems() {
   const { data } = await api.get<ProjectListItem[]>('/ai-systems');
   return data;
@@ -56,6 +63,24 @@ export async function createAiSystem(values: NewProjectFormValues) {
 export async function classifyProjectIntake(projectId: string) {
   const { data } = await api.post(
     `/ai-systems/${projectId}/assessments/preliminary`,
+  );
+  return data;
+}
+
+export async function createProjectAssessment(projectId: string) {
+  const { data } = await api.post<{ id: string }>(
+    `/ai-systems/${projectId}/assessments`,
+    {},
+  );
+  return data;
+}
+
+export async function classifyAssessment(
+  projectId: string,
+  assessmentId: string,
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/assessments/${assessmentId}/classify`,
   );
   return data;
 }
@@ -130,7 +155,10 @@ export async function listProjectObligations(projectId: string) {
       status: string;
       priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
       approvalState:
-        'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED';
+        | 'DRAFT'
+        | 'READY_FOR_REVIEW'
+        | 'APPROVED'
+        | 'CHANGES_REQUESTED';
       applicabilityReason?: string | null;
       owner?: { id: string; email: string } | null;
       dueAt?: string | null;

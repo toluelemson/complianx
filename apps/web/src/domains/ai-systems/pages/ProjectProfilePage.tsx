@@ -4,16 +4,19 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import type { ProjectDetail } from '@complianx/contracts/ai-systems';
-import { getProject, updateProject } from '../api';
+import {
+  getOrganizationProfile,
+  getProject,
+  updateOrganizationProfile,
+  updateProject,
+} from '../api';
 
 const organizationFields = [
+  ['legalName', 'Legal name'],
+  ['website', 'Website'],
   ['industry', 'Industry'],
-  ['responsibleOwner', 'Responsible owner'],
-  ['providerOrDeveloper', 'Provider / developer'],
-  ['deployerOrUser', 'Deployer / user'],
-  ['importer', 'Importer'],
-  ['distributor', 'Distributor'],
-  ['authorizedRepresentative', 'Authorized representative'],
+  ['address', 'Address'],
+  ['contactEmail', 'Contact email'],
 ];
 const systemFields = [
   ['description', 'Description'],
@@ -25,28 +28,45 @@ const systemFields = [
   ['lifecycleStage', 'Lifecycle stage'],
 ];
 
-export default function ProjectProfilePage() {
+export default function ProjectProfilePage({
+  organization: organizationProp = false,
+}: {
+  organization?: boolean;
+}) {
   const { projectId = '', profileKey = 'ai-system-profile' } = useParams<{
     projectId: string;
     profileKey: string;
   }>();
+  const organization =
+    organizationProp || profileKey === 'organization-profile';
   const { token, initializing, activeCompanyId } = useAuth();
   const query = useQuery<ProjectDetail>({
     queryKey: ['project', projectId, activeCompanyId],
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getProject(projectId),
   });
+  const organizationQuery = useQuery({
+    queryKey: ['company', activeCompanyId],
+    enabled: Boolean(token && activeCompanyId && organization),
+    queryFn: getOrganizationProfile,
+  });
   const client = useQueryClient();
   const save = useMutation({
-    mutationFn: (payload: Record<string, unknown> & { name: string }) =>
-      updateProject(projectId, payload),
+    mutationFn: (payload: Record<string, string>) =>
+      organization
+        ? updateOrganizationProfile(payload)
+        : updateProject(projectId, {
+            name: query.data?.name ?? '',
+            ...payload,
+          }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['project', projectId] });
+      void client.invalidateQueries({ queryKey: ['company', activeCompanyId] });
     },
   });
   if (!initializing && !token) return <Navigate to="/login" replace />;
-  const organization = profileKey === 'organization-profile';
   const fields = organization ? organizationFields : systemFields;
+  const profile = organization ? organizationQuery.data : query.data;
   return (
     <AppShell
       title={organization ? 'Organization profile' : 'AI system profile'}
@@ -64,7 +84,9 @@ export default function ProjectProfilePage() {
             {organization ? 'Organization profile' : 'AI system profile'}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Reusable facts for {query.data?.name ?? 'this project'}.
+            {organization
+              ? 'Shared organization details reused across projects.'
+              : `System details for ${query.data?.name ?? 'this project'}.`}
           </p>
         </div>
         <form
@@ -72,9 +94,15 @@ export default function ProjectProfilePage() {
           onSubmit={(event) => {
             event.preventDefault();
             const values = Object.fromEntries(
-              new FormData(event.currentTarget).entries(),
+              Array.from(new FormData(event.currentTarget).entries()).map(
+                ([key, value]) => [key, String(value)],
+              ),
             );
-            save.mutate({ name: query.data?.name ?? '', ...values });
+            save.mutate(
+              organization
+                ? values
+                : { name: query.data?.name ?? '', ...values },
+            );
           }}
         >
           {fields.map(([key, label]) => (
@@ -86,7 +114,7 @@ export default function ProjectProfilePage() {
                 <select
                   name={key}
                   defaultValue={String(
-                    query.data?.[key as keyof ProjectDetail] ?? 'UNKNOWN',
+                    profile?.[key as keyof typeof profile] ?? 'UNKNOWN',
                   )}
                   className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
                 >
@@ -101,7 +129,7 @@ export default function ProjectProfilePage() {
                 <textarea
                   name={key}
                   defaultValue={String(
-                    query.data?.[key as keyof ProjectDetail] ?? '',
+                    profile?.[key as keyof typeof profile] ?? '',
                   )}
                   rows={key === 'description' || key === 'intendedUse' ? 3 : 2}
                   className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
@@ -112,7 +140,11 @@ export default function ProjectProfilePage() {
           <div className="flex justify-end sm:col-span-2">
             <button
               type="submit"
-              disabled={save.isPending || !query.data}
+              disabled={
+                save.isPending ||
+                (!organization && !query.data) ||
+                (organization && !organizationQuery.data)
+              }
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
               {save.isPending ? 'Saving…' : 'Save profile'}
