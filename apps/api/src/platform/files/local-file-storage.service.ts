@@ -26,7 +26,11 @@ export class LocalFileStorageService implements FileStorage {
   }
 
   async remove(bucket: string, fileName: string) {
-    await fs.unlink(this.resolve(bucket, fileName));
+    try {
+      await fs.unlink(this.resolve(bucket, fileName));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
   }
 
   createReadStream(bucket: string, fileName: string) {

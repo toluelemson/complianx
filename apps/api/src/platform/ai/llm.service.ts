@@ -124,7 +124,9 @@ export class LlmService {
         if (isDocumentMode(mode)) throw new LlmAuthenticationError();
         return 'AI suggestions are temporarily unavailable.';
       }
-      this.logger.error(`LLM generation failed for ${mode}`, error);
+      this.logger.error(
+        `LLM generation failed for ${mode} (provider status: ${status ?? 'unknown'})`,
+      );
       throw error;
     }
   }
@@ -584,8 +586,8 @@ ${JSON.stringify(mergedContent, null, 2)}`;
     try {
       return JSON.parse(jsonCandidate) as T;
     } catch (error) {
-      this.logger.error('Failed to parse LLM JSON response', error);
-      this.logger.error(`Raw LLM response: ${content}`);
+      const errorName = error instanceof Error ? error.name : 'unknown';
+      this.logger.error(`Failed to parse LLM JSON response (${errorName})`);
       throw error;
     }
   }

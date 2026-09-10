@@ -97,7 +97,7 @@ export async function getGenerationReadiness(projectId: string) {
 
 export async function generateProjectDocuments(
   projectId: string,
-  payload: { documentTypes: string[] },
+  payload: { documentTypes: string[]; operationId?: string },
 ) {
   const { data } = await api.post<DocumentItem[]>(
     `/projects/${projectId}/generate`,

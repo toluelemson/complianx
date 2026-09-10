@@ -7,36 +7,37 @@ import {
 } from '../domain/workflow.types';
 import { SectionWorkflowStatus } from '../domain/workflow-status';
 
+export function sectionFieldsComplete(
+  section: ProjectWorkflowAggregate['sections'][number],
+) {
+  const requiredBySection: Record<string, string[]> = {
+    system_overview: ['purpose', 'intendedUsers', 'deploymentContext'],
+    model_info: ['modelType', 'trainingData', 'metrics'],
+    data_governance: ['dataSources', 'qualityChecks', 'privacy'],
+    risk_assessment: ['risks', 'likelihood', 'impact'],
+    human_oversight: ['roles', 'escalations'],
+    monitoring: ['monitoringPlan', 'maintenance'],
+  };
+  const content = section.content;
+  if (!content || typeof content !== 'object' || Array.isArray(content)) {
+    return false;
+  }
+  const values = content as Record<string, unknown>;
+  const required = requiredBySection[section.name];
+  return (
+    (required ?? Object.keys(values)).length > 0 &&
+    (required ?? Object.keys(values)).every((key) => {
+      const value = values[key];
+      return typeof value === 'string'
+        ? value.trim().length > 0
+        : value !== null && value !== undefined;
+    })
+  );
+}
+
 @Injectable()
 export class ProjectReadinessService {
   constructor(private readonly blockingComments: BlockingCommentChecker) {}
-
-  private sectionFieldsComplete(
-    section: ProjectWorkflowAggregate['sections'][number],
-  ) {
-    const requiredBySection: Record<string, string[]> = {
-      system_overview: ['purpose', 'intendedUsers', 'deploymentContext'],
-      model_info: ['modelType', 'trainingData', 'metrics'],
-      data_governance: ['dataSources', 'qualityChecks', 'privacy'],
-      risk_assessment: ['risks', 'likelihood', 'impact'],
-      human_oversight: ['roles', 'escalations'],
-      monitoring: ['monitoringPlan', 'maintenance'],
-    };
-    const content = section.content;
-    if (!content || typeof content !== 'object' || Array.isArray(content))
-      return false;
-    const values = content as Record<string, unknown>;
-    const required = requiredBySection[section.name];
-    return (
-      (required ?? Object.keys(values)).length > 0 &&
-      (required ?? Object.keys(values)).every((key) => {
-        const value = values[key];
-        return typeof value === 'string'
-          ? value.trim().length > 0
-          : value !== null && value !== undefined;
-      })
-    );
-  }
 
   async getSubmissionReadiness(
     project: ProjectWorkflowAggregate,
@@ -53,14 +54,10 @@ export class ProjectReadinessService {
         key: 'required_fields_complete',
         passed:
           project.sections.length > 0 &&
-          project.sections.every((section) =>
-            this.sectionFieldsComplete(section),
-          ),
+          project.sections.every((section) => sectionFieldsComplete(section)),
         message:
           project.sections.length > 0 &&
-          project.sections.every((section) =>
-            this.sectionFieldsComplete(section),
-          )
+          project.sections.every((section) => sectionFieldsComplete(section))
             ? 'All required fields are complete'
             : 'Every required field must be complete before submission',
       },

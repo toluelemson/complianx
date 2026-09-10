@@ -116,6 +116,7 @@ model Document {
   url                String
   createdAt          DateTime             @default(now())
   projectId          String
+  operationKey       String?              @unique
   project            Project              @relation(fields: [projectId], references: [id])
   obligationEvidence ObligationEvidence[]
 }
@@ -191,6 +192,7 @@ model Company {
   stripeSubscriptionId String?
   trialEndsAt          DateTime?
   usage                CompanyUsage[]
+  documentReservations DocumentQuotaReservation[]
   members              UserCompany[]
 }
 
@@ -206,11 +208,32 @@ model CompanyUsage {
   company       Company @relation(fields: [companyId], references: [id])
   month         String // format: YYYY-MM
   docsGenerated Int     @default(0)
-  docsReserved  Int     @default(0)
   trustAnalyses Int     @default(0)
   reviewsLogged Int     @default(0)
 
   @@unique([companyId, month])
+}
+
+enum DocumentQuotaReservationStatus {
+  ACTIVE
+  COMMITTED
+  RELEASED
+}
+
+model DocumentQuotaReservation {
+  id           String                          @id @default(uuid())
+  companyId    String
+  company      Company                         @relation(fields: [companyId], references: [id])
+  month        String
+  amount       Int
+  status       DocumentQuotaReservationStatus @default(ACTIVE)
+  createdAt    DateTime                        @default(now())
+  expiresAt    DateTime
+  committedAt  DateTime?
+  releasedAt   DateTime?
+  operationKey String?                         @unique
+
+  @@index([companyId, month, status, expiresAt])
 }
 
 model Invitation {

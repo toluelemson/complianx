@@ -30,9 +30,10 @@ export class GeneratorController {
     @Param('projectId') projectId: string,
     @Request() req,
     @Body('documentTypes') documentTypes?: string[],
+    @Body('operationId') operationId?: string,
   ) {
     return this.generatorService
-      .generate(projectId, req.user.userId, documentTypes)
+      .generate(projectId, req.user.userId, documentTypes, operationId)
       .catch((error: unknown) => {
         if (
           error instanceof LlmAuthenticationError ||

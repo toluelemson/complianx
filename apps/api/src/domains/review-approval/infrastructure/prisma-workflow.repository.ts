@@ -15,6 +15,11 @@ import {
   WorkflowMembership,
 } from '../domain/workflow.types';
 import { WorkflowVersionConflictError } from '../domain/workflow-errors';
+import {
+  IncompleteAssessmentError,
+  ReviewerNotAssignedError,
+} from '../domain/workflow-errors';
+import { sectionFieldsComplete } from '../application/project-readiness.service';
 import { ProjectWorkflowRepository } from './project-workflow.repository';
 import { SectionWorkflowRepository } from './section-workflow.repository';
 
@@ -228,6 +233,45 @@ export class PrismaWorkflowRepository
 
   async transitionProject(request: ProjectWorkflowTransitionRequest) {
     await this.prisma.$transaction(async (tx) => {
+      const current = await tx.project.findUnique({
+        where: { id: request.projectId },
+        select: {
+          workflowStatus: true,
+          workflowVersion: true,
+          reviewerId: true,
+          sections: {
+            select: {
+              id: true,
+              name: true,
+              content: true,
+              workflowStatus: true,
+            },
+          },
+        },
+      });
+      if (!current) throw new NotFoundException('Project not found');
+      if (
+        toProjectWorkflowStatus(current.workflowStatus) !==
+          ProjectWorkflowStatus.DRAFT ||
+        (typeof request.expectedVersion === 'number' &&
+          current.workflowVersion !== request.expectedVersion)
+      )
+        throw new WorkflowVersionConflictError();
+      const reviewerId = request.reviewerId ?? current.reviewerId;
+      if (!reviewerId) throw new ReviewerNotAssignedError();
+      if (
+        current.sections.length === 0 ||
+        !current.sections.every((section) =>
+          sectionFieldsComplete({
+            ...section,
+            workflowStatus: toSectionWorkflowStatus(section.workflowStatus),
+          }),
+        )
+      )
+        throw new IncompleteAssessmentError(
+          'Every required field must be complete before submission',
+        );
+
       const updateResult = await tx.project.updateMany({
         where: {
           id: request.projectId,
@@ -238,7 +282,7 @@ export class PrismaWorkflowRepository
         data: {
           workflowStatus: request.toStatus,
           workflowVersion: { increment: 1 },
-          reviewerId: request.reviewerId ?? undefined,
+          reviewerId,
           approverId: request.approverId ?? undefined,
         },
       });

@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../../../platform/database/prisma.service';
 import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
 import { LlmService } from '../../../../platform/ai/llm.service';
@@ -43,6 +48,7 @@ const DOCUMENT_SPECS: Record<
 @Injectable()
 export class GeneratorService {
   private readonly storageBucket = 'documents';
+  private readonly logger = new Logger(GeneratorService.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -84,7 +90,12 @@ export class GeneratorService {
     );
   }
 
-  async generate(projectId: string, userId: string, requestedTypes?: string[]) {
+  async generate(
+    projectId: string,
+    userId: string,
+    requestedTypes?: string[],
+    operationId?: string,
+  ) {
     await this.projectsService.assertOwnership(projectId, userId);
     const sections = await (this.prisma as any).section.findMany({
       where: { projectId },
@@ -154,14 +165,28 @@ export class GeneratorService {
       if (!spec) {
         continue;
       }
+      const operationKey = operationId ? `${operationId}:${type}` : undefined;
+      if (operationKey) {
+        const existing = await this.prisma.document.findUnique({
+          where: { operationKey },
+        });
+        if (existing) {
+          documents.push(existing);
+          continue;
+        }
+      }
       // Find previous document of this type to build a simple redline summary
       const previous = await this.prisma.document.findFirst({
         where: { projectId, type },
         orderBy: { createdAt: 'desc' },
       });
 
-      const reservation =
-        await this.monetization.reserveDocumentsForProject(projectId);
+      const reservation = await this.monetization.reserveDocumentsForProject(
+        projectId,
+        1,
+        operationKey,
+      );
+      let fileName: string | undefined;
       try {
         const markdown = await this.llmService.generate(spec.mode, merged);
         const readinessNotice =
@@ -180,19 +205,37 @@ export class GeneratorService {
           .filter(Boolean)
           .join('\n\n');
         const html = this.composition.renderHtml(spec.label, finalMarkdown);
-        const fileName = `${projectId}-${type}-${Date.now()}.pdf`;
+        fileName = `${projectId}-${type}-${Date.now()}.pdf`;
+        const generatedFileName = fileName;
         await this.storage.ensure(this.storageBucket);
         const filePath = this.storage.resolve(this.storageBucket, fileName);
         await this.pdfService.htmlToPdf(html, filePath);
         const record = await this.prisma.$transaction(async (tx) => {
           await this.monetization.commitDocumentReservation(reservation, tx);
           return tx.document.create({
-            data: { projectId, type, url: fileName },
+            data: { projectId, type, url: generatedFileName, operationKey },
           });
         });
         documents.push(record);
       } catch (error) {
-        await this.monetization.releaseDocumentReservation(reservation);
+        if (fileName) {
+          try {
+            await this.storage.remove(this.storageBucket, fileName);
+          } catch (cleanupError) {
+            this.logger.error(
+              `Document file cleanup failed for ${projectId}/${type}`,
+              cleanupError as Error,
+            );
+          }
+        }
+        try {
+          await this.monetization.releaseDocumentReservation(reservation);
+        } catch (releaseError) {
+          this.logger.error(
+            `Document quota release failed for ${projectId}/${type}`,
+            releaseError as Error,
+          );
+        }
         throw error;
       }
     }
