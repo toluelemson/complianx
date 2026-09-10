@@ -1,7 +1,12 @@
 // AI systems domain route.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { AppShell } from '@/app/layout/AppShell';
@@ -19,6 +24,8 @@ import {
   getProjectSections,
   listProjectReminders,
   listProjectObligations,
+  linkObligationEvidence,
+  listObligationEvidence,
   listProjectReviewers,
   listTemplates,
   reviewClassification,
@@ -27,6 +34,7 @@ import {
   suggestSection,
   updateProjectReminder,
   updateTemplate,
+  unlinkObligationEvidence,
 } from '@/domains/ai-systems/api';
 import type {
   DocumentItem,
@@ -233,6 +241,60 @@ export default function ProjectPage() {
     queryKey: ['obligations', projectId, activeCompanyId],
     enabled: Boolean(projectId && activeCompanyId),
     queryFn: () => listProjectObligations(projectId),
+  });
+  const [obligationFilter, setObligationFilter] = useState('ALL');
+  const visibleObligations = (obligationsQuery.data ?? []).filter(
+    (item) => obligationFilter === 'ALL' || item.status === obligationFilter,
+  );
+  const obligationEvidenceQueries = useQueries({
+    queries: (obligationsQuery.data ?? []).map((item) => ({
+      queryKey: ['obligationEvidence', projectId, item.id, activeCompanyId],
+      enabled: Boolean(projectId && activeCompanyId),
+      queryFn: () => listObligationEvidence(projectId, item.id),
+    })),
+  });
+  const evidenceByObligation = useMemo(
+    () =>
+      new Map(
+        (obligationsQuery.data ?? []).map((item, index) => [
+          item.id,
+          obligationEvidenceQueries[index]?.data ?? [],
+        ]),
+      ),
+    [obligationsQuery.data, obligationEvidenceQueries],
+  );
+  const projectArtifacts = useMemo(
+    () =>
+      (sectionsQuery.data ?? []).flatMap((section) =>
+        (section.artifacts ?? []).map((artifact) => ({
+          ...artifact,
+          sectionName: section.name,
+        })),
+      ),
+    [sectionsQuery.data],
+  );
+  const evidenceLinkMutation = useMutation({
+    mutationFn: (payload: {
+      action: 'link' | 'unlink';
+      obligationId: string;
+      artifactId?: string;
+      linkId?: string;
+    }) =>
+      payload.action === 'link'
+        ? linkObligationEvidence(projectId, payload.obligationId, {
+            artifactId: payload.artifactId,
+          })
+        : unlinkObligationEvidence(
+            projectId,
+            payload.obligationId,
+            payload.linkId ?? '',
+          ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['obligationEvidence', projectId],
+      });
+    },
+    onError: () => toast.error('Unable to update requirement evidence'),
   });
   const documents = useProjectDocuments(
     projectId,
@@ -1036,7 +1098,7 @@ export default function ProjectPage() {
   return (
     <AppShell title={projectQuery.data?.name ?? 'Project'}>
       <div className="hz-project-page">
-        <div className="hz-project-summary mb-6">
+        <div id="overview" className="hz-project-summary mb-6">
           <ProjectPanel>
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold text-slate-600">
@@ -1051,6 +1113,28 @@ export default function ProjectPage() {
               <span className="text-[11px] text-slate-400">
                 {liveStatusTimestamp}
               </span>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+              <span>ID: {projectQuery.data?.id ?? '—'}</span>
+              <span>
+                Organization:{' '}
+                {projectQuery.data?.companyId ?? 'Personal workspace'}
+              </span>
+              <span>Framework: EU AI Act</span>
+              <span>
+                Status:{' '}
+                {(projectQuery.data?.workflowStatus ?? 'DRAFT').replaceAll(
+                  '_',
+                  ' ',
+                )}
+              </span>
+              <span>
+                Due:{' '}
+                {projectQuery.data?.dueDate
+                  ? new Date(projectQuery.data.dueDate).toLocaleDateString()
+                  : 'Not set'}
+              </span>
+              <span>{Math.round(completionRate)}% complete</span>
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <div>
@@ -1075,7 +1159,10 @@ export default function ProjectPage() {
                       Human review required
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-amber-800">
+                  <p
+                    id="classification"
+                    className="mt-1 text-sm text-amber-800"
+                  >
                     {classificationQuery.data.category.replaceAll('_', ' ')} ·
                     pack{' '}
                     {classificationQuery.data.regulatoryContentVersion ?? '—'}
@@ -1129,39 +1216,142 @@ export default function ProjectPage() {
                 </div>
               ) : null}
               {obligationsQuery.data?.length ? (
-                <div className="sm:col-span-3 rounded-xl border border-slate-200 bg-white p-3">
+                <div
+                  id="requirements"
+                  className="sm:col-span-3 rounded-xl border border-slate-200 bg-white p-3"
+                >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">
-                      Required obligations
-                    </p>
-                    <span className="text-xs text-slate-500">
-                      {obligationsQuery.data.length} mapped from the latest
-                      classification
-                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        Requirements
+                      </p>
+                      <span className="text-xs text-slate-500">
+                        {obligationsQuery.data.length} mapped from the latest
+                        classification
+                      </span>
+                    </div>
+                    <select
+                      aria-label="Filter requirements"
+                      value={obligationFilter}
+                      onChange={(event) =>
+                        setObligationFilter(event.target.value)
+                      }
+                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                    >
+                      <option value="ALL">All statuses</option>
+                      <option value="NOT_STARTED">Not started</option>
+                      <option value="IN_PROGRESS">In progress</option>
+                      <option value="READY_FOR_REVIEW">Ready for review</option>
+                      <option value="SATISFIED">Satisfied</option>
+                    </select>
                   </div>
                   <ul className="mt-3 grid gap-2 md:grid-cols-2">
-                    {obligationsQuery.data.map((item) => (
+                    {visibleObligations.map((item) => (
                       <li
                         key={item.id}
                         className="rounded-lg border border-slate-100 px-3 py-2"
                       >
-                        <p className="text-sm font-medium text-slate-800">
-                          {item.obligation.title}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {item.obligation.legalReference ??
-                            'EU AI Act pack reference'}{' '}
-                          · {item.status.replaceAll('_', ' ').toLowerCase()}
-                          {item.actions.length
-                            ? ` · ${item.actions.length} action${item.actions.length === 1 ? '' : 's'}`
-                            : ''}
-                        </p>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-slate-800">
+                              {item.obligation.title}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {item.obligation.legalReference ??
+                                'EU AI Act pack reference'}{' '}
+                              · {item.status.replaceAll('_', ' ').toLowerCase()}
+                              {item.actions.length
+                                ? ` · ${item.actions.length} action${item.actions.length === 1 ? '' : 's'}`
+                                : ''}
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-400">
+                              Owner: {item.owner?.email ?? 'Unassigned'}
+                              {item.dueAt
+                                ? ` · Due ${new Date(item.dueAt).toLocaleDateString()}`
+                                : ''}
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-xs font-medium text-slate-400">
+                            {evidenceByObligation.get(item.id)?.length ?? 0}{' '}
+                            linked
+                          </span>
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          {(evidenceByObligation.get(item.id) ?? []).map(
+                            (link) => (
+                              <div
+                                key={link.id}
+                                className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-600"
+                              >
+                                <span className="truncate">
+                                  {link.artifact?.originalName ??
+                                    DOCUMENT_LABELS[link.document?.type ?? ''] ??
+                                    'Linked document'}
+                                  {link.artifact
+                                    ? ` · v${link.artifact.version}`
+                                    : ''}
+                                </span>
+                                {isOwner || canReviewEvidence ? (
+                                  <button
+                                    type="button"
+                                    className="shrink-0 font-semibold text-slate-500 hover:text-rose-600"
+                                    onClick={() =>
+                                      evidenceLinkMutation.mutate({
+                                        action: 'unlink',
+                                        obligationId: item.id,
+                                        linkId: link.id,
+                                      })
+                                    }
+                                  >
+                                    Remove
+                                  </button>
+                                ) : null}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                        {isOwner || canReviewEvidence ? (
+                          <select
+                            aria-label={`Link evidence to ${item.obligation.title}`}
+                            value=""
+                            onChange={(event) => {
+                              const artifactId = event.target.value;
+                              if (!artifactId) return;
+                              evidenceLinkMutation.mutate({
+                                action: 'link',
+                                obligationId: item.id,
+                                artifactId,
+                              });
+                            }}
+                            className="mt-2 w-full rounded-md border border-dashed border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-500"
+                            disabled={evidenceLinkMutation.isPending}
+                          >
+                            <option value="">Link evidence…</option>
+                            {projectArtifacts
+                              .filter(
+                                (artifact) =>
+                                  !(evidenceByObligation.get(item.id) ?? []).some(
+                                    (link) => link.artifact?.id === artifact.id,
+                                  ),
+                              )
+                              .map((artifact) => (
+                                <option key={artifact.id} value={artifact.id}>
+                                  {artifact.originalName} · {artifact.sectionName}
+                                </option>
+                              ))}
+                          </select>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
+                  {!visibleObligations.length ? (
+                    <p className="mt-3 text-sm text-slate-500">
+                      No requirements match this filter.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
-              <div>
+              <div id="organization-profile">
                 <p className="text-xs uppercase tracking-wide text-slate-400">
                   System owner
                 </p>
@@ -1208,6 +1398,7 @@ export default function ProjectPage() {
           </div>
 
           <section
+            id="ai-system-profile"
             ref={wizardSectionRef}
             className="hz-project-content space-y-6"
           >
@@ -1495,7 +1686,10 @@ export default function ProjectPage() {
                       </div>
                     </fieldset>
                   </form>
-                  <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div
+                    id="evidence"
+                    className="mt-8 rounded-2xl border border-slate-200 bg-white p-4"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <h4 className="text-sm font-semibold text-slate-900">
@@ -1880,7 +2074,10 @@ export default function ProjectPage() {
                     )}
                   </div>
                   {currentSection ? (
-                    <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div
+                      id="messages"
+                      className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-semibold text-slate-900">
                           Discussion
@@ -2009,7 +2206,7 @@ export default function ProjectPage() {
                   )}
                 </>
               ) : (
-                <div className="mt-6 space-y-4">
+                <div id="review-approval" className="mt-6 space-y-4">
                   <ReviewApprovalPanel
                     trackableSteps={trackableStepSummaries}
                     projectStatusLabel={projectStatusLabel}

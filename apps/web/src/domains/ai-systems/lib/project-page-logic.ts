@@ -2,6 +2,7 @@ export type DocumentOption = { type: string };
 
 type AttentionProject = {
   workflowStatus?: string;
+  dueDate?: string | null;
   sections?: Array<unknown>;
   documents?: Array<{
     lifecycleStatus?: string;
@@ -27,6 +28,9 @@ export function getProjectAttentionReasons(project: AttentionProject) {
         `Complete ${remaining} more control area${remaining === 1 ? '' : 's'}`,
       );
     } else reasons.push('Submit the system for review');
+  }
+  if (project.dueDate && new Date(project.dueDate).getTime() < Date.now()) {
+    reasons.push('Project due date has passed');
   }
   if (failedDocuments.length) reasons.push('Retry failed package generation');
   if (!documents.length)

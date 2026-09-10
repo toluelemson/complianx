@@ -109,6 +109,7 @@ export type ProjectDetail = {
   generatesContent?: boolean | null;
   useCaseIndicators?: string[];
   sourcePublicResultId?: string | null;
+  dueDate?: string | null;
   createdAt: string;
   updatedAt?: string;
   companyId?: string | null;
@@ -166,6 +167,7 @@ export type ProjectListItem = {
   generatesContent?: boolean | null;
   useCaseIndicators?: string[];
   sourcePublicResultId?: string | null;
+  dueDate?: string | null;
   createdAt: string;
   updatedAt: string;
   workflowStatus?: ProjectWorkflowStatus;

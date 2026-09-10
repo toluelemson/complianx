@@ -18,6 +18,7 @@ export interface CreateAiSystemCommand {
   generatesContent?: boolean;
   useCaseIndicators?: string[];
   sourcePublicResultId?: string;
+  dueDate?: string;
 }
 
 export interface RequestAiSystemReviewCommand {

@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsDateString,
 } from 'class-validator';
 
 export enum LifecycleStage {
@@ -100,4 +101,8 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   sourcePublicResultId?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
 }

@@ -263,6 +263,7 @@ function mapProjectDetail(
     generatesContent: boolean | null;
     useCaseIndicators: Prisma.JsonValue | null;
     sourcePublicResultId: string | null;
+    dueDate: Date | null;
     reviewerId: string | null;
     approverId: string | null;
     workflowVersion: number;
@@ -314,6 +315,7 @@ function mapProjectDetail(
         )
       : [],
     sourcePublicResultId: project.sourcePublicResultId,
+    dueDate: project.dueDate?.toISOString() ?? null,
     reviewerId: project.reviewerId,
     approverId: project.approverId,
     workflowVersion: project.workflowVersion,
@@ -440,6 +442,7 @@ export class ProjectsService {
           )
         : [],
       sourcePublicResultId: project.sourcePublicResultId,
+      dueDate: project.dueDate?.toISOString() ?? null,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
       workflowStatus: project.workflowStatus,
@@ -485,6 +488,7 @@ export class ProjectsService {
           lifecycleStage: dto.lifecycleStage
             ? (dto.lifecycleStage as LifecycleStage)
             : undefined,
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
           ownerId: userId,
           companyId,
         },
@@ -595,6 +599,7 @@ export class ProjectsService {
           generatesContent: source.generatesContent,
           useCaseIndicators: source.useCaseIndicators ?? undefined,
           sourcePublicResultId: source.sourcePublicResultId,
+          dueDate: source.dueDate ?? undefined,
           ownerId: userId,
           companyId,
         },

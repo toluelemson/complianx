@@ -24,6 +24,7 @@ export interface NewProjectFormValues {
   authorizedRepresentative?: string;
   generatesContent?: boolean;
   useCaseIndicators?: string[];
+  dueDate?: string;
 }
 
 interface NewProjectModalProps {
@@ -53,6 +54,7 @@ export function NewProjectModal({
       operatorRoles: [],
       useCaseIndicators: [],
       generatesContent: false,
+      dueDate: '',
     },
   });
 
@@ -130,6 +132,11 @@ export function NewProjectModal({
                 <option value="PRODUCTION">Production</option>
                 <option value="RETIRED">Retired</option>
               </Select>
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Due date{' '}
+              <span className="font-normal text-slate-400">(optional)</span>
+              <Input type="date" {...register('dueDate')} className="mt-1" />
             </label>
             <details className="rounded-lg border border-slate-200 px-3 py-2">
               <summary className="cursor-pointer text-sm font-medium text-slate-700">

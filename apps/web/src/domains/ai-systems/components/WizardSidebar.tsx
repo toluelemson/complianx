@@ -34,6 +34,36 @@ export function WizardSidebar({
   });
   return (
     <aside className="space-y-4">
+      <nav
+        aria-label="Project workspace sections"
+        className="rounded-xl border border-slate-200 bg-white p-3"
+      >
+        <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Project workspace
+        </p>
+        <div className="grid gap-1 text-sm">
+          {[
+            ['Overview', 'overview'],
+            ['Organization profile', 'organization-profile'],
+            ['AI system profile', 'ai-system-profile'],
+            ['Applicability & classification', 'classification'],
+            ['Requirements', 'requirements'],
+            ['Evidence', 'evidence'],
+            ['Documents', 'documents'],
+            ['Compliance package', 'documents'],
+            ['Messages', 'messages'],
+            ['Review & approval', 'review-approval'],
+          ].map(([label, id]) => (
+            <a
+              key={`${id}-${label}`}
+              href={`#${id}`}
+              className="rounded-md px-2 py-1.5 text-slate-600 hover:bg-slate-50 hover:text-sky-700"
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+      </nav>
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-900">Wizard Progress</p>
         <p className="mt-2 text-3xl font-semibold text-slate-900">

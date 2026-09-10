@@ -77,6 +77,7 @@ model Project {
   generatesContent     Boolean?
   useCaseIndicators    Json?
   sourcePublicResultId String?
+  dueDate              DateTime?
   status               ProjectStatus         @default(DRAFT)
   workflowStatus       ProjectWorkflowStatus @default(DRAFT)
   workflowVersion      Int                   @default(0)

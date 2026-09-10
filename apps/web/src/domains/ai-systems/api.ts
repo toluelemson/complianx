@@ -87,6 +87,8 @@ export async function listProjectObligations(projectId: string) {
       id: string;
       status: string;
       applicabilityReason?: string | null;
+      owner?: { id: string; email: string } | null;
+      dueAt?: string | null;
       obligation: {
         title: string;
         legalReference?: string | null;
@@ -94,6 +96,57 @@ export async function listProjectObligations(projectId: string) {
       actions: Array<{ id: string; status: string }>;
     }>
   >(`/ai-systems/${projectId}/obligations`);
+  return data;
+}
+
+export type ObligationEvidenceLink = {
+  id: string;
+  linkType: 'PRIMARY' | 'SUPPORTING' | 'REFERENCE';
+  notes?: string | null;
+  artifact?: {
+    id: string;
+    originalName: string;
+    citationKey: string;
+    status: ArtifactStatus;
+    version: number;
+  } | null;
+  document?: {
+    id: string;
+    type: string;
+    createdAt: string;
+  } | null;
+};
+
+export async function listObligationEvidence(
+  projectId: string,
+  obligationId: string,
+) {
+  const { data } = await api.get<ObligationEvidenceLink[]>(
+    `/ai-systems/${projectId}/obligations/${obligationId}/evidence`,
+  );
+  return data;
+}
+
+export async function linkObligationEvidence(
+  projectId: string,
+  obligationId: string,
+  payload: { artifactId?: string; documentId?: string },
+) {
+  const { data } = await api.post<ObligationEvidenceLink>(
+    `/ai-systems/${projectId}/obligations/${obligationId}/evidence`,
+    payload,
+  );
+  return data;
+}
+
+export async function unlinkObligationEvidence(
+  projectId: string,
+  obligationId: string,
+  linkId: string,
+) {
+  const { data } = await api.delete<{ success: boolean }>(
+    `/ai-systems/${projectId}/obligations/${obligationId}/evidence/${linkId}`,
+  );
   return data;
 }
 
