@@ -79,7 +79,6 @@ vi.mock('../api', async () => {
     getBillingUsage: vi.fn(),
     getSectionAutosave: vi.fn(),
     createTemplate: vi.fn(),
-    completeProjectSections: vi.fn(),
     runProjectWorkflowAction: vi.fn(),
   };
 });
@@ -172,7 +171,6 @@ beforeEach(() => {
   mockedApi.getBillingUsage.mockResolvedValue({ docsGenerated: 0 } as never);
   mockedApi.getSectionAutosave.mockResolvedValue(null);
   mockedApi.createTemplate.mockResolvedValue({} as never);
-  mockedApi.completeProjectSections.mockResolvedValue(undefined);
   mockedApi.runProjectWorkflowAction.mockResolvedValue({} as never);
 });
 
@@ -220,14 +218,6 @@ describe('ProjectPage integration', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockedApi.completeProjectSections).toHaveBeenCalledWith([
-        'system_overview-section',
-        'model_info-section',
-        'data_governance-section',
-        'risk_assessment-section',
-        'human_oversight-section',
-        'monitoring-section',
-      ]);
       expect(mockedApi.runProjectWorkflowAction).toHaveBeenCalledWith({
         endpoint: '/projects/project-1/workflow/submit',
         body: {

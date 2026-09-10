@@ -27,6 +27,7 @@ import {
 } from '@/domains/ai-systems/api';
 import type {
   DocumentItem,
+  ArtifactStatus,
   FormValues,
   GenerationReadiness,
   ProjectDetail,
@@ -822,9 +823,6 @@ export default function ProjectPage() {
     allFieldsComplete,
     reviewerId: selectedReviewerId,
     approverId: selectedApproverId,
-    sectionIdsToComplete: sectionsQuery.data
-      ?.filter((section) => (section.workflowStatus ?? 'DRAFT') === 'DRAFT')
-      .map((section) => section.id) ?? [],
     reviewMessage,
     onPaywall: () => window.dispatchEvent(new Event('paywall')),
     onSuccess: () =>

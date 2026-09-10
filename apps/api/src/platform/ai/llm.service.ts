@@ -5,6 +5,22 @@ import { ConfigService } from '@nestjs/config';
 type GenerationMode =
   'technical' | 'model_card' | 'risk' | 'section_helper' | 'nist_rmf';
 
+export class LlmAuthenticationError extends Error {
+  constructor() {
+    super('The language-model credentials were rejected.');
+    this.name = 'LlmAuthenticationError';
+  }
+}
+
+export class LlmConfigurationError extends Error {
+  constructor() {
+    super('The document generation service is not configured.');
+    this.name = 'LlmConfigurationError';
+  }
+}
+
+const isDocumentMode = (mode: GenerationMode) => mode !== 'section_helper';
+
 type TechnicalOverviewSection = {
   executiveSummary: string;
   scope: string[];
@@ -87,6 +103,7 @@ export class LlmService {
     mergedContent: Record<string, any>,
   ): Promise<string> {
     if (!this.enabled || !this.client) {
+      if (isDocumentMode(mode)) throw new LlmConfigurationError();
       this.logger.warn(`LLM disabled; returning fallback text for ${mode}`);
       return 'LLM suggestions are disabled in this environment.';
     }
@@ -103,12 +120,11 @@ export class LlmService {
       const status = (error as { response?: { status?: number } }).response
         ?.status;
       if (status === 401 || status === 403) {
-        this.logger.warn(
-          `LLM credentials were rejected; returning fallback text for ${mode}`,
-        );
-        return 'AI generation is temporarily unavailable because the configured language-model credentials were rejected.';
+        this.logger.warn(`LLM credentials were rejected for ${mode}`);
+        if (isDocumentMode(mode)) throw new LlmAuthenticationError();
+        return 'AI suggestions are temporarily unavailable.';
       }
-      this.logger.error(`LLM generation failed for ${mode}`, error as any);
+      this.logger.error(`LLM generation failed for ${mode}`, error);
       throw error;
     }
   }
@@ -568,7 +584,7 @@ ${JSON.stringify(mergedContent, null, 2)}`;
     try {
       return JSON.parse(jsonCandidate) as T;
     } catch (error) {
-      this.logger.error('Failed to parse LLM JSON response', error as any);
+      this.logger.error('Failed to parse LLM JSON response', error);
       this.logger.error(`Raw LLM response: ${content}`);
       throw error;
     }

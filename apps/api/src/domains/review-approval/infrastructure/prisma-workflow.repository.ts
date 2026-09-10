@@ -33,6 +33,7 @@ const projectWorkflowSelect = Prisma.validator<Prisma.ProjectSelect>()({
     select: {
       id: true,
       name: true,
+      content: true,
       workflowStatus: true,
     },
   },
@@ -254,6 +255,66 @@ export class PrismaWorkflowRepository
         },
       });
     });
+  }
+
+  async submitProjectForReview(request: ProjectWorkflowTransitionRequest) {
+    await this.prisma.$transaction(async (tx) => {
+      const updateResult = await tx.project.updateMany({
+        where: {
+          id: request.projectId,
+          workflowStatus: ProjectWorkflowStatus.DRAFT,
+          ...(typeof request.expectedVersion === 'number'
+            ? { workflowVersion: request.expectedVersion }
+            : {}),
+        },
+        data: {
+          workflowStatus: ProjectWorkflowStatus.READY_FOR_REVIEW,
+          workflowVersion: { increment: 1 },
+          reviewerId: request.reviewerId ?? undefined,
+          approverId: request.approverId ?? undefined,
+        },
+      });
+      if (updateResult.count !== 1) throw new WorkflowVersionConflictError();
+
+      const draftSections = await tx.section.findMany({
+        where: {
+          projectId: request.projectId,
+          workflowStatus: SectionWorkflowStatus.DRAFT,
+        },
+        select: { id: true },
+      });
+      if (draftSections.length) {
+        await tx.section.updateMany({
+          where: { id: { in: draftSections.map((section) => section.id) } },
+          data: { workflowStatus: SectionWorkflowStatus.COMPLETE },
+        });
+        await tx.sectionStatusEvent.createMany({
+          data: draftSections.map((section) => ({
+            sectionId: section.id,
+            status: SectionWorkflowStatus.COMPLETE,
+            note: encodeWorkflowNote(
+              SectionWorkflowStatus.COMPLETE,
+              request.note ?? 'Completed during project submission',
+            ),
+            actorId: request.actorId,
+          })),
+        });
+      }
+      await tx.projectStatusEvent.create({
+        data: {
+          projectId: request.projectId,
+          status: ProjectWorkflowStatus.READY_FOR_REVIEW,
+          note: encodeWorkflowNote(
+            ProjectWorkflowStatus.READY_FOR_REVIEW,
+            request.note,
+          ),
+          actorId: request.actorId,
+        },
+      });
+    });
+    const project = await this.getProject(request.projectId);
+    if (!project) throw new NotFoundException('Project not found');
+    return project;
   }
 
   async listProjectHistory(

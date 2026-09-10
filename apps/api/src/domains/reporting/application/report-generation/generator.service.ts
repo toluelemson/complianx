@@ -149,12 +149,6 @@ export class GeneratorService {
     const documents: Array<
       Awaited<ReturnType<DocumentsService['createRecord']>>
     > = [];
-    // Monetization: enforce doc generation quota based on number of documents
-    await this.monetization.checkAndConsumeForProject(
-      projectId,
-      'docgen',
-      typesToGenerate.length,
-    );
     for (const type of typesToGenerate) {
       const spec = DOCUMENT_SPECS[type];
       if (!spec) {
@@ -166,34 +160,41 @@ export class GeneratorService {
         orderBy: { createdAt: 'desc' },
       });
 
-      const markdown = await this.llmService.generate(spec.mode, merged);
-      const readinessNotice =
-        readiness.status === 'partial'
-          ? this.buildReadinessNotice(readiness)
+      const reservation =
+        await this.monetization.reserveDocumentsForProject(projectId);
+      try {
+        const markdown = await this.llmService.generate(spec.mode, merged);
+        const readinessNotice =
+          readiness.status === 'partial'
+            ? this.buildReadinessNotice(readiness)
+            : '';
+        const changesSummary = previous
+          ? this.buildChangesSince(previous.createdAt, sections)
           : '';
-      const changesSummary = previous
-        ? this.buildChangesSince(previous.createdAt, sections)
-        : '';
-      const assembled = [
-        readinessNotice,
-        changesSummary,
-        markdown,
-        appendixMarkdown,
-      ]
-        .filter(Boolean)
-        .join('\n\n');
-      const finalMarkdown = assembled;
-      const html = this.composition.renderHtml(spec.label, finalMarkdown);
-      const fileName = `${projectId}-${type}-${Date.now()}.pdf`;
-      await this.storage.ensure(this.storageBucket);
-      const filePath = this.storage.resolve(this.storageBucket, fileName);
-      await this.pdfService.htmlToPdf(html, filePath);
-      const record = await this.documentsService.createRecord(
-        projectId,
-        type,
-        fileName,
-      );
-      documents.push(record);
+        const finalMarkdown = [
+          readinessNotice,
+          changesSummary,
+          markdown,
+          appendixMarkdown,
+        ]
+          .filter(Boolean)
+          .join('\n\n');
+        const html = this.composition.renderHtml(spec.label, finalMarkdown);
+        const fileName = `${projectId}-${type}-${Date.now()}.pdf`;
+        await this.storage.ensure(this.storageBucket);
+        const filePath = this.storage.resolve(this.storageBucket, fileName);
+        await this.pdfService.htmlToPdf(html, filePath);
+        const record = await this.prisma.$transaction(async (tx) => {
+          await this.monetization.commitDocumentReservation(reservation, tx);
+          return tx.document.create({
+            data: { projectId, type, url: fileName },
+          });
+        });
+        documents.push(record);
+      } catch (error) {
+        await this.monetization.releaseDocumentReservation(reservation);
+        throw error;
+      }
     }
     return documents;
   }

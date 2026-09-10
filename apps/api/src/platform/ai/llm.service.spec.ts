@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { LlmService } from './llm.service';
+import { LlmAuthenticationError, LlmService } from './llm.service';
 import axios from 'axios';
 
 jest.mock('axios');
@@ -33,7 +33,7 @@ describe('LlmService', () => {
     );
   });
 
-  it('returns fallback text when the provider rejects credentials', async () => {
+  it('throws a typed error when the provider rejects document credentials', async () => {
     const post = jest.fn().mockRejectedValue({ response: { status: 401 } });
     mockedAxios.create.mockReturnValue({ post } as any);
 
@@ -45,6 +45,6 @@ describe('LlmService', () => {
 
     await expect(
       service.generate('model_card', { foo: 'bar' }),
-    ).resolves.toContain('temporarily unavailable');
+    ).rejects.toBeInstanceOf(LlmAuthenticationError);
   });
 });

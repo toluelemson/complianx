@@ -26,6 +26,7 @@ export interface ProjectWorkflowAggregate {
   sections: Array<{
     id: string;
     name: string;
+    content?: unknown;
     workflowStatus: SectionWorkflowStatus;
   }>;
 }

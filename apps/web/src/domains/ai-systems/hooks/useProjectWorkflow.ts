@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import type { ProjectWorkflowStatus } from '@complianx/contracts/ai-systems';
-import { completeProjectSections, runProjectWorkflowAction } from '../api';
+import { runProjectWorkflowAction } from '../api';
 
 type WorkflowOptions = {
   projectId: string;
@@ -15,7 +15,6 @@ type WorkflowOptions = {
   allFieldsComplete: boolean;
   reviewerId?: string | null;
   approverId?: string | null;
-  sectionIdsToComplete: string[];
   reviewMessage: string;
   onPaywall: () => void;
   onSuccess: () => void;
@@ -26,14 +25,7 @@ export function useProjectWorkflow(options: WorkflowOptions) {
     mutationFn: async (payload: {
       endpoint: string;
       body?: Record<string, unknown>;
-      sectionIdsToComplete?: string[];
-    }) => {
-      const { sectionIdsToComplete, ...action } = payload;
-      if (sectionIdsToComplete?.length) {
-        await completeProjectSections(sectionIdsToComplete);
-      }
-      return runProjectWorkflowAction(action);
-    },
+    }) => runProjectWorkflowAction(payload),
     onSuccess: () => {
       options.onSuccess();
       toast.success('Project workflow updated');
@@ -60,11 +52,8 @@ export function useProjectWorkflow(options: WorkflowOptions) {
     return true;
   };
 
-  const run = (
-    endpoint: string,
-    body: Record<string, unknown>,
-    sectionIdsToComplete: string[] = [],
-  ) => mutation.mutate({ endpoint, body, sectionIdsToComplete });
+  const run = (endpoint: string, body: Record<string, unknown>) =>
+    mutation.mutate({ endpoint, body });
 
   const sendForReview = () => {
     if (blockedByPlan('Upgrade to request reviews and approvals.')) return;
@@ -115,7 +104,7 @@ export function useProjectWorkflow(options: WorkflowOptions) {
       approverId: options.approverId ?? undefined,
       note,
       expectedVersion: options.version,
-    }, options.sectionIdsToComplete);
+    });
   };
 
   const approveWithSignature = (signature: string) => {

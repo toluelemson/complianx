@@ -206,6 +206,7 @@ model CompanyUsage {
   company       Company @relation(fields: [companyId], references: [id])
   month         String // format: YYYY-MM
   docsGenerated Int     @default(0)
+  docsReserved  Int     @default(0)
   trustAnalyses Int     @default(0)
   reviewsLogged Int     @default(0)
 

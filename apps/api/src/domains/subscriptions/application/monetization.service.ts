@@ -1,8 +1,17 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { BillingPlan, BillingUsage } from '@complianx/contracts/ai-systems';
+import type {
+  BillingPlan,
+  BillingUsage,
+} from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../platform/database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 type UsageType = 'docgen' | 'trust' | 'review';
+export type DocumentQuotaReservation = {
+  companyId: string;
+  month: string;
+  amount: number;
+} | null;
 
 @Injectable()
 export class MonetizationService {
@@ -124,34 +133,102 @@ export class MonetizationService {
       return; // allow
     }
     const month = this.currentMonth();
-    const usage = await this.getUsage(companyId, month);
     const key = this.pickLimitKey(type);
     const limit = (limits as any)[key] as number;
-    const usageAny = usage as any;
-    const current =
-      key === 'docs'
-        ? usage.docsGenerated
-        : key === 'trust'
-          ? usage.trustAnalyses
-          : (usageAny.reviewsLogged ?? 0);
-    if (current + amount > limit) {
+    await this.prisma.companyUsage.upsert({
+      where: { companyId_month: { companyId, month } },
+      create: { companyId, month, docsGenerated: 0, docsReserved: 0 },
+      update: {},
+    });
+    const column = key === 'trust' ? 'trustAnalyses' : 'reviewsLogged';
+    const changed = await this.prisma.$executeRawUnsafe(
+      `
+      UPDATE "CompanyUsage"
+      SET "${column}" = "${column}" + $3
+      WHERE "companyId" = $1
+        AND "month" = $2
+        AND "${column}" + $3 <= $4
+    `,
+      companyId,
+      month,
+      amount,
+      limit,
+    );
+    if (changed !== 1) {
       throw new BadRequestException({
         code: 'PAYWALL',
         message: 'Monthly limit reached',
         plan,
         limit,
-        usage: current,
       });
     }
-    const dataUpdate =
-      key === 'docs'
-        ? { docsGenerated: { increment: amount } }
-        : key === 'trust'
-          ? { trustAnalyses: { increment: amount } }
-          : { reviewsLogged: { increment: amount } };
-    await this.prisma.companyUsage.update({
+  }
+
+  async reserveDocumentsForProject(
+    projectId: string,
+    amount = 1,
+  ): Promise<DocumentQuotaReservation> {
+    if (!this.isEnabled() || amount <= 0) return null;
+    const { id: companyId, plan } = await this.getCompanyForProject(projectId);
+    if (!companyId) return null;
+    const limit = this.getLimits(plan).docs;
+    if (limit >= Number.MAX_SAFE_INTEGER) return null;
+    const month = this.currentMonth();
+    await this.prisma.companyUsage.upsert({
       where: { companyId_month: { companyId, month } },
-      data: dataUpdate,
+      create: { companyId, month, docsGenerated: 0, docsReserved: 0 },
+      update: {},
+    });
+    const changed = await this.prisma.$executeRaw(Prisma.sql`
+      UPDATE "CompanyUsage"
+      SET "docsReserved" = "docsReserved" + ${amount}
+      WHERE "companyId" = ${companyId}
+        AND "month" = ${month}
+        AND "docsGenerated" + "docsReserved" + ${amount} <= ${limit}
+    `);
+    if (changed !== 1) {
+      throw new BadRequestException({
+        code: 'PAYWALL',
+        message: 'Monthly document limit reached',
+        plan,
+        limit,
+      });
+    }
+    return { companyId, month, amount };
+  }
+
+  async commitDocumentReservation(
+    reservation: DocumentQuotaReservation,
+    client: Prisma.TransactionClient = this.prisma,
+  ) {
+    if (!reservation) return;
+    const changed = await client.companyUsage.updateMany({
+      where: {
+        companyId: reservation.companyId,
+        month: reservation.month,
+        docsReserved: { gte: reservation.amount },
+      },
+      data: {
+        docsReserved: { decrement: reservation.amount },
+        docsGenerated: { increment: reservation.amount },
+      },
+    });
+    if (changed.count !== 1) {
+      throw new BadRequestException(
+        'Document quota reservation is no longer valid',
+      );
+    }
+  }
+
+  async releaseDocumentReservation(reservation: DocumentQuotaReservation) {
+    if (!reservation) return;
+    await this.prisma.companyUsage.updateMany({
+      where: {
+        companyId: reservation.companyId,
+        month: reservation.month,
+        docsReserved: { gte: reservation.amount },
+      },
+      data: { docsReserved: { decrement: reservation.amount } },
     });
   }
 }

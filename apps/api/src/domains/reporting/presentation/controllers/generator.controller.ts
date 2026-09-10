@@ -7,7 +7,12 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { GeneratorService } from '../../application/report-generation/generator.service';
+import {
+  LlmAuthenticationError,
+  LlmConfigurationError,
+} from '../../../../platform/ai/llm.service';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -26,10 +31,20 @@ export class GeneratorController {
     @Request() req,
     @Body('documentTypes') documentTypes?: string[],
   ) {
-    return this.generatorService.generate(
-      projectId,
-      req.user.userId,
-      documentTypes,
-    );
+    return this.generatorService
+      .generate(projectId, req.user.userId, documentTypes)
+      .catch((error: unknown) => {
+        if (
+          error instanceof LlmAuthenticationError ||
+          error instanceof LlmConfigurationError
+        ) {
+          throw new ServiceUnavailableException({
+            code: 'DOCUMENT_GENERATION_UNAVAILABLE',
+            message:
+              'Document generation is temporarily unavailable. Please contact an administrator.',
+          });
+        }
+        throw error;
+      });
   }
 }

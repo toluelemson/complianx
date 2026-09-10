@@ -11,6 +11,33 @@ import { SectionWorkflowStatus } from '../domain/workflow-status';
 export class ProjectReadinessService {
   constructor(private readonly blockingComments: BlockingCommentChecker) {}
 
+  private sectionFieldsComplete(
+    section: ProjectWorkflowAggregate['sections'][number],
+  ) {
+    const requiredBySection: Record<string, string[]> = {
+      system_overview: ['purpose', 'intendedUsers', 'deploymentContext'],
+      model_info: ['modelType', 'trainingData', 'metrics'],
+      data_governance: ['dataSources', 'qualityChecks', 'privacy'],
+      risk_assessment: ['risks', 'likelihood', 'impact'],
+      human_oversight: ['roles', 'escalations'],
+      monitoring: ['monitoringPlan', 'maintenance'],
+    };
+    const content = section.content;
+    if (!content || typeof content !== 'object' || Array.isArray(content))
+      return false;
+    const values = content as Record<string, unknown>;
+    const required = requiredBySection[section.name];
+    return (
+      (required ?? Object.keys(values)).length > 0 &&
+      (required ?? Object.keys(values)).every((key) => {
+        const value = values[key];
+        return typeof value === 'string'
+          ? value.trim().length > 0
+          : value !== null && value !== undefined;
+      })
+    );
+  }
+
   async getSubmissionReadiness(
     project: ProjectWorkflowAggregate,
   ): Promise<WorkflowReadinessResult> {
@@ -23,27 +50,19 @@ export class ProjectReadinessService {
           : 'Reviewer must be assigned',
       },
       {
-        key: 'required_sections_complete',
+        key: 'required_fields_complete',
         passed:
           project.sections.length > 0 &&
           project.sections.every((section) =>
-            [
-              SectionWorkflowStatus.COMPLETE,
-              SectionWorkflowStatus.IN_REVIEW,
-              SectionWorkflowStatus.APPROVED,
-            ].includes(section.workflowStatus),
+            this.sectionFieldsComplete(section),
           ),
         message:
           project.sections.length > 0 &&
           project.sections.every((section) =>
-            [
-              SectionWorkflowStatus.COMPLETE,
-              SectionWorkflowStatus.IN_REVIEW,
-              SectionWorkflowStatus.APPROVED,
-            ].includes(section.workflowStatus),
+            this.sectionFieldsComplete(section),
           )
-            ? 'All required sections are complete'
-            : 'Every section must be complete before submission',
+            ? 'All required fields are complete'
+            : 'Every required field must be complete before submission',
       },
     ];
     const blocking = await this.blockingComments.checkProject(project.id);
@@ -63,27 +82,23 @@ export class ProjectReadinessService {
           : 'Approver must be assigned',
       },
       {
-        key: 'required_sections_complete',
+        key: 'required_sections_approved',
         passed:
           project.sections.length > 0 &&
-          project.sections.every((section) =>
-            [
-              SectionWorkflowStatus.COMPLETE,
-              SectionWorkflowStatus.IN_REVIEW,
-              SectionWorkflowStatus.APPROVED,
-            ].includes(section.workflowStatus),
+          project.sections.every(
+            (section) =>
+              section.workflowStatus === SectionWorkflowStatus.APPROVED,
           ),
         message:
           project.sections.length > 0 &&
-          project.sections.every((section) =>
-            [
-              SectionWorkflowStatus.COMPLETE,
-              SectionWorkflowStatus.IN_REVIEW,
-              SectionWorkflowStatus.APPROVED,
-            ].includes(section.workflowStatus),
+          project.sections.every(
+            (section) =>
+              section.workflowStatus === SectionWorkflowStatus.APPROVED,
           )
-            ? 'All required sections are complete'
-            : 'Every section must be complete before approval',
+            ? 'All required sections are approved'
+            : project.sections.length === 0
+              ? 'At least one required section must exist and be approved before project approval'
+              : 'All required sections must be approved before project approval',
       },
     ];
     const blocking = await this.blockingComments.checkProject(project.id);

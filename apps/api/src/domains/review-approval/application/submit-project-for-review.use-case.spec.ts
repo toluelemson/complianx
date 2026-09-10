@@ -32,6 +32,10 @@ describe('SubmitProjectForReviewUseCase', () => {
   it('transitions a ready project into READY_FOR_REVIEW', async () => {
     const repository = {
       transitionProject: jest.fn().mockResolvedValue(undefined),
+      submitProjectForReview: jest.fn().mockResolvedValue({
+        ...project,
+        workflowStatus: ProjectWorkflowStatus.READY_FOR_REVIEW,
+      }),
       getProject: jest.fn().mockResolvedValue({
         ...project,
         workflowStatus: ProjectWorkflowStatus.READY_FOR_REVIEW,
@@ -67,7 +71,7 @@ describe('SubmitProjectForReviewUseCase', () => {
     });
 
     expect(result).not.toBeNull();
-    expect(repository.transitionProject).toHaveBeenCalledWith(
+    expect(repository.submitProjectForReview).toHaveBeenCalledWith(
       expect.objectContaining({
         projectId: 'project-1',
         actorId: 'owner-1',

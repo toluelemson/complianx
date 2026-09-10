@@ -17,4 +17,3 @@ export default function BillingLandingPage() {
     </AppShell>
   );
 }
-import { Panel } from '@/shared/components/ui/panel';
