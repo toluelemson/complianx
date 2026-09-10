@@ -75,17 +75,25 @@ export class DocumentsService {
       allowApprover: true,
       allowCompanyMember: true,
     });
-    return this.prisma.document.findMany({
-      where: { projectId },
-      orderBy: { createdAt: 'desc' },
-    }).then((documents) =>
-      documents.map((document) => ({
-        id: document.id,
-        type: document.type,
-        url: document.url,
-        createdAt: document.createdAt.toISOString(),
-      })),
-    );
+    return this.prisma.document
+      .findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'desc' },
+      })
+      .then((documents) =>
+        documents.map((document) => ({
+          id: document.id,
+          type: document.type,
+          url: document.url,
+          version: document.version,
+          frameworkKey: document.frameworkKey,
+          regulatoryContentVersion: document.regulatoryContentVersion,
+          approvalState: document.approvalState,
+          lifecycleStatus: document.lifecycleStatus,
+          provenanceStatus: document.provenanceStatus,
+          createdAt: document.createdAt.toISOString(),
+        })),
+      );
   }
 
   async createRecord(projectId: string, type: string, fileName: string) {

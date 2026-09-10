@@ -13,12 +13,15 @@ import {
   createTemplate,
   deleteTemplate,
   getGenerationReadiness,
+  getPreliminaryClassification,
   getProject,
   getProjectDocuments,
   getProjectSections,
   listProjectReminders,
+  listProjectObligations,
   listProjectReviewers,
   listTemplates,
+  reviewClassification,
   saveProjectSection,
   sendSuggestionFeedback,
   suggestSection,
@@ -198,6 +201,38 @@ export default function ProjectPage() {
       projectId && activeCompanyId && projectQuery.data?.viewerRole === 'OWNER',
     ),
     queryFn: () => getGenerationReadiness(projectId),
+  });
+  const classificationQuery = useQuery({
+    queryKey: ['preliminaryClassification', projectId, activeCompanyId],
+    enabled: Boolean(projectId && activeCompanyId),
+    queryFn: () => getPreliminaryClassification(projectId),
+  });
+  const classificationReviewMutation = useMutation({
+    mutationFn: (payload: {
+      status: 'REVIEWED' | 'OVERRIDDEN';
+      overrideCategory?: string;
+      reason?: string;
+    }) =>
+      reviewClassification(
+        projectId,
+        classificationQuery.data?.id ?? '',
+        payload,
+      ),
+    onSuccess: () => {
+      toast.success('Classification review saved');
+      queryClient.invalidateQueries({
+        queryKey: ['preliminaryClassification', projectId, activeCompanyId],
+      });
+    },
+    onError: (error) =>
+      toast.error(
+        getApiErrorMessage(error) ?? 'Unable to save classification review',
+      ),
+  });
+  const obligationsQuery = useQuery({
+    queryKey: ['obligations', projectId, activeCompanyId],
+    enabled: Boolean(projectId && activeCompanyId),
+    queryFn: () => listProjectObligations(projectId),
   });
   const documents = useProjectDocuments(
     projectId,
@@ -1002,7 +1037,7 @@ export default function ProjectPage() {
     <AppShell title={projectQuery.data?.name ?? 'Project'}>
       <div className="hz-project-page">
         <div className="hz-project-summary mb-6">
-        <ProjectPanel>
+          <ProjectPanel>
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold text-slate-600">
                 System workspace
@@ -1030,6 +1065,102 @@ export default function ProjectPage() {
                   complete
                 </p>
               </div>
+              {classificationQuery.data ? (
+                <div className="sm:col-span-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-amber-900">
+                      Preliminary classification
+                    </p>
+                    <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-800">
+                      Human review required
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-amber-800">
+                    {classificationQuery.data.category.replaceAll('_', ' ')} ·
+                    pack{' '}
+                    {classificationQuery.data.regulatoryContentVersion ?? '—'}
+                  </p>
+                  {classificationQuery.data.resultSnapshot?.missing_information
+                    ?.length ? (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Missing:{' '}
+                      {classificationQuery.data.resultSnapshot.missing_information.join(
+                        ', ',
+                      )}
+                    </p>
+                  ) : null}
+                  {classificationQuery.data.reviewStatus === 'PENDING' &&
+                  (isAssignedReviewer || isAssignedApprover || isAdmin) ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={classificationReviewMutation.isPending}
+                        onClick={() =>
+                          classificationReviewMutation.mutate({
+                            status: 'REVIEWED',
+                          })
+                        }
+                        className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                      >
+                        Mark reviewed
+                      </button>
+                      <button
+                        type="button"
+                        disabled={classificationReviewMutation.isPending}
+                        onClick={() => {
+                          const category = window.prompt(
+                            'Override category (for example: high_risk)',
+                          );
+                          if (!category?.trim()) return;
+                          const reason = window.prompt('Reason for override');
+                          if (!reason?.trim()) return;
+                          classificationReviewMutation.mutate({
+                            status: 'OVERRIDDEN',
+                            overrideCategory: category.trim(),
+                            reason: reason.trim(),
+                          });
+                        }}
+                        className="rounded-md border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-800 disabled:opacity-60"
+                      >
+                        Override result
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {obligationsQuery.data?.length ? (
+                <div className="sm:col-span-3 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900">
+                      Required obligations
+                    </p>
+                    <span className="text-xs text-slate-500">
+                      {obligationsQuery.data.length} mapped from the latest
+                      classification
+                    </span>
+                  </div>
+                  <ul className="mt-3 grid gap-2 md:grid-cols-2">
+                    {obligationsQuery.data.map((item) => (
+                      <li
+                        key={item.id}
+                        className="rounded-lg border border-slate-100 px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-slate-800">
+                          {item.obligation.title}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {item.obligation.legalReference ??
+                            'EU AI Act pack reference'}{' '}
+                          · {item.status.replaceAll('_', ' ').toLowerCase()}
+                          {item.actions.length
+                            ? ` · ${item.actions.length} action${item.actions.length === 1 ? '' : 's'}`
+                            : ''}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-400">
                   System owner
@@ -2071,7 +2202,7 @@ export default function ProjectPage() {
             </ProjectPanel>
 
             <ProjectPanel>
-              <div className="flex items-center justify-between">
+              <div id="documents" className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">
                   Deliverables
                 </h3>

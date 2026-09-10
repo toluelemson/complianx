@@ -5,9 +5,10 @@ import { ProjectsService } from './application/projects/projects.service';
 import { CompanyModule } from '../organizations/company.module';
 import { RegulatoryFrameworksModule } from '../regulatory-frameworks/regulatory-frameworks.module';
 import { ImportPublicResultService } from './application/import-public-result.service';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
-  imports: [CompanyModule, RegulatoryFrameworksModule],
+  imports: [CompanyModule, RegulatoryFrameworksModule, SubscriptionsModule],
   controllers: [ProjectsController, AiSystemsController],
   providers: [ProjectsService, ImportPublicResultService],
   exports: [ProjectsService],

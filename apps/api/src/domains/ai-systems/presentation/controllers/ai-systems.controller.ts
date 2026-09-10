@@ -15,6 +15,7 @@ import { CreateProjectDto } from '../dto/create-project.dto';
 import { CloneProjectDto } from '../dto/clone-project.dto';
 import { ImportPublicResultDto } from '../dto/import-public-result.dto';
 import { ImportPublicResultService } from '../../application/import-public-result.service';
+import { MonetizationService } from '../../../subscriptions/application/monetization.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('ai-systems')
@@ -23,6 +24,7 @@ export class AiSystemsController {
     private readonly projectsService: ProjectsService,
     private readonly companyContext: CompanyContextService,
     private readonly importPublicResult: ImportPublicResultService,
+    private readonly monetization: MonetizationService,
   ) {}
 
   private resolveCompanyId(req: AuthenticatedRequest) {
@@ -40,11 +42,12 @@ export class AiSystemsController {
 
   @Post()
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateProjectDto) {
-    return this.projectsService.createForUser(
-      req.user.userId,
-      this.resolveCompanyId(req),
-      dto,
-    );
+    const companyId = this.resolveCompanyId(req);
+    return this.monetization
+      .assertCanAddAiSystem(companyId)
+      .then(() =>
+        this.projectsService.createForUser(req.user.userId, companyId, dto),
+      );
   }
 
   @Post('import-public-result')
@@ -52,12 +55,17 @@ export class AiSystemsController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: ImportPublicResultDto,
   ) {
-    return this.importPublicResult.import(
-      dto.publicResultId,
-      req.user.userId,
-      this.resolveCompanyId(req),
-      dto.name,
-    );
+    const companyId = this.resolveCompanyId(req);
+    return this.monetization
+      .assertCanAddAiSystem(companyId)
+      .then(() =>
+        this.importPublicResult.import(
+          dto.publicResultId,
+          req.user.userId,
+          companyId,
+          dto.name,
+        ),
+      );
   }
 
   @Get(':id')
@@ -75,11 +83,16 @@ export class AiSystemsController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: CloneProjectDto,
   ) {
-    return this.projectsService.cloneProject(
-      id,
-      req.user.userId,
-      this.resolveCompanyId(req),
-      dto.name,
-    );
+    const companyId = this.resolveCompanyId(req);
+    return this.monetization
+      .assertCanAddAiSystem(companyId)
+      .then(() =>
+        this.projectsService.cloneProject(
+          id,
+          req.user.userId,
+          companyId,
+          dto.name,
+        ),
+      );
   }
 }

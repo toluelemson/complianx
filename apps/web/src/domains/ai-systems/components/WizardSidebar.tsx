@@ -67,9 +67,7 @@ export function WizardSidebar({
       <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
         <p className="font-semibold text-slate-900">Project metadata</p>
         <p className="mt-2">Industry: {projectQuery.data?.industry ?? '—'}</p>
-        <p className="mt-1">
-          Risk level: {projectQuery.data?.riskLevel ?? '—'}
-        </p>
+        <p className="mt-1">Classification: Preliminary review</p>
         <p className="mt-1">
           Created:{' '}
           {projectQuery.data

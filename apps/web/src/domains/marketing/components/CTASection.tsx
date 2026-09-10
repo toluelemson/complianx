@@ -19,10 +19,10 @@ export function CTASection() {
                 Start with one AI system
               </p>
               <h2 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--cx-text)] sm:text-5xl">
-                Turn system information into a reviewable documentation package.
+                A reviewable package for every AI system.
               </h2>
               <p className="mt-4 text-base leading-8 text-[var(--cx-text-secondary)]">
-                Capture the facts, map evidence, invite review, and keep the approved version ready to hand over.
+                Capture facts. Map evidence. Review.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">

@@ -40,6 +40,80 @@ export async function createAiSystem(values: NewProjectFormValues) {
   return data;
 }
 
+export async function classifyProjectIntake(projectId: string) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/assessments/preliminary`,
+  );
+  return data;
+}
+
+export async function getPreliminaryClassification(projectId: string) {
+  const { data } = await api.get(
+    `/ai-systems/${projectId}/assessments/preliminary`,
+  );
+  return data as {
+    id: string;
+    assessmentId: string;
+    category: string;
+    reviewStatus: string;
+    regulatoryContentVersion?: string;
+    ruleSetVersion?: string;
+    resultSnapshot?: {
+      missing_information?: string[];
+      human_review_required?: boolean;
+    };
+  } | null;
+}
+
+export async function reviewClassification(
+  projectId: string,
+  classificationId: string,
+  payload: {
+    status: 'REVIEWED' | 'OVERRIDDEN';
+    overrideCategory?: string;
+    reason?: string;
+  },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/assessments/classifications/${classificationId}/review`,
+    payload,
+  );
+  return data;
+}
+
+export async function listProjectObligations(projectId: string) {
+  const { data } = await api.get<
+    Array<{
+      id: string;
+      status: string;
+      applicabilityReason?: string | null;
+      obligation: {
+        title: string;
+        legalReference?: string | null;
+      };
+      actions: Array<{ id: string; status: string }>;
+    }>
+  >(`/ai-systems/${projectId}/obligations`);
+  return data;
+}
+
+export async function listAssignedReviews() {
+  const { data } = await api.get<
+    Array<{
+      id: string;
+      name: string;
+      ownerId: string;
+      ownerEmail?: string;
+      reviewerId: string | null;
+      approverId: string | null;
+      workflowStatus: string;
+      workflowVersion: number;
+      updatedAt: string;
+    }>
+  >('/reviews/assigned-to-me');
+  return data;
+}
+
 export async function getAiSystem(aiSystemId: string) {
   const { data } = await api.get<ProjectDetail>(`/ai-systems/${aiSystemId}`);
   return data;

@@ -13,6 +13,7 @@ import { ProjectsService } from '../../application/projects/projects.service';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { CloneProjectDto } from '../dto/clone-project.dto';
 import { CompanyContextService } from '../../../organizations/application/membership/company-context.service';
+import { MonetizationService } from '../../../subscriptions/application/monetization.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('projects')
@@ -20,6 +21,7 @@ export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly companyContext: CompanyContextService,
+    private readonly monetization: MonetizationService,
   ) {}
 
   private resolveCompanyId(req: AuthenticatedRequest) {
@@ -37,7 +39,11 @@ export class ProjectsController {
   @Post()
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateProjectDto) {
     const companyId = this.resolveCompanyId(req);
-    return this.projectsService.createForUser(req.user.userId, companyId, dto);
+    return this.monetization
+      .assertCanAddAiSystem(companyId)
+      .then(() =>
+        this.projectsService.createForUser(req.user.userId, companyId, dto),
+      );
   }
 
   @Get(':id')
@@ -57,11 +63,15 @@ export class ProjectsController {
     @Body() dto: CloneProjectDto,
   ) {
     const companyId = this.resolveCompanyId(req);
-    return this.projectsService.cloneProject(
-      id,
-      req.user.userId,
-      companyId,
-      dto.name,
-    );
+    return this.monetization
+      .assertCanAddAiSystem(companyId)
+      .then(() =>
+        this.projectsService.cloneProject(
+          id,
+          req.user.userId,
+          companyId,
+          dto.name,
+        ),
+      );
   }
 }

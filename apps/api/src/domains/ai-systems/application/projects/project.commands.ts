@@ -1,11 +1,22 @@
 export interface CreateAiSystemCommand {
   name: string;
   industry?: string;
-  riskLevel?: string;
   description?: string;
+  businessPurpose?: string;
   intendedUse?: string;
+  intendedUsers?: string;
+  affectedPersons?: string;
   deploymentGeography?: string;
   operatorRoles?: string[];
+  lifecycleStage?: string;
+  responsibleOwner?: string;
+  providerOrDeveloper?: string;
+  deployerOrUser?: string;
+  importer?: string;
+  distributor?: string;
+  authorizedRepresentative?: string;
+  generatesContent?: boolean;
+  useCaseIndicators?: string[];
   sourcePublicResultId?: string;
 }
 

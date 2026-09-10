@@ -3,7 +3,7 @@ import { MonetizationService } from './monetization.service';
 
 describe('MonetizationService document reservations', () => {
   const prisma = {
-    project: { findUnique: jest.fn() },
+    project: { findUnique: jest.fn(), count: jest.fn() },
     company: { findUnique: jest.fn() },
     companyUsage: {
       upsert: jest.fn(),
@@ -12,6 +12,7 @@ describe('MonetizationService document reservations', () => {
     },
     documentQuotaReservation: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       aggregate: jest.fn(),
       create: jest.fn(),
       updateMany: jest.fn(),
@@ -68,6 +69,19 @@ describe('MonetizationService document reservations', () => {
     expect(prisma.documentQuotaReservation.updateMany).toHaveBeenCalled();
   });
 
+  it('blocks AI-system creation when the plan capacity is reached', async () => {
+    prisma.company.findUnique.mockResolvedValue({
+      id: 'company-1',
+      plan: 'FREE',
+    });
+    prisma.project.count.mockResolvedValue(3);
+    await expect(
+      service.assertCanAddAiSystem('company-1'),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'PAYWALL', limit: 3 }),
+    });
+  });
+
   it('rejects a reservation when the atomic quota update cannot claim capacity', async () => {
     prisma.$transaction.mockImplementationOnce(async () => {
       throw new BadRequestException('Monthly document limit reached');
@@ -75,6 +89,43 @@ describe('MonetizationService document reservations', () => {
     await expect(
       service.reserveDocumentsForProject('project-1'),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('reuses a completed reservation and refreshes released attempts', async () => {
+    const committed = { id: 'done', status: 'COMMITTED', operationKey: 'op-1' };
+    prisma.documentQuotaReservation.findFirst.mockResolvedValueOnce(committed);
+    await expect(
+      service.reserveDocumentsForProject('project-1', 1, 'op-1'),
+    ).resolves.toBe(committed);
+    expect(prisma.documentQuotaReservation.update).not.toHaveBeenCalled();
+
+    const released = {
+      id: 'released',
+      status: 'RELEASED',
+      operationKey: 'op-2',
+    };
+    prisma.documentQuotaReservation.findFirst.mockResolvedValueOnce(released);
+    prisma.documentQuotaReservation.update.mockResolvedValueOnce({
+      ...released,
+      status: 'ACTIVE',
+    });
+    await expect(
+      service.reserveDocumentsForProject('project-1', 1, 'op-2'),
+    ).resolves.toEqual(expect.objectContaining({ status: 'ACTIVE' }));
+  });
+
+  it('scopes operation-key retries to the current company and month', async () => {
+    prisma.documentQuotaReservation.findFirst.mockResolvedValue(null);
+    await service.reserveDocumentsForProject('project-1', 1, 'shared-key');
+    expect(prisma.documentQuotaReservation.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          operationKey: 'shared-key',
+          companyId: 'company-1',
+          month: expect.any(String),
+        }),
+      }),
+    );
   });
 
   it('releases a failed reservation without incrementing generated documents', async () => {

@@ -1,7 +1,7 @@
 // AI systems domain route.
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AppShell } from '@/app/layout/AppShell';
 import type { NewProjectFormValues } from '../components/NewProjectModal';
@@ -10,15 +10,19 @@ import { CloneProjectModal } from '../components/CloneProjectModal';
 import {
   cloneProject,
   createProject,
+  classifyProjectIntake,
   listProjects,
 } from '@/domains/ai-systems/api';
 import type { ProjectListItem } from '@complianx/contracts/ai-systems';
 import { TRACKABLE_STEP_COUNT } from '@/domains/ai-systems/constants/steps';
 import { DOCUMENT_LABELS } from '@/domains/ai-systems/constants/documents';
 import { useAuth } from '@/app/providers/AuthContext';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
+import { getProjectAttentionReasons } from '../lib/project-page-logic';
 
 export default function DashboardPage() {
   const { token, initializing, activeCompanyId } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const workspaceSuffix = activeCompanyId
     ? `?companyId=${activeCompanyId}`
@@ -36,12 +40,24 @@ export default function DashboardPage() {
 
   const createMutation = useMutation({
     mutationFn: (values: NewProjectFormValues) => createProject(values),
-    onSuccess: () => {
+    onSuccess: (project) => {
       queryClient.invalidateQueries({
         queryKey: ['projects', activeCompanyId],
       });
       setModalOpen(false);
       toast.success('Project created');
+      trackMarketingEvent('ai_system_registered');
+      void classifyProjectIntake(project.id)
+        .then(() => {
+          trackMarketingEvent('classification_completed');
+          queryClient.invalidateQueries({
+            queryKey: ['projects', activeCompanyId],
+          });
+          navigate(`/projects/${project.id}`);
+        })
+        .catch(() =>
+          toast.error('Classification needs review before it can run'),
+        );
     },
     onError: () => {
       toast.error('Unable to create project');
@@ -75,9 +91,11 @@ export default function DashboardPage() {
       : value >= 40
         ? 'bg-amber-50 text-amber-700 border border-amber-200'
         : 'bg-rose-50 text-rose-700 border border-rose-200';
-  const { readinessByProject, recentDocuments } =
+  const { readinessByProject, recentDocuments, attentionProjects } =
     useMemo(() => {
       const readinessMap = new Map<string, number>();
+      const attention: Array<{ project: ProjectListItem; reasons: string[] }> =
+        [];
       const docs: Array<{
         id: string;
         type: string;
@@ -93,6 +111,8 @@ export default function DashboardPage() {
           (uniqueSections.size / TRACKABLE_STEP_COUNT) * 100 || 0,
         );
         readinessMap.set(project.id, readiness);
+        const reasons = getProjectAttentionReasons(project);
+        if (reasons.length) attention.push({ project, reasons });
         (project.documents ?? []).forEach((doc) => {
           docs.push({
             id: doc.id,
@@ -111,6 +131,7 @@ export default function DashboardPage() {
       return {
         readinessByProject: readinessMap,
         recentDocuments: docs.slice(0, 4),
+        attentionProjects: attention,
       };
     }, [ownedProjects]);
 
@@ -119,294 +140,349 @@ export default function DashboardPage() {
   }
 
   return (
-    <AppShell title="EU AI Act documentation workspace">
+    <AppShell title="Documentation workspace">
       <div className="hz-console-content hz-dashboard">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-slate-500">
-            Turn system facts and evidence into reviewed, versioned documentation packages.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setModalOpen(true)}
-            className="hz-button hz-button--primary"
-          >
-            Assess an AI system
-          </button>
-          <Link
-            to="/company"
-            className="hz-button hz-button--outline"
-          >
-            Manage workspace
-          </Link>
-        </div>
-      </div>
-      <div className="hz-dashboard__metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-700">AI systems</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{ownedProjects.length}</p>
-          <p className="mt-1 text-sm text-slate-500">Your registered systems</p>
-        </div>
-        <div id="reviews" className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-700">Reviews waiting</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{assignedProjects.length}</p>
-          <p className="mt-1 text-sm text-slate-500">Assigned to you</p>
-        </div>
-        <div id="documents" className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-700">Packages generated</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{ownedProjects.reduce((count, project) => count + (project.documents?.length ?? 0), 0)}</p>
-          <p className="mt-1 text-sm text-slate-500">Across your systems</p>
-        </div>
-        <div className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-700">Needs attention</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{ownedProjects.filter((project) => (project.workflowStatus ?? 'DRAFT') === 'DRAFT' || !project.documents?.length).length}</p>
-          <p className="mt-1 text-sm text-slate-500">Finish intake or create a package</p>
-        </div>
-        <div id="recent-activity" className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm sm:col-span-2 lg:col-span-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700">
-              Recent package activity
-            </p>
-            <span className="text-xs text-slate-400">
-              {recentDocuments.length || 0} recent records
-            </span>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-slate-500">Intake to approval.</p>
           </div>
-          <div className="mt-4 space-y-3">
-            {recentDocuments.length ? (
-              recentDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2"
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setModalOpen(true)}
+              className="hz-button hz-button--primary"
+            >
+              Assess an AI system
+            </button>
+            <Link to="/company" className="hz-button hz-button--outline">
+              Settings
+            </Link>
+          </div>
+        </div>
+        <div className="hz-dashboard__metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-semibold text-slate-700">AI systems</p>
+            <p className="mt-3 text-3xl font-semibold text-slate-900">
+              {ownedProjects.length}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">Registered</p>
+          </div>
+          <div
+            id="reviews"
+            className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <p className="text-sm font-semibold text-slate-700">
+              Reviews waiting
+            </p>
+            <p className="mt-3 text-3xl font-semibold text-slate-900">
+              {assignedProjects.length}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">Assigned</p>
+          </div>
+          <div
+            id="documents"
+            className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <p className="text-sm font-semibold text-slate-700">
+              Packages generated
+            </p>
+            <p className="mt-3 text-3xl font-semibold text-slate-900">
+              {ownedProjects.reduce(
+                (count, project) => count + (project.documents?.length ?? 0),
+                0,
+              )}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">All systems</p>
+          </div>
+          {recentDocuments.length ? (
+            <div
+              id="recent-activity"
+              className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm sm:col-span-2 lg:col-span-3"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-700">
+                  Recent package activity
+                </p>
+                <span className="text-xs text-slate-400">
+                  {recentDocuments.length} recent records
+                </span>
+              </div>
+              <div className="mt-4 space-y-3">
+                {recentDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {DOCUMENT_LABELS[doc.type] ?? doc.type}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {doc.projectName} ·{' '}
+                        {new Date(doc.createdAt).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        {attentionProjects.length ? (
+          <section className="mt-6 rounded-2xl border border-amber-200 border-l-4 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">
+                  Next actions
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  What needs attention in your workspace.
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-slate-500">
+                {attentionProjects.length} system
+                {attentionProjects.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <div className="mt-4 grid max-w-2xl gap-2">
+              {attentionProjects.map(({ project, reasons }) => (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}${workspaceSuffix}`}
+                  className="rounded-xl border border-slate-200 p-3 hover:border-amber-400"
+                >
+                  <p className="font-semibold text-slate-900">{project.name}</p>
+                  <ul className="mt-2 space-y-1 text-sm text-slate-600">
+                    {reasons.map((reason) => (
+                      <li key={reason}>• {reason}</li>
+                    ))}
+                  </ul>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {assignedProjects.length ? (
+          <div className="hz-dashboard__assigned mt-6 rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700">
+                Assigned reviews
+              </p>
+              <span className="text-xs text-slate-400">
+                {assignedProjects.length} active
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {assignedProjects.map((project) => (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}${workspaceSuffix}`}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2 hover:border-sky-200"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      {DOCUMENT_LABELS[doc.type] ?? doc.type}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {doc.projectName} ·{' '}
-                      {new Date(doc.createdAt).toLocaleString(undefined, {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-slate-500">
-                Generate documentation to see activity history.
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-      {assignedProjects.length ? (
-        <div className="hz-dashboard__assigned mt-6 rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700">
-              Assigned reviews
-            </p>
-            <span className="text-xs text-slate-400">
-              {assignedProjects.length} active
-            </span>
-          </div>
-          <div className="mt-3 space-y-2">
-            {assignedProjects.map((project) => (
-              <Link
-                key={project.id}
-                to={`/projects/${project.id}${workspaceSuffix}`}
-                className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2 hover:border-sky-200"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {project.name}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Role: {project.viewerRole?.toLowerCase() ?? 'reviewer'}
-                  </p>
-                </div>
-                <span className="text-xs font-semibold text-slate-500">
-                  {(project.workflowStatus ?? 'IN_REVIEW').replaceAll('_', ' ')}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      <div id="systems" className="hz-dashboard__table mt-8 hidden overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/92 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)] md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-6 py-3 font-medium">Name</th>
-                <th className="px-6 py-3 font-medium">Industry</th>
-                <th className="px-6 py-3 font-medium">Risk Level</th>
-                <th className="px-6 py-3 font-medium">Documentation progress</th>
-                <th className="px-6 py-3 font-medium">Created</th>
-                <th className="px-6 py-3 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {ownedProjects.length ? (
-                ownedProjects.map((project) => {
-                  const readiness = readinessByProject.get(project.id) ?? 0;
-                  const readinessBadge = readinessBadgeClass(readiness);
-                  return (
-                    <tr key={project.id} className="border-b border-slate-100">
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {project.name}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {project.industry ?? '—'}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {project.riskLevel ?? '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${readinessBadge}`}
-                        >
-                          {readiness}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {new Date(project.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            onClick={() =>
-                              setCloneTarget({
-                                id: project.id,
-                                name: project.name,
-                              })
-                            }
-                            className="text-xs font-medium text-slate-500 hover:text-slate-700"
-                          >
-                            Duplicate
-                          </button>
-                          <Link
-                            to={`/projects/${project.id}/trust${workspaceSuffix}`}
-                            className="text-sm font-medium text-slate-500 hover:text-sky-600"
-                          >
-                            Assessment →
-                          </Link>
-                          <Link
-                            to={`/projects/${project.id}${workspaceSuffix}`}
-                            className="text-sm font-medium text-sky-600 hover:text-sky-500"
-                          >
-                            Open →
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-10 text-center text-slate-500"
-                  >
-                    {projectsQuery.isLoading
-                      ? 'Loading projects...'
-                      : 'No projects yet. Create one to get started.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div className="mt-6 space-y-4 md:hidden">
-        {ownedProjects.length ? (
-          ownedProjects.map((project) => {
-            const readiness = readinessByProject.get(project.id) ?? 0;
-            const readinessBadge = readinessBadgeClass(readiness);
-            return (
-              <div
-                key={project.id}
-                className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)]"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-slate-900">
                       {project.name}
                     </p>
-                    <p className="text-sm text-slate-500">
-                      {project.industry ?? '—'} · {project.riskLevel ?? '—'}{' '}
-                      risk
+                    <p className="text-xs text-slate-500">
+                      Role: {project.viewerRole?.toLowerCase() ?? 'reviewer'}
                     </p>
                   </div>
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${readinessBadge}`}
-                  >
-                    {readiness}%
+                  <span className="text-xs font-semibold text-slate-500">
+                    {(project.workflowStatus ?? 'IN_REVIEW').replaceAll(
+                      '_',
+                      ' ',
+                    )}
                   </span>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                  <span className="font-medium text-slate-600">Created:</span>
-                  <span>
-                    {new Date(project.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    onClick={() =>
-                      setCloneTarget({
-                        id: project.id,
-                        name: project.name,
-                      })
-                    }
-                    className="text-xs font-medium text-slate-500 hover:text-slate-700"
-                  >
-                    Duplicate
-                  </button>
-                  <Link
-                    to={`/projects/${project.id}/trust${workspaceSuffix}`}
-                    className="text-sm font-medium text-slate-500 hover:text-sky-600"
-                  >
-                    Assessment →
-                  </Link>
-                  <Link
-                    to={`/projects/${project.id}${workspaceSuffix}`}
-                    className="text-sm font-medium text-sky-600 hover:text-sky-500"
-                  >
-                    Open →
-                  </Link>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-white/92 p-6 text-center text-sm text-slate-500 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)]">
-            {projectsQuery.isLoading
-              ? 'Loading projects...'
-              : 'No projects yet. Create one to get started.'}
+                </Link>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
-      <NewProjectModal
-        isOpen={isModalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={(values) => createMutation.mutate(values)}
-        isSubmitting={createMutation.isPending}
-      />
-      <CloneProjectModal
-        isOpen={Boolean(cloneTarget)}
-        projectName={cloneTarget?.name ?? ''}
-        defaultName={
-          cloneTarget ? `${cloneTarget.name} Template` : 'New AI System'
-        }
-        isSubmitting={cloneMutation.isPending}
-        onClose={() => setCloneTarget(null)}
-        onSubmit={(name) => {
-          if (cloneTarget) {
-            cloneMutation.mutate({ projectId: cloneTarget.id, name });
+        ) : null}
+        <div
+          id="systems"
+          className="hz-dashboard__table mt-8 hidden overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/92 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)] md:block"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-6 py-3 font-medium">Name</th>
+                  <th className="px-6 py-3 font-medium">Industry</th>
+                  <th className="px-6 py-3 font-medium">Classification</th>
+                  <th className="px-6 py-3 font-medium">
+                    Documentation progress
+                  </th>
+                  <th className="px-6 py-3 font-medium">Created</th>
+                  <th className="px-6 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {ownedProjects.length ? (
+                  ownedProjects.map((project) => {
+                    const readiness = readinessByProject.get(project.id) ?? 0;
+                    const readinessBadge = readinessBadgeClass(readiness);
+                    return (
+                      <tr
+                        key={project.id}
+                        className="border-b border-slate-100"
+                      >
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          {project.name}
+                        </td>
+                        <td className="px-6 py-4 text-slate-600">
+                          {project.industry ?? '—'}
+                        </td>
+                        <td className="px-6 py-4 text-slate-600">
+                          {project.riskLevel ? 'Preliminary' : 'Not classified'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-semibold ${readinessBadge}`}
+                          >
+                            {readiness}%
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600">
+                          {new Date(project.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            <button
+                              onClick={() =>
+                                setCloneTarget({
+                                  id: project.id,
+                                  name: project.name,
+                                })
+                              }
+                              className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                            >
+                              Duplicate
+                            </button>
+                            <Link
+                              to={`/projects/${project.id}/trust${workspaceSuffix}`}
+                              className="text-sm font-medium text-slate-500 hover:text-sky-600"
+                            >
+                              Assessment →
+                            </Link>
+                            <Link
+                              to={`/projects/${project.id}${workspaceSuffix}`}
+                              className="text-sm font-medium text-sky-600 hover:text-sky-500"
+                            >
+                              Open →
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-10 text-center text-slate-500"
+                    >
+                      {projectsQuery.isLoading
+                        ? 'Loading projects...'
+                        : 'No projects yet. Create one to get started.'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="mt-6 space-y-4 md:hidden">
+          {ownedProjects.length ? (
+            ownedProjects.map((project) => {
+              const readiness = readinessByProject.get(project.id) ?? 0;
+              const readinessBadge = readinessBadgeClass(readiness);
+              return (
+                <div
+                  key={project.id}
+                  className="rounded-[1.5rem] border border-slate-200 bg-white/92 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-base font-semibold text-slate-900">
+                        {project.name}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {project.industry ?? '—'} ·{' '}
+                        {project.riskLevel
+                          ? 'Preliminary classification'
+                          : 'Not classified'}
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-semibold ${readinessBadge}`}
+                    >
+                      {readiness}%
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                    <span className="font-medium text-slate-600">Created:</span>
+                    <span>
+                      {new Date(project.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      onClick={() =>
+                        setCloneTarget({
+                          id: project.id,
+                          name: project.name,
+                        })
+                      }
+                      className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                    >
+                      Duplicate
+                    </button>
+                    <Link
+                      to={`/projects/${project.id}/trust${workspaceSuffix}`}
+                      className="text-sm font-medium text-slate-500 hover:text-sky-600"
+                    >
+                      Assessment →
+                    </Link>
+                    <Link
+                      to={`/projects/${project.id}${workspaceSuffix}`}
+                      className="text-sm font-medium text-sky-600 hover:text-sky-500"
+                    >
+                      Open →
+                    </Link>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-white/92 p-6 text-center text-sm text-slate-500 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.2)]">
+              {projectsQuery.isLoading
+                ? 'Loading projects...'
+                : 'No projects yet. Create one to get started.'}
+            </div>
+          )}
+        </div>
+        <NewProjectModal
+          isOpen={isModalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={(values) => createMutation.mutate(values)}
+          isSubmitting={createMutation.isPending}
+        />
+        <CloneProjectModal
+          isOpen={Boolean(cloneTarget)}
+          projectName={cloneTarget?.name ?? ''}
+          defaultName={
+            cloneTarget ? `${cloneTarget.name} Template` : 'New AI System'
           }
-        }}
-      />
+          isSubmitting={cloneMutation.isPending}
+          onClose={() => setCloneTarget(null)}
+          onSubmit={(name) => {
+            if (cloneTarget) {
+              cloneMutation.mutate({ projectId: cloneTarget.id, name });
+            }
+          }}
+        />
       </div>
     </AppShell>
   );

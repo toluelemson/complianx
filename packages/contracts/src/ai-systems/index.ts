@@ -93,9 +93,21 @@ export type ProjectDetail = {
   industry?: string | null;
   riskLevel?: string | null;
   description?: string | null;
+  businessPurpose?: string | null;
   intendedUse?: string | null;
+  intendedUsers?: string | null;
+  affectedPersons?: string | null;
   deploymentGeography?: string | null;
   operatorRoles?: string[];
+  lifecycleStage?: string | null;
+  responsibleOwner?: string | null;
+  providerOrDeveloper?: string | null;
+  deployerOrUser?: string | null;
+  importer?: string | null;
+  distributor?: string | null;
+  authorizedRepresentative?: string | null;
+  generatesContent?: boolean | null;
+  useCaseIndicators?: string[];
   sourcePublicResultId?: string | null;
   createdAt: string;
   updatedAt?: string;
@@ -123,6 +135,12 @@ export type DocumentItem = {
   id: string;
   type: string;
   url: string;
+  version?: number;
+  frameworkKey?: string;
+  regulatoryContentVersion?: string | null;
+  approvalState?: 'DRAFT' | 'APPROVED';
+  lifecycleStatus?: 'CURRENT' | 'SUPERSEDED' | 'FAILED';
+  provenanceStatus?: 'COMPLETE' | 'PARTIAL' | 'UNVERIFIED';
   createdAt: string;
 };
 
@@ -132,16 +150,41 @@ export type ProjectListItem = {
   industry?: string | null;
   riskLevel?: string | null;
   description?: string | null;
+  businessPurpose?: string | null;
   intendedUse?: string | null;
+  intendedUsers?: string | null;
+  affectedPersons?: string | null;
   deploymentGeography?: string | null;
   operatorRoles?: string[];
+  lifecycleStage?: string | null;
+  responsibleOwner?: string | null;
+  providerOrDeveloper?: string | null;
+  deployerOrUser?: string | null;
+  importer?: string | null;
+  distributor?: string | null;
+  authorizedRepresentative?: string | null;
+  generatesContent?: boolean | null;
+  useCaseIndicators?: string[];
   sourcePublicResultId?: string | null;
   createdAt: string;
   updatedAt: string;
   workflowStatus?: ProjectWorkflowStatus;
   viewerRole: 'OWNER' | 'REVIEWER' | 'APPROVER' | 'MEMBER';
   sections: ProjectListSection[];
-  documents: Array<Pick<DocumentItem, 'id' | 'type' | 'createdAt'>>;
+  documents: Array<
+    Pick<
+      DocumentItem,
+      | 'id'
+      | 'type'
+      | 'createdAt'
+      | 'version'
+      | 'frameworkKey'
+      | 'regulatoryContentVersion'
+      | 'approvalState'
+      | 'lifecycleStatus'
+      | 'provenanceStatus'
+    >
+  >;
 };
 
 export type TrackableStepSummary = {
@@ -225,6 +268,12 @@ export type BillingPlan = {
     docs: number;
     reviews?: number;
     trust?: number;
+    activeAiSystems?: number;
+    users?: number;
+    clientWorkspaces?: number;
+    versionHistory?: boolean;
+    reviewApproval?: boolean;
+    exports?: boolean;
   };
 };
 

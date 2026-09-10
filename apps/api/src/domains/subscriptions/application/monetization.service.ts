@@ -29,6 +29,12 @@ export class MonetizationService {
         docs: Number.MAX_SAFE_INTEGER,
         trust: Number.MAX_SAFE_INTEGER,
         reviews: Number.MAX_SAFE_INTEGER,
+        activeAiSystems: Number.MAX_SAFE_INTEGER,
+        users: Number.MAX_SAFE_INTEGER,
+        clientWorkspaces: Number.MAX_SAFE_INTEGER,
+        versionHistory: true,
+        reviewApproval: true,
+        exports: true,
       };
     }
     const freeDocs = parseInt(process.env.FREE_DOCS_PER_MONTH || '3', 10);
@@ -42,22 +48,72 @@ export class MonetizationService {
     const proReviews = parseInt(process.env.PRO_REVIEWS_PER_MONTH || '250', 10);
     switch ((plan || 'FREE').toUpperCase()) {
       case 'PRO':
-        return { docs: proDocs, trust: proTrust, reviews: proReviews };
+        return {
+          docs: proDocs,
+          trust: proTrust,
+          reviews: proReviews,
+          activeAiSystems: Number.parseInt(
+            process.env.PRO_AI_SYSTEMS || '25',
+            10,
+          ),
+          users: Number.parseInt(process.env.PRO_USERS || '10', 10),
+          clientWorkspaces: 0,
+          versionHistory: true,
+          reviewApproval: true,
+          exports: true,
+        };
       case 'ENTERPRISE':
         return {
           docs: Number.MAX_SAFE_INTEGER,
           trust: Number.MAX_SAFE_INTEGER,
           reviews: Number.MAX_SAFE_INTEGER,
+          activeAiSystems: Number.MAX_SAFE_INTEGER,
+          users: Number.MAX_SAFE_INTEGER,
+          clientWorkspaces: Number.MAX_SAFE_INTEGER,
+          versionHistory: true,
+          reviewApproval: true,
+          exports: true,
         };
       case 'FREE':
       default:
-        return { docs: freeDocs, trust: freeTrust, reviews: freeReviews };
+        return {
+          docs: freeDocs,
+          trust: freeTrust,
+          reviews: freeReviews,
+          activeAiSystems: Number.parseInt(
+            process.env.FREE_AI_SYSTEMS || '3',
+            10,
+          ),
+          users: 1,
+          clientWorkspaces: 0,
+          versionHistory: false,
+          reviewApproval: false,
+          exports: true,
+        };
     }
   }
 
   private currentMonth() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  async assertCanAddAiSystem(companyId: string) {
+    if (!this.isEnabled()) return;
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { plan: true },
+    });
+    const limit = this.getLimits(company?.plan).activeAiSystems;
+    if (limit === undefined || limit >= Number.MAX_SAFE_INTEGER) return;
+    const active = await this.prisma.project.count({ where: { companyId } });
+    if (active >= limit) {
+      throw new BadRequestException({
+        code: 'PAYWALL',
+        message: 'AI-system limit reached for this plan',
+        limit,
+      });
+    }
   }
 
   async getCompanyForProject(projectId: string) {
@@ -171,12 +227,6 @@ export class MonetizationService {
     const limit = this.getLimits(plan).docs;
     if (limit >= Number.MAX_SAFE_INTEGER) return null;
     const month = this.currentMonth();
-    if (operationKey) {
-      const existing = await this.prisma.documentQuotaReservation.findUnique({
-        where: { operationKey },
-      });
-      if (existing) return existing;
-    }
     return this.prisma.$transaction(async (tx) => {
       await tx.companyUsage.upsert({
         where: { companyId_month: { companyId, month } },
@@ -197,6 +247,36 @@ export class MonetizationService {
       });
       const used = usage[0]?.docsGenerated ?? 0;
       const active = reserved._sum.amount ?? 0;
+      if (operationKey) {
+        const existing = await tx.documentQuotaReservation.findFirst({
+          where: { operationKey, companyId, month },
+        });
+        if (
+          existing?.status === 'COMMITTED' ||
+          (existing?.status === 'ACTIVE' && existing.expiresAt > new Date())
+        ) {
+          return existing;
+        }
+        if (used + active + amount > limit) {
+          throw new BadRequestException({
+            code: 'PAYWALL',
+            message: 'Monthly document limit reached',
+            plan,
+            limit,
+          });
+        }
+        if (existing) {
+          return tx.documentQuotaReservation.update({
+            where: { id: existing.id },
+            data: {
+              status: 'ACTIVE',
+              expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+              releasedAt: null,
+              committedAt: null,
+            },
+          });
+        }
+      }
       if (used + active + amount > limit) {
         throw new BadRequestException({
           code: 'PAYWALL',

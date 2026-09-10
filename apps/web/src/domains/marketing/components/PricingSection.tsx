@@ -32,9 +32,9 @@ type PricingPlan = {
 const PRICING_PLANS: PricingPlan[] = [
   {
     name: 'Trial',
-    tagline: 'See one assessment workflow end to end',
+    tagline: 'Try the workflow',
     price: 'Free',
-    suffix: 'one AI-system assessment',
+    suffix: 'one assessment',
     billing: 'Export restricted',
     cta: 'Start an assessment',
     packageInterest: 'starter',
@@ -52,11 +52,11 @@ const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: 'Solo',
-    tagline: 'For one SME or independent consultant',
-    price: '€99',
-    suffix: 'per month',
-    billing: 'One active workspace',
-    cta: 'Choose Solo',
+    tagline: 'For one person or SME',
+    price: 'Early access',
+    suffix: 'Solo workspace',
+    billing: 'Planned tier',
+    cta: 'Join early access',
     packageInterest: 'professional',
     source: 'pricing_professional',
     sections: [
@@ -72,11 +72,11 @@ const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: 'Team',
-    tagline: 'For teams managing several AI systems',
-    price: '€349',
-    suffix: 'per month',
-    billing: 'Shared workspace',
-    cta: 'Choose Team',
+    tagline: 'For teams and several systems',
+    price: 'Early access',
+    suffix: 'Team workspace',
+    billing: 'Planned tier',
+    cta: 'Join early access',
     packageInterest: 'professional',
     source: 'pricing_professional',
     featured: true,
@@ -94,11 +94,11 @@ const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: 'Consultancy',
-    tagline: 'For consultants managing client work',
-    price: '€799',
-    suffix: 'per month',
-    billing: 'Multiple client workspaces',
-    cta: 'Choose Consultancy',
+    tagline: 'For client-facing consultants',
+    price: 'Early access',
+    suffix: 'Client workspaces',
+    billing: 'Planned tier',
+    cta: 'Join early access',
     packageInterest: 'not_sure',
     source: 'pricing_saas',
     sections: [
@@ -115,7 +115,7 @@ const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: 'Enterprise',
-    tagline: 'Custom support for larger regulated programs',
+    tagline: 'For larger programs',
     price: 'Custom',
     suffix: 'workspace and advisory scope',
     billing: 'Talk to us about fit',
@@ -177,7 +177,7 @@ export function PricingSection() {
             A workspace for each stage of documentation
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#5e5e5e]">
-            Start with one AI system, then scale to team and client workspaces. Plans are product hypotheses and can be configured as the service evolves.
+            One workspace. Clear documentation.
           </p>
         </div>
 
@@ -185,31 +185,31 @@ export function PricingSection() {
           {servicePlans.map((plan, index) => (
             <Card
               key={plan.name}
-                className={`hz-pricing-blueprint__card shadow-none transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] ${
+              className={`hz-pricing-blueprint__card shadow-none transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_70px_-42px_rgba(15,23,42,0.5)] ${
                 plan.featured
                   ? 'hz-pricing-blueprint__card--featured border-[#d40c2e] text-[#383838]'
                   : plan.comingSoon
                     ? 'border-[var(--cx-border)] bg-[var(--cx-surface)] text-[var(--cx-text)]'
                     : 'border-[var(--cx-border)] bg-[var(--cx-surface)] text-[var(--cx-text)]'
               } ${inView ? 'animate-enter-scale' : 'translate-y-6 opacity-0'}`}
-              style={inView ? { animationDelay: `${0.1 + index * 0.08}s` } : undefined}
+              style={
+                inView
+                  ? { animationDelay: `${0.1 + index * 0.08}s` }
+                  : undefined
+              }
             >
               <CardContent className="flex flex-col p-6">
                 <div>
                   <div className="flex items-start justify-between gap-4">
                     <h3 className="text-2xl font-semibold">{plan.name}</h3>
                   </div>
-                  <p className="mt-2 text-sm text-[#5e5e5e]">
-                    {plan.tagline}
-                  </p>
+                  <p className="mt-2 text-sm text-[#5e5e5e]">{plan.tagline}</p>
 
                   <div className="mt-6">
                     <div className="hz-pricing-price text-5xl font-semibold tracking-tight">
                       {plan.price}
                     </div>
-                    <p className="mt-2 text-sm text-[#5e5e5e]">
-                      {plan.suffix}
-                    </p>
+                    <p className="mt-2 text-sm text-[#5e5e5e]">{plan.suffix}</p>
                     {plan.billing ? (
                       <p className="mt-1 text-sm text-[#8a8a8a]">
                         {plan.billing}
@@ -229,9 +229,7 @@ export function PricingSection() {
                     <Button
                       asChild
                       size="lg"
-                      className={`mt-6 w-full transition duration-300 hover:scale-[1.01] ${
-                        'bg-[#d40c2e] text-white hover:bg-[#e21236]'
-                      }`}
+                      className={`mt-6 w-full transition duration-300 hover:scale-[1.01] ${'bg-[#d40c2e] text-white hover:bg-[#e21236]'}`}
                     >
                       {plan.external ? (
                         <a
@@ -256,10 +254,13 @@ export function PricingSection() {
                             source: plan.source ?? 'pricing_starter',
                           })}
                           onClick={() =>
-                            trackMarketingEvent('marketing_submit_cta_clicked', {
-                              package_interest: plan.packageInterest ?? null,
-                              source: plan.source ?? plan.name.toLowerCase(),
-                            })
+                            trackMarketingEvent(
+                              'marketing_submit_cta_clicked',
+                              {
+                                package_interest: plan.packageInterest ?? null,
+                                source: plan.source ?? plan.name.toLowerCase(),
+                              },
+                            )
                           }
                         >
                           {plan.cta}

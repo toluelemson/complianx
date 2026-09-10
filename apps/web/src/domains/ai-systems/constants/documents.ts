@@ -1,5 +1,5 @@
 export const DOCUMENT_LABELS: Record<string, string> = {
-  technical_doc: 'Technical Documentation',
+  technical_doc: 'EU AI Act Documentation Package',
   model_card: 'Model Card',
   risk_assessment: 'Risk Assessment',
   nist_rmf_profile: 'NIST AI RMF Profile',
@@ -15,7 +15,7 @@ export type DocumentGenerationOption = {
 export const DOCUMENT_GENERATION_OPTIONS: DocumentGenerationOption[] = [
   {
     type: 'technical_doc',
-    label: 'EU AI Act Technical File',
+    label: 'EU AI Act Documentation Package',
     framework: 'EU AI Act',
     description:
       'Detailed system, data, risk, and oversight coverage aligned to EU AI Act Article 11 technical documentation expectations.',
@@ -43,6 +43,4 @@ export const DOCUMENT_GENERATION_OPTIONS: DocumentGenerationOption[] = [
   },
 ];
 
-export const DEFAULT_DOCUMENT_SELECTION = DOCUMENT_GENERATION_OPTIONS.map(
-  (option) => option.type,
-);
+export const DEFAULT_DOCUMENT_SELECTION = ['technical_doc'];

@@ -59,11 +59,23 @@ model Project {
   id                   String                @id @default(uuid())
   name                 String
   industry             String?
-  riskLevel            String?
+  riskLevel            String?               // Legacy value; classification now derives risk from intake facts.
   description          String?
+  businessPurpose      String?
   intendedUse          String?
+  intendedUsers        String?
+  affectedPersons      String?
   deploymentGeography  String?
   operatorRoles        Json?
+  lifecycleStage       LifecycleStage?
+  responsibleOwner     String?
+  providerOrDeveloper  String?
+  deployerOrUser       String?
+  importer             String?
+  distributor          String?
+  authorizedRepresentative String?
+  generatesContent     Boolean?
+  useCaseIndicators    Json?
   sourcePublicResultId String?
   status               ProjectStatus         @default(DRAFT)
   workflowStatus       ProjectWorkflowStatus @default(DRAFT)
@@ -90,6 +102,15 @@ model Project {
   readinessReports     ReadinessReport[]
 }
 
+enum LifecycleStage {
+  UNKNOWN
+  DESIGN
+  DEVELOPMENT
+  PILOT
+  PRODUCTION
+  RETIRED
+}
+
 model Section {
   id                 String                @id @default(uuid())
   name               String
@@ -114,11 +135,34 @@ model Document {
   id                 String               @id @default(uuid())
   type               String
   url                String
+  version            Int                  @default(1)
+  frameworkKey       String               @default("eu-ai-act")
+  regulatoryContentVersion String?
+  approvalState      DocumentApprovalState @default(DRAFT)
+  lifecycleStatus    DocumentLifecycleStatus @default(CURRENT)
+  provenanceStatus   DocumentProvenanceStatus @default(PARTIAL)
   createdAt          DateTime             @default(now())
   projectId          String
   operationKey       String?              @unique
   project            Project              @relation(fields: [projectId], references: [id])
   obligationEvidence ObligationEvidence[]
+}
+
+enum DocumentApprovalState {
+  DRAFT
+  APPROVED
+}
+
+enum DocumentLifecycleStatus {
+  CURRENT
+  SUPERSEDED
+  FAILED
+}
+
+enum DocumentProvenanceStatus {
+  COMPLETE
+  PARTIAL
+  UNVERIFIED
 }
 
 model SectionComment {
@@ -436,10 +480,26 @@ model ClassificationResult {
   reasoningTrace  Json
   legalReferences Json
   ambiguityFlags  Json
+  frameworkKey    String                    @default("eu-ai-act")
+  regulatoryContentVersion String?
+  ruleSetVersion  String?
+  inputFacts      Json?
+  rulesTriggered  Json?
+  missingInformation Json?
+  reviewStatus    ClassificationReviewStatus @default(PENDING)
+  reviewerId      String?
+  reviewedAt      DateTime?
+  humanOverride   Json?
   createdAt       DateTime             @default(now())
   obligations     AiSystemObligation[]
 
   @@index([assessmentId, createdAt])
+}
+
+enum ClassificationReviewStatus {
+  PENDING
+  REVIEWED
+  OVERRIDDEN
 }
 
 model Obligation {

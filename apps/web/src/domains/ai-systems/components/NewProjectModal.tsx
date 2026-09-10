@@ -8,11 +8,22 @@ import { Select } from '@/shared/components/ui/select';
 export interface NewProjectFormValues {
   name: string;
   industry?: string;
-  riskLevel?: string;
   description?: string;
+  businessPurpose?: string;
   intendedUse?: string;
+  intendedUsers?: string;
+  affectedPersons?: string;
   deploymentGeography?: string;
   operatorRoles?: string[];
+  lifecycleStage?: string;
+  responsibleOwner?: string;
+  providerOrDeveloper?: string;
+  deployerOrUser?: string;
+  importer?: string;
+  distributor?: string;
+  authorizedRepresentative?: string;
+  generatesContent?: boolean;
+  useCaseIndicators?: string[];
 }
 
 interface NewProjectModalProps {
@@ -30,8 +41,18 @@ export function NewProjectModal({
 }: NewProjectModalProps) {
   const { register, handleSubmit, reset } = useForm<NewProjectFormValues>({
     defaultValues: {
-      name: '', industry: '', riskLevel: '', description: '', intendedUse: '',
-      deploymentGeography: '', operatorRoles: [],
+      name: '',
+      industry: '',
+      description: '',
+      businessPurpose: '',
+      intendedUse: '',
+      intendedUsers: '',
+      affectedPersons: '',
+      deploymentGeography: '',
+      lifecycleStage: 'UNKNOWN',
+      operatorRoles: [],
+      useCaseIndicators: [],
+      generatesContent: false,
     },
   });
 
@@ -60,7 +81,7 @@ export function NewProjectModal({
             })}
           >
             <p className="max-w-md text-sm leading-6 text-slate-500">
-              Capture the minimum context needed to start an EU AI Act documentation package. You can add controls, evidence, owners, and obligations next.
+              Start with the basics.
             </p>
             <label className="block text-sm font-medium text-slate-700">
               System name
@@ -74,40 +95,138 @@ export function NewProjectModal({
               <Input {...register('industry')} className="mt-1" />
             </label>
             <label className="block text-sm font-medium text-slate-700">
-              What will the system be used for?
+              Intended use
               <textarea
                 {...register('intendedUse')}
                 className="mt-1 min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                placeholder="Describe the decision, recommendation, or content it supports."
+                placeholder="What does it do?"
               />
             </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Intended users
+                <Input {...register('intendedUsers')} className="mt-1" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Affected persons
+                <Input {...register('affectedPersons')} className="mt-1" />
+              </label>
+            </div>
             <label className="block text-sm font-medium text-slate-700">
-              Where will it be deployed?
+              Deployment
               <Input
                 {...register('deploymentGeography')}
                 className="mt-1"
-                placeholder="EU countries, global, or unknown"
+                placeholder="Countries or region"
               />
             </label>
             <label className="block text-sm font-medium text-slate-700">
-              Who owns or operates it?
-              <Input
-                {...register('operatorRoles', {
-                  setValueAs: (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean),
-                })}
-                className="mt-1"
-                placeholder="Product owner, engineering, compliance"
-              />
-            </label>
-            <label className="block text-sm font-medium text-slate-700">
-              Initial risk indication
-              <Select {...register('riskLevel')} className="mt-1">
-                <option value="">Not assessed</option>
-                <option value="minimal">Minimal</option>
-                <option value="limited">Limited</option>
-                <option value="high">High</option>
+              Lifecycle
+              <Select {...register('lifecycleStage')} className="mt-1">
+                <option value="UNKNOWN">Not set</option>
+                <option value="DESIGN">Design</option>
+                <option value="DEVELOPMENT">Development</option>
+                <option value="PILOT">Pilot</option>
+                <option value="PRODUCTION">Production</option>
+                <option value="RETIRED">Retired</option>
               </Select>
             </label>
+            <details className="rounded-lg border border-slate-200 px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                More details
+              </summary>
+              <div className="mt-4 space-y-4">
+                <label className="block text-sm font-medium text-slate-700">
+                  Business purpose
+                  <Input {...register('businessPurpose')} className="mt-1" />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Description
+                  <textarea
+                    {...register('description')}
+                    className="mt-1 min-h-16 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Responsible owner
+                  <Input {...register('responsibleOwner')} className="mt-1" />
+                </label>
+                <p className="text-sm font-medium text-slate-700">
+                  Organization role
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    ['provider', 'Provider / developer'],
+                    ['deployer', 'Deployer / user'],
+                    ['importer', 'Importer'],
+                    ['distributor', 'Distributor'],
+                    ['authorized_representative', 'Authorized representative'],
+                  ].map(([value, label]) => (
+                    <label
+                      key={value}
+                      className="flex items-center gap-2 text-sm text-slate-700"
+                    >
+                      <input
+                        type="checkbox"
+                        value={value}
+                        {...register('operatorRoles')}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[
+                    ['providerOrDeveloper', 'Provider / developer'],
+                    ['deployerOrUser', 'Deployer / user'],
+                    ['importer', 'Importer'],
+                    ['distributor', 'Distributor'],
+                    ['authorizedRepresentative', 'Authorized representative'],
+                  ].map(([field, label]) => (
+                    <label
+                      key={field}
+                      className="block text-sm font-medium text-slate-700"
+                    >
+                      {label}
+                      <Input
+                        {...register(field as keyof NewProjectFormValues)}
+                        className="mt-1"
+                      />
+                    </label>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" {...register('generatesContent')} />
+                  Generates or manipulates content
+                </label>
+                <fieldset>
+                  <legend className="text-sm font-medium text-slate-700">
+                    Use-case indicators
+                  </legend>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {[
+                      ['high_risk_context', 'High-risk context'],
+                      ['prohibited_practice', 'Potential prohibited practice'],
+                      ['employment', 'Employment'],
+                      ['credit', 'Credit or essential service'],
+                      ['biometric', 'Biometric use'],
+                    ].map(([value, label]) => (
+                      <label
+                        key={value}
+                        className="flex items-center gap-2 text-sm text-slate-700"
+                      >
+                        <input
+                          type="checkbox"
+                          value={value}
+                          {...register('useCaseIndicators')}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+            </details>
             <div className="mt-6 flex justify-end gap-3">
               <Button type="button" onClick={onClose} variant="outline">
                 Cancel

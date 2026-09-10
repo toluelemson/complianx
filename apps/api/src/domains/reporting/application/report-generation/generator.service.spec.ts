@@ -7,6 +7,8 @@ describe('GeneratorService document lifecycle', () => {
     document: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+      updateMany: jest.fn(),
+      aggregate: jest.fn(),
       create: jest.fn(),
     },
     $transaction: jest.fn(),
@@ -52,6 +54,8 @@ describe('GeneratorService document lifecycle', () => {
     prisma.aiSystemObligation.findMany.mockResolvedValue([]);
     prisma.document.findFirst.mockResolvedValue(null);
     prisma.document.findUnique.mockResolvedValue(null);
+    prisma.document.updateMany.mockResolvedValue({ count: 0 });
+    prisma.document.aggregate.mockResolvedValue({ _max: { version: 0 } });
     prisma.document.create.mockResolvedValue({
       id: 'doc-1',
       type: 'model_card',

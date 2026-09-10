@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import type { ProjectWorkflowStatus } from '@complianx/contracts/ai-systems';
 import { runProjectWorkflowAction } from '../api';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
 
 type WorkflowOptions = {
   projectId: string;
@@ -53,7 +54,18 @@ export function useProjectWorkflow(options: WorkflowOptions) {
   };
 
   const run = (endpoint: string, body: Record<string, unknown>) =>
-    mutation.mutate({ endpoint, body });
+    mutation.mutate(
+      { endpoint, body },
+      {
+        onSuccess: () => {
+          if (endpoint.endsWith('/submit')) {
+            trackMarketingEvent('review_requested');
+          } else if (endpoint.endsWith('/approve')) {
+            trackMarketingEvent('review_completed');
+          }
+        },
+      },
+    );
 
   const sendForReview = () => {
     if (blockedByPlan('Upgrade to request reviews and approvals.')) return;

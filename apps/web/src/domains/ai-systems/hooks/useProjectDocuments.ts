@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { trackMarketingEvent } from '@/platform/analytics/marketing';
 import api from '@/platform/api/client';
 import type {
   BillingPlan,
@@ -60,6 +61,7 @@ export function useProjectDocuments(
       generateProjectDocuments(projectId, { documentTypes }),
     onSuccess: () => {
       onDocumentsChanged?.();
+      trackMarketingEvent('package_generated');
       toast.success('Compliance documents are being prepared');
     },
     onError: () => toast.error('Failed to trigger document generation'),

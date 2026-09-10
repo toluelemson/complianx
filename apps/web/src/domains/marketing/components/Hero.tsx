@@ -13,10 +13,10 @@ export function Hero() {
       <div className="hz-marketing-container grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-center lg:gap-16">
         <div className="min-w-0 max-w-3xl animate-enter-up">
           <h1 className="animate-enter-up animation-delay-100 max-w-[680px] text-4xl font-medium tracking-[-0.04em] text-[#383838] sm:text-6xl lg:text-[4rem] lg:leading-[1.02]">
-            Build audit-ready EU AI Act documentation without managing spreadsheets and disconnected files.
+            EU AI Act documentation, ready for review.
           </h1>
           <p className="animate-enter-up animation-delay-200 mt-5 max-w-xl text-base leading-7 text-[#5e5e5e] sm:text-lg sm:leading-8">
-            Complianx guides SMEs and consultants through AI-system intake, risk classification, evidence collection, review, approval, and documentation.
+            Intake, evidence, review, approval.
           </p>
 
           <div className="hz-marketing-actions animate-enter-up animation-delay-300 mt-7 flex flex-col justify-start gap-3 sm:flex-row sm:flex-wrap">
@@ -46,7 +46,7 @@ export function Hero() {
 
           <div className="animate-enter-up animation-delay-400 mt-8 border-t border-[#e8e8e8] pt-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8a8a8a]">
-              How it works
+              Workflow
             </p>
             <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
               {['Register system', 'Map obligations', 'Attach evidence', 'Review'].map(

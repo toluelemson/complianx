@@ -19,6 +19,7 @@ export interface ProjectWorkflowAggregate {
   name: string;
   companyId: string | null;
   ownerId: string;
+  ownerEmail?: string;
   reviewerId: string | null;
   approverId: string | null;
   workflowStatus: ProjectWorkflowStatus;

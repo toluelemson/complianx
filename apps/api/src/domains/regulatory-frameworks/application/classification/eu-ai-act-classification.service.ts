@@ -75,7 +75,17 @@ export class EuAiActClassificationService {
               !documentationReady ||
               !conformityReady
             ? 'action_required'
-            : 'likely_compliant';
+            : 'minimal_risk';
+
+    const missingInformation = [
+      !aiSystem
+        ? 'Confirm whether the functionality meets the AI-system definition'
+        : null,
+      !usedInEu ? 'Confirm EU deployment or market connection' : null,
+      roles.length === 0 ? "Identify the organization's operator role" : null,
+      !map.intended_use ? 'Describe the intended use' : null,
+      !map.affected_persons ? 'Describe who may be affected' : null,
+    ].filter((value): value is string => Boolean(value));
 
     const obligations: Array<Record<string, unknown>> = [];
     if (!outOfScope && roles.includes('provider')) {
@@ -179,6 +189,9 @@ export class EuAiActClassificationService {
     ];
     const result = {
       result_kind: resultKind,
+      preliminary: true,
+      human_review_required: true,
+      classification_status: 'PRELIMINARY',
       in_scope: inScope,
       excluded: false,
       prohibited,
@@ -191,6 +204,7 @@ export class EuAiActClassificationService {
       considered_provider: false,
       obligations,
       missing_evidence: Array.from(new Set(missingEvidence)),
+      missing_information: missingInformation,
       next_required_documents: Array.from(new Set(nextRequiredDocuments)),
       legal_references: Array.from(new Set(legalReferences)),
       reasoning_trace: reasoningTrace,

@@ -63,6 +63,7 @@ const assignedReviewSelect = Prisma.validator<Prisma.ProjectSelect>()({
   workflowStatus: true,
   workflowVersion: true,
   updatedAt: true,
+  owner: { select: { email: true } },
 });
 
 const sectionWorkflowSelect = Prisma.validator<Prisma.SectionSelect>()({
@@ -400,6 +401,7 @@ export class PrismaWorkflowRepository
     });
     return projects.map((project) => ({
       ...project,
+      ownerEmail: project.owner.email,
       workflowStatus: toProjectWorkflowStatus(project.workflowStatus),
     }));
   }

@@ -83,7 +83,7 @@ export function AppShell({
       { label: 'AI systems', to: '/dashboard#systems', show: true },
       { label: 'Reviews', to: '/reviews', show: true },
       { label: 'Documents', to: '/documents', show: true },
-      { label: 'Clients', to: '/company', show: Boolean(user) },
+      { label: 'Organization', to: '/company', show: Boolean(user) },
       { label: 'Settings', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
     const admin = [
@@ -372,18 +372,18 @@ export function AppShell({
           <nav aria-label="Workspace navigation">{renderSidebarNav()}</nav>
         </aside>
         <main className="hz-main">
-        <BillingModal
-          isOpen={billingOpen}
-          onClose={() => setBillingOpen(false)}
-        />
-        {title && (
-          <div className="hz-page-title">
-            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
-              {title}
-            </h1>
-          </div>
-        )}
-        {children}
+          <BillingModal
+            isOpen={billingOpen}
+            onClose={() => setBillingOpen(false)}
+          />
+          {title && (
+            <div className="hz-page-title">
+              <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
+                {title}
+              </h1>
+            </div>
+          )}
+          {children}
         </main>
       </div>
     </div>

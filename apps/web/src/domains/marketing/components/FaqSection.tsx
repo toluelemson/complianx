@@ -5,27 +5,27 @@ const FAQ_ITEMS = [
   {
     question: 'What is Complianx?',
     answer:
-      'Complianx is an EU AI Act documentation and approval workspace for SMEs, AI providers, software agencies, and independent compliance consultants.',
+      'Complianx is a documentation and approval workspace for AI systems.',
   },
   {
     question: 'What exactly do you deliver?',
     answer:
-      'The primary output is an EU AI Act Documentation Package containing system context, classification inputs and results, evidence references, review history, approval status, and exportable documentation.',
+      'An EU AI Act Documentation Package with system facts, evidence, review history, and approval status.',
   },
   {
     question: 'Who is this service for?',
     answer:
-      'It is built for SMEs and teams that need a repeatable way to document AI systems, plus consultants who manage documentation across client workspaces.',
+      'For SMEs, AI teams, and consultants managing client work.',
   },
   {
     question: "Why shouldn't we do this ourselves?",
     answer:
-      'You can. Complianx provides a shared structure for intake, evidence, review, approval, and version history so the work does not get scattered across spreadsheets and disconnected files.',
+      'You can. Complianx keeps intake, evidence, review, approval, and versions together.',
   },
   {
     question: 'How fast can we get our documentation?',
     answer:
-      'Timing depends on the completeness of your system information and evidence. The workspace shows what is missing and what is ready for review.',
+      'It depends on your information and evidence. The workspace shows what is missing.',
   },
   {
     question: 'What do you need from us to start?',
@@ -35,7 +35,7 @@ const FAQ_ITEMS = [
   {
     question: 'Is this compliant with the EU AI Act?',
     answer:
-      'Complianx supports EU AI Act documentation work. It does not replace legal advice, a qualified compliance review, or your responsibility to determine applicable obligations.',
+      'Complianx supports documentation work. It does not replace legal or compliance review.',
   },
   {
     question: 'Will this help with investors or partnerships?',
@@ -65,7 +65,7 @@ const FAQ_ITEMS = [
   {
     question: 'What makes NeuralDocx different?',
     answer:
-      'Complianx combines structured intake, deterministic classification references, evidence mapping, human review, and versioned documentation in one workspace.',
+      'Structured intake, evidence mapping, human review, and version history in one place.',
   },
   {
     question: 'What happens after delivery?',

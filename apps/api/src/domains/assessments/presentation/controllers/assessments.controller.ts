@@ -14,6 +14,7 @@ import { CompanyContextService } from '../../../organizations/application/member
 import { AssessmentsService } from '../../application/classification/assessments.service';
 import { CreateAssessmentDto } from '../dto/create-assessment.dto';
 import { UpdateAssessmentAnswersDto } from '../dto/update-assessment-answers.dto';
+import { ReviewClassificationDto } from '../dto/review-classification.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('ai-systems/:aiSystemId/assessments')
@@ -41,6 +42,46 @@ export class AssessmentsController {
       req.user.userId,
       this.companyId(req),
       dto.packVersion,
+    );
+  }
+
+  @Post('preliminary')
+  preliminary(
+    @Param('aiSystemId') aiSystemId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.classifyProjectIntake(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+    );
+  }
+
+  @Get('preliminary')
+  latestPreliminary(
+    @Param('aiSystemId') aiSystemId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.getLatestProjectClassification(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+    );
+  }
+
+  @Post('classifications/:classificationId/review')
+  reviewClassification(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('classificationId') classificationId: string,
+    @Body() dto: ReviewClassificationDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.reviewClassification(
+      aiSystemId,
+      classificationId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
     );
   }
 

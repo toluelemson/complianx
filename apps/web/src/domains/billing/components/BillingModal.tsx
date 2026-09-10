@@ -118,6 +118,21 @@ export default function BillingModal({ isOpen, onClose }: Props) {
                   ? 'Unlimited'
                   : limits.reviews}
               </p>
+              <p className="mt-2 text-slate-600">
+                AI systems:{' '}
+                {limits.activeAiSystems === Number.MAX_SAFE_INTEGER
+                  ? 'Unlimited'
+                  : (limits.activeAiSystems ?? '—')}{' '}
+                · Users:{' '}
+                {limits.users === Number.MAX_SAFE_INTEGER
+                  ? 'Unlimited'
+                  : (limits.users ?? '—')}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Review and approval:{' '}
+                {limits.reviewApproval ? 'Included' : 'Paid plan'} · Version
+                history: {limits.versionHistory ? 'Included' : 'Paid plan'}
+              </p>
             </div>
             <div className="rounded-xl border border-slate-200 p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">

@@ -24,7 +24,7 @@ const DOCUMENT_SPECS: Record<
   { label: string; mode: GenerationMode; framework?: string }
 > = {
   technical_doc: {
-    label: 'EU AI Act Technical Documentation',
+    label: 'EU AI Act Documentation Package',
     mode: 'technical',
     framework: 'EU AI Act',
   },
@@ -147,6 +147,11 @@ export class GeneratorService {
     }
     const merged = this.composition.mergeSections(sections);
     const appendixMarkdown = this.buildEvidenceAppendix(sections);
+    const regulatoryPack = await this.prisma.compliancePackVersion?.findFirst({
+      where: { key: 'eu-ai-act', status: 'PUBLISHED' },
+      orderBy: { publishedAt: 'desc' },
+      select: { version: true },
+    });
     const orderedTypes = Object.keys(DOCUMENT_SPECS);
     const filteredSelection = (requestedTypes ?? [])
       .map((type) => type?.toString())
@@ -197,6 +202,7 @@ export class GeneratorService {
           ? this.buildChangesSince(previous.createdAt, sections)
           : '';
         const finalMarkdown = [
+          this.buildProvenanceNotice(),
           readinessNotice,
           changesSummary,
           markdown,
@@ -212,8 +218,31 @@ export class GeneratorService {
         await this.pdfService.htmlToPdf(html, filePath);
         const record = await this.prisma.$transaction(async (tx) => {
           await this.monetization.commitDocumentReservation(reservation, tx);
+          await tx.document.updateMany({
+            where: {
+              projectId,
+              type,
+              lifecycleStatus: 'CURRENT',
+            },
+            data: { lifecycleStatus: 'SUPERSEDED' },
+          });
+          const latest = await tx.document.aggregate({
+            where: { projectId, type },
+            _max: { version: true },
+          });
           return tx.document.create({
-            data: { projectId, type, url: generatedFileName, operationKey },
+            data: {
+              projectId,
+              type,
+              url: generatedFileName,
+              operationKey,
+              version: (latest._max.version ?? 0) + 1,
+              frameworkKey: 'eu-ai-act',
+              regulatoryContentVersion: regulatoryPack?.version,
+              approvalState: 'DRAFT',
+              lifecycleStatus: 'CURRENT',
+              provenanceStatus: 'PARTIAL',
+            },
           });
         });
         documents.push(record);
@@ -289,6 +318,17 @@ export class GeneratorService {
       lines.push('');
     });
     return lines.join('\n');
+  }
+
+  private buildProvenanceNotice() {
+    return [
+      '## Provenance and review status',
+      '',
+      '- System facts and evidence are based on customer-provided workspace data.',
+      '- Classification references are derived from the configured regulatory pack and deterministic rules.',
+      '- Some wording may be AI-assisted and must be validated by a qualified human reviewer.',
+      '- This document is not legal advice and is not an automatic finding of regulatory compliance.',
+    ].join('\n');
   }
 
   private buildReadinessNotice(readiness: {
