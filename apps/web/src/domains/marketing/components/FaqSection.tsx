@@ -3,29 +3,29 @@ import { ChevronDown } from 'lucide-react';
 
 const FAQ_ITEMS = [
   {
-    question: 'What is NeuralDocx?',
+    question: 'What is Complianx?',
     answer:
-      'NeuralDocx is a done-for-you AI compliance documentation service. We create audit-ready documents for your AI systems so you do not have to.',
+      'Complianx is an EU AI Act documentation and approval workspace for SMEs, AI providers, software agencies, and independent compliance consultants.',
   },
   {
     question: 'What exactly do you deliver?',
     answer:
-      'We deliver complete compliance documentation, including AI system descriptions, risk classification, data governance documentation, model transparency and explainability reports, risk and mitigation analysis, and audit-ready compliance reports.',
+      'The primary output is an EU AI Act Documentation Package containing system context, classification inputs and results, evidence references, review history, approval status, and exportable documentation.',
   },
   {
     question: 'Who is this service for?',
     answer:
-      'It is built for startups building AI products, SaaS companies using AI features, fintech and healthtech teams, companies preparing for EU AI Act compliance, and teams needing documentation for investors, audits, or regulators.',
+      'It is built for SMEs and teams that need a repeatable way to document AI systems, plus consultants who manage documentation across client workspaces.',
   },
   {
     question: "Why shouldn't we do this ourselves?",
     answer:
-      'You can, but it typically takes weeks of research, legal and technical alignment, and compliance expertise. We compress that into 24 to 72 hours with structured, high-quality output.',
+      'You can. Complianx provides a shared structure for intake, evidence, review, approval, and version history so the work does not get scattered across spreadsheets and disconnected files.',
   },
   {
     question: 'How fast can we get our documentation?',
     answer:
-      'Basic package: 24 hours. Standard package: 48 hours. Advanced package: 72 hours.',
+      'Timing depends on the completeness of your system information and evidence. The workspace shows what is missing and what is ready for review.',
   },
   {
     question: 'What do you need from us to start?',
@@ -35,7 +35,7 @@ const FAQ_ITEMS = [
   {
     question: 'Is this compliant with the EU AI Act?',
     answer:
-      'Yes. We structure documentation based on EU AI Act requirements and best practices so your records are audit-ready.',
+      'Complianx supports EU AI Act documentation work. It does not replace legal advice, a qualified compliance review, or your responsibility to determine applicable obligations.',
   },
   {
     question: 'Will this help with investors or partnerships?',
@@ -55,7 +55,7 @@ const FAQ_ITEMS = [
   {
     question: 'How much does it cost?',
     answer:
-      'Typical ranges: Starter: EUR99 - EUR199. Standard: EUR299 - EUR599. Advanced: EUR999+. Custom pricing depends on complexity.',
+      'Trial, Solo, Team, Consultancy, and Enterprise pricing are configurable hypotheses while the product and service model are validated.',
   },
   {
     question: 'Is this a one-time service or ongoing?',
@@ -65,7 +65,7 @@ const FAQ_ITEMS = [
   {
     question: 'What makes NeuralDocx different?',
     answer:
-      'NeuralDocx combines AI automation with real compliance structure. It is built for speed, clarity, and audit-readiness, and it is tailored to your actual system instead of relying on generic templates.',
+      'Complianx combines structured intake, deterministic classification references, evidence mapping, human review, and versioned documentation in one workspace.',
   },
   {
     question: 'What happens after delivery?',

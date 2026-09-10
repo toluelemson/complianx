@@ -114,14 +114,14 @@ describe('useProjectAutosave', () => {
     const { rerender } = renderHook(
       ({ id, values }) =>
         useProjectAutosave(
-          section(id, id === 'one' ? { purpose: 'Initial' } : {}),
+          section(id, { purpose: id === 'one' ? 'Initial' : '' }),
           values,
           true,
         ),
       { initialProps: { id: 'one', values: { purpose: 'Initial' } } },
     );
     rerender({ id: 'one', values: { purpose: 'Changed' } });
-    rerender({ id: 'two', values: {} });
+    rerender({ id: 'two', values: { purpose: '' } });
     await act(async () => undefined);
     expect(mockedSave).toHaveBeenCalledWith({
       sectionId: 'one',

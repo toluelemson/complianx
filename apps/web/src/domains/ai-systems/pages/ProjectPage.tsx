@@ -202,7 +202,6 @@ export default function ProjectPage() {
   const documents = useProjectDocuments(
     projectId,
     token,
-    token,
     projectQuery.data?.viewerRole === 'OWNER',
     monetizationEnabled,
     readinessQuery.data,

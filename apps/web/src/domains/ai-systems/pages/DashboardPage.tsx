@@ -75,10 +75,9 @@ export default function DashboardPage() {
       : value >= 40
         ? 'bg-amber-50 text-amber-700 border border-amber-200'
         : 'bg-rose-50 text-rose-700 border border-rose-200';
-  const { readinessByProject, averageReadiness, recentDocuments } =
+  const { readinessByProject, recentDocuments } =
     useMemo(() => {
       const readinessMap = new Map<string, number>();
-      let readinessTotal = 0;
       const docs: Array<{
         id: string;
         type: string;
@@ -94,7 +93,6 @@ export default function DashboardPage() {
           (uniqueSections.size / TRACKABLE_STEP_COUNT) * 100 || 0,
         );
         readinessMap.set(project.id, readiness);
-        readinessTotal += readiness;
         (project.documents ?? []).forEach((doc) => {
           docs.push({
             id: doc.id,
@@ -112,9 +110,6 @@ export default function DashboardPage() {
 
       return {
         readinessByProject: readinessMap,
-        averageReadiness: readinessMap.size
-          ? Math.round(readinessTotal / readinessMap.size)
-          : 0,
         recentDocuments: docs.slice(0, 4),
       };
     }, [ownedProjects]);
@@ -124,12 +119,12 @@ export default function DashboardPage() {
   }
 
   return (
-    <AppShell title="AI system portfolio">
+    <AppShell title="EU AI Act documentation workspace">
       <div className="hz-console-content hz-dashboard">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500">
-            Monitor ownership, readiness, evidence, and review status across your AI systems.
+            Turn system facts and evidence into reviewed, versioned documentation packages.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -137,7 +132,7 @@ export default function DashboardPage() {
             onClick={() => setModalOpen(true)}
             className="hz-button hz-button--primary"
           >
-            Register AI system
+            Assess an AI system
           </button>
           <Link
             to="/company"
@@ -147,28 +142,31 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
-      <div className="hz-dashboard__metrics mt-8 grid gap-4 md:grid-cols-2">
+      <div className="hz-dashboard__metrics mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-700">
-            Portfolio readiness
-          </p>
-          <p className="mt-4 text-4xl font-semibold text-slate-900">
-            {averageReadiness}%
-          </p>
-          <p className="text-sm text-slate-500">
-            Average readiness across {ownedProjects.length || '0'} registered systems
-          </p>
-          <div className="mt-4 h-3 w-full rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-[#d40c2e] transition-all"
-              style={{ width: `${averageReadiness}%` }}
-            />
-          </div>
+          <p className="text-sm font-semibold text-slate-700">AI systems</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{ownedProjects.length}</p>
+          <p className="mt-1 text-sm text-slate-500">Your registered systems</p>
+        </div>
+        <div id="reviews" className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-semibold text-slate-700">Reviews waiting</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{assignedProjects.length}</p>
+          <p className="mt-1 text-sm text-slate-500">Assigned to you</p>
+        </div>
+        <div id="documents" className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-semibold text-slate-700">Packages generated</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{ownedProjects.reduce((count, project) => count + (project.documents?.length ?? 0), 0)}</p>
+          <p className="mt-1 text-sm text-slate-500">Across your systems</p>
         </div>
         <div className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-semibold text-slate-700">Needs attention</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{ownedProjects.filter((project) => (project.workflowStatus ?? 'DRAFT') === 'DRAFT' || !project.documents?.length).length}</p>
+          <p className="mt-1 text-sm text-slate-500">Finish intake or create a package</p>
+        </div>
+        <div id="recent-activity" className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm sm:col-span-2 lg:col-span-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700">
-              Recent activity
+              Recent package activity
             </p>
             <span className="text-xs text-slate-400">
               {recentDocuments.length || 0} recent records
@@ -236,7 +234,7 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : null}
-      <div className="hz-dashboard__table mt-8 hidden overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/92 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)] md:block">
+      <div id="systems" className="hz-dashboard__table mt-8 hidden overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/92 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)] md:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
@@ -244,7 +242,7 @@ export default function DashboardPage() {
                 <th className="px-6 py-3 font-medium">Name</th>
                 <th className="px-6 py-3 font-medium">Industry</th>
                 <th className="px-6 py-3 font-medium">Risk Level</th>
-                <th className="px-6 py-3 font-medium">Readiness</th>
+                <th className="px-6 py-3 font-medium">Documentation progress</th>
                 <th className="px-6 py-3 font-medium">Created</th>
                 <th className="px-6 py-3 font-medium"></th>
               </tr>
@@ -292,7 +290,7 @@ export default function DashboardPage() {
                             to={`/projects/${project.id}/trust${workspaceSuffix}`}
                             className="text-sm font-medium text-slate-500 hover:text-sky-600"
                           >
-                            Trust →
+                            Assessment →
                           </Link>
                           <Link
                             to={`/projects/${project.id}${workspaceSuffix}`}
@@ -369,7 +367,7 @@ export default function DashboardPage() {
                     to={`/projects/${project.id}/trust${workspaceSuffix}`}
                     className="text-sm font-medium text-slate-500 hover:text-sky-600"
                   >
-                    Trust →
+                    Assessment →
                   </Link>
                   <Link
                     to={`/projects/${project.id}${workspaceSuffix}`}

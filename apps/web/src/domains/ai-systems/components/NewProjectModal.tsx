@@ -9,6 +9,10 @@ export interface NewProjectFormValues {
   name: string;
   industry?: string;
   riskLevel?: string;
+  description?: string;
+  intendedUse?: string;
+  deploymentGeography?: string;
+  operatorRoles?: string[];
 }
 
 interface NewProjectModalProps {
@@ -25,7 +29,10 @@ export function NewProjectModal({
   isSubmitting,
 }: NewProjectModalProps) {
   const { register, handleSubmit, reset } = useForm<NewProjectFormValues>({
-    defaultValues: { name: '', industry: '', riskLevel: '' },
+    defaultValues: {
+      name: '', industry: '', riskLevel: '', description: '', intendedUse: '',
+      deploymentGeography: '', operatorRoles: [],
+    },
   });
 
   if (!isOpen) return null;
@@ -53,8 +60,7 @@ export function NewProjectModal({
             })}
           >
             <p className="max-w-md text-sm leading-6 text-slate-500">
-              Start with the system context. You can add detailed controls,
-              evidence, owners, and obligations after registration.
+              Capture the minimum context needed to start an EU AI Act documentation package. You can add controls, evidence, owners, and obligations next.
             </p>
             <label className="block text-sm font-medium text-slate-700">
               System name
@@ -66,6 +72,32 @@ export function NewProjectModal({
             <label className="block text-sm font-medium text-slate-700">
               Operating domain
               <Input {...register('industry')} className="mt-1" />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              What will the system be used for?
+              <textarea
+                {...register('intendedUse')}
+                className="mt-1 min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Describe the decision, recommendation, or content it supports."
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Where will it be deployed?
+              <Input
+                {...register('deploymentGeography')}
+                className="mt-1"
+                placeholder="EU countries, global, or unknown"
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Who owns or operates it?
+              <Input
+                {...register('operatorRoles', {
+                  setValueAs: (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean),
+                })}
+                className="mt-1"
+                placeholder="Product owner, engineering, compliance"
+              />
             </label>
             <label className="block text-sm font-medium text-slate-700">
               Initial risk indication

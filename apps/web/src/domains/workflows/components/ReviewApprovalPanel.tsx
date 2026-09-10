@@ -249,7 +249,7 @@ export function ReviewApprovalPanel({
             {canApprove && projectStatusLabel === 'IN_REVIEW' ? (
               <Button
                 type="button"
-                variant="primary"
+                variant="default"
                 className="h-auto flex-1 md:flex-none"
                 onClick={onApprove}
                 disabled={approveBlocked}

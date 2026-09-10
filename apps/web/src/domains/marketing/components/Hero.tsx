@@ -13,10 +13,10 @@ export function Hero() {
       <div className="hz-marketing-container grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-center lg:gap-16">
         <div className="min-w-0 max-w-3xl animate-enter-up">
           <h1 className="animate-enter-up animation-delay-100 max-w-[680px] text-4xl font-medium tracking-[-0.04em] text-[#383838] sm:text-6xl lg:text-[4rem] lg:leading-[1.02]">
-            Keep every AI system ready for review.
+            Build audit-ready EU AI Act documentation without managing spreadsheets and disconnected files.
           </h1>
           <p className="animate-enter-up animation-delay-200 mt-5 max-w-xl text-base leading-7 text-[#5e5e5e] sm:text-lg sm:leading-8">
-            Register systems, organize evidence, and stay ready for review.
+            Complianx guides SMEs and consultants through AI-system intake, risk classification, evidence collection, review, approval, and documentation.
           </p>
 
           <div className="hz-marketing-actions animate-enter-up animation-delay-300 mt-7 flex flex-col justify-start gap-3 sm:flex-row sm:flex-wrap">
@@ -33,14 +33,14 @@ export function Hero() {
                   })
                 }
               >
-                Submit your system
+                Assess an AI system
               </Link>
             </Button>
             <Link
-              to="/eu-ai-act-checker"
+              to="/demo/loan-approval-ai"
               className="inline-flex items-center justify-center px-2 py-3 text-sm font-semibold text-[#5e5e5e] underline decoration-[#dbdbdb] underline-offset-4 transition hover:text-[#383838] hover:decoration-[#383838] sm:justify-start"
             >
-              Run compliance check first
+              View example package
             </Link>
           </div>
 

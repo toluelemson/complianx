@@ -34,6 +34,12 @@ const PublicEuAiActResultPage = lazy(
 const DashboardPage = lazy(
   () => import('@/domains/ai-systems/pages/DashboardPage'),
 );
+const ReviewsPage = lazy(
+  () => import('@/domains/ai-systems/pages/ReviewsPage'),
+);
+const DocumentsPage = lazy(
+  () => import('@/domains/ai-systems/pages/DocumentsPage'),
+);
 const ProjectPage = lazy(
   () => import('@/domains/ai-systems/pages/ProjectPage'),
 );
@@ -91,6 +97,22 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviews"
+          element={
+            <ProtectedRoute>
+              <ReviewsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <ProtectedRoute>
+              <DocumentsPage />
             </ProtectedRoute>
           }
         />

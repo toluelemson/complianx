@@ -80,9 +80,11 @@ export function AppShell({
   const navSections = useMemo(() => {
     const primary = [
       { label: 'Dashboard', to: '/dashboard', show: true },
-      { label: 'Demo Tool', to: '/demo/eu-ai-act-report', show: true },
-      { label: 'Company', to: '/company', show: Boolean(user) },
-      { label: 'Profile', to: '/settings/profile', show: true },
+      { label: 'AI systems', to: '/dashboard#systems', show: true },
+      { label: 'Reviews', to: '/reviews', show: true },
+      { label: 'Documents', to: '/documents', show: true },
+      { label: 'Clients', to: '/company', show: Boolean(user) },
+      { label: 'Settings', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
     const admin = [
       { label: 'Roles', to: '/admin/roles', show: user?.role === 'ADMIN' },

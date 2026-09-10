@@ -31,33 +31,52 @@ type PricingPlan = {
 
 const PRICING_PLANS: PricingPlan[] = [
   {
-    name: 'Starter',
-    tagline: 'A focused first compliance pack',
-    price: 'EUR500 - EUR1,500',
-    suffix: 'per engagement',
-    billing: '2–4 day turnaround',
-    cta: 'Choose Starter',
+    name: 'Trial',
+    tagline: 'See one assessment workflow end to end',
+    price: 'Free',
+    suffix: 'one AI-system assessment',
+    billing: 'Export restricted',
+    cta: 'Start an assessment',
     packageInterest: 'starter',
     source: 'pricing_starter',
     sections: [
       {
         title: 'Included',
         items: [
-          'AI system intake and scope review',
-          'Core system description',
-          'Initial risk assessment',
-          'EU AI Act aligned summary pack',
+          'Guided AI-system intake',
+          'Preliminary classification',
+          'Evidence checklist and review workflow',
         ],
       },
     ],
   },
   {
-    name: 'Professional',
-    tagline: 'Deeper coverage for diligence or audit',
-    price: 'EUR2,000 - EUR5,000',
-    suffix: 'per engagement',
-    billing: 'Most common engagement',
-    cta: 'Choose Professional',
+    name: 'Solo',
+    tagline: 'For one SME or independent consultant',
+    price: '€99',
+    suffix: 'per month',
+    billing: 'One active workspace',
+    cta: 'Choose Solo',
+    packageInterest: 'professional',
+    source: 'pricing_professional',
+    sections: [
+      {
+        title: 'Included',
+        items: [
+          'EU AI Act documentation package',
+          'Evidence and version history',
+          'Review, approval, and PDF export',
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Team',
+    tagline: 'For teams managing several AI systems',
+    price: '€349',
+    suffix: 'per month',
+    billing: 'Shared workspace',
+    cta: 'Choose Team',
     packageInterest: 'professional',
     source: 'pricing_professional',
     featured: true,
@@ -65,55 +84,52 @@ const PRICING_PLANS: PricingPlan[] = [
       {
         title: 'Included',
         items: [
-          'Everything in Starter',
-          'Deeper risk and control analysis',
-          'Governance documentation set',
-          'Mitigation and review notes',
+          'Everything in Solo',
+          'Multiple reviewers and approvers',
+          'Client-ready handover packages',
+          'Cross-system workspace visibility',
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Consultancy',
+    tagline: 'For consultants managing client work',
+    price: '€799',
+    suffix: 'per month',
+    billing: 'Multiple client workspaces',
+    cta: 'Choose Consultancy',
+    packageInterest: 'not_sure',
+    source: 'pricing_saas',
+    sections: [
+      {
+        title: 'Planned',
+        items: [
+          'Everything in Team',
+          'Client isolation and invitations',
+          'Branded documentation handover',
+          'Consultant review workflow',
         ],
       },
     ],
   },
   {
     name: 'Enterprise',
-    tagline: 'A complete workstream for regulated programs',
-    price: 'EUR8,000 - EUR20,000+',
-    suffix: 'custom scope',
-    billing: 'Talk to sales',
-    cta: 'Talk to us',
+    tagline: 'Custom support for larger regulated programs',
+    price: 'Custom',
+    suffix: 'workspace and advisory scope',
+    billing: 'Talk to us about fit',
+    cta: 'Discuss your workflow',
     href: 'https://calendly.com/neuraldocx',
     external: true,
     source: 'pricing_enterprise',
     sections: [
       {
-        title: 'Included',
+        title: 'Discuss',
         items: [
-          'Full documentation workstream',
-          'Advanced risk and compliance mapping',
-          'EU AI Act classification support',
-          'Internal governance alignment',
-          'Ongoing advisory engagement',
-        ],
-      },
-    ],
-  },
-  {
-    name: 'SaaS',
-    tagline: 'For teams that want a self-serve workflow later',
-    price: 'Coming soon',
-    suffix: 'product roadmap',
-    billing: 'Join the early access list',
-    cta: 'Coming Soon',
-    packageInterest: 'not_sure',
-    source: 'pricing_saas',
-    comingSoon: true,
-    sections: [
-      {
-        title: 'Planned',
-        items: [
-          'Guided self-serve system intake',
-          'Structured documentation workflow',
-          'Shared workspace for updates',
-          'Review and export support',
+          'Multiple business workspaces',
+          'Implementation and migration support',
+          'Configurable review and handover workflows',
         ],
       },
     ],
@@ -158,10 +174,10 @@ export function PricingSection() {
           }`}
         >
           <h2 className="text-4xl font-semibold tracking-tight text-[#383838] sm:text-5xl">
-            Compliance support, sized to the work
+            A workspace for each stage of documentation
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#5e5e5e]">
-            One system, a deeper review, or a complete workstream.
+            Start with one AI system, then scale to team and client workspaces. Plans are product hypotheses and can be configured as the service evolves.
           </p>
         </div>
 

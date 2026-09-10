@@ -16,13 +16,13 @@ export function CTASection() {
           <CardContent className="flex flex-col gap-8 p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--cx-text-muted)]">
-                Service-first delivery
+                Start with one AI system
               </p>
               <h2 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--cx-text)] sm:text-5xl">
-                Get audit-ready before you need to be.
+                Turn system information into a reviewable documentation package.
               </h2>
               <p className="mt-4 text-base leading-8 text-[var(--cx-text-secondary)]">
-                Submit your system and receive a clear path forward.
+                Capture the facts, map evidence, invite review, and keep the approved version ready to hand over.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -39,7 +39,7 @@ export function CTASection() {
                     })
                   }
                 >
-                  Submit your system
+                  Assess an AI system
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -49,7 +49,7 @@ export function CTASection() {
                 rel="noreferrer"
             className="inline-flex items-center px-2 py-3 text-sm font-semibold text-[var(--cx-text-secondary)] underline decoration-[var(--cx-border-strong)] underline-offset-4 transition hover:text-[var(--cx-text)] hover:decoration-[var(--cx-border-strong)]"
               >
-                Enterprise demo
+                Discuss a consultancy workflow
               </a>
             </div>
           </CardContent>
