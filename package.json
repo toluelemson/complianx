@@ -2,12 +2,19 @@
   "name": "complianx",
   "private": true,
   "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
     "format": "turbo run format",
+    "verify:fast": "pnpm build && pnpm lint",
+    "verify": "pnpm build && pnpm test && pnpm lint",
+    "db:validate": "pnpm --filter api exec prisma validate",
+    "db:generate": "pnpm --filter api prisma:generate",
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api start:dev",
     "build:web": "pnpm --filter web build",

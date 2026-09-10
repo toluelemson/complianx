@@ -25,6 +25,8 @@ Review approval, assessments, evidence, reporting, identity access, organization
 - pnpm 10+
 - PostgreSQL
 
+Use Node 20 (`.nvmrc`) and pnpm 10.13.1. Keep development and test databases separate; set a test-only `DATABASE_URL` when running API integration/e2e tests.
+
 ## Setup
 
 ```bash
@@ -44,6 +46,10 @@ pnpm dev:api      # Nest API
 pnpm build
 pnpm test
 pnpm lint
+pnpm verify:fast
+pnpm verify
+pnpm db:validate
+pnpm db:generate
 pnpm build:web
 pnpm build:api
 pnpm test:web
@@ -58,6 +64,8 @@ pnpm --filter api prisma:migrate
 ```
 
 Use `pnpm --dir apps/api exec prisma migrate deploy` in controlled deployment environments.
+
+For local development, `prisma:migrate` targets the configured development database. Do not run it against production. The repository does not currently include a Docker Compose database service; provide PostgreSQL separately.
 
 ## Architecture
 

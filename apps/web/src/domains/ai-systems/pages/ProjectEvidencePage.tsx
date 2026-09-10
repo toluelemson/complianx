@@ -10,6 +10,7 @@ import { useProjectEvidence } from '../hooks/useProjectEvidence';
 export default function ProjectEvidencePage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { token, initializing, activeCompanyId } = useAuth();
+  const [now] = useState(() => Date.now());
   const query = useQuery<ProjectDetail>({
     queryKey: ['project', projectId, activeCompanyId],
     enabled: Boolean(token && projectId && activeCompanyId),
@@ -53,7 +54,6 @@ export default function ProjectEvidencePage() {
       section: section.name,
     })),
   );
-  const [now] = useState(() => Date.now());
   return (
     <AppShell title="Evidence" projectId={projectId}>
       <div className="hz-console-content space-y-6">

@@ -18,6 +18,10 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:validate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_ci
+      - run: pnpm db:generate
       - run: pnpm build
       - run: pnpm test
       - run: pnpm lint
