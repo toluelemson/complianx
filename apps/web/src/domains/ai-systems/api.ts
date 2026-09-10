@@ -130,14 +130,12 @@ export async function listProjectObligations(projectId: string) {
       status: string;
       priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
       approvalState:
-        | 'DRAFT'
-        | 'READY_FOR_REVIEW'
-        | 'APPROVED'
-        | 'CHANGES_REQUESTED';
+        'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED';
       applicabilityReason?: string | null;
       owner?: { id: string; email: string } | null;
       dueAt?: string | null;
       obligation: {
+        key?: string;
         title: string;
         legalReference?: string | null;
       };
@@ -258,6 +256,17 @@ export async function cloneProject(projectId: string, name: string) {
 
 export async function getProject(projectId: string) {
   const { data } = await api.get<ProjectDetail>(`/projects/${projectId}`);
+  return data;
+}
+
+export async function updateProject(
+  projectId: string,
+  payload: Record<string, unknown> & { name: string },
+) {
+  const { data } = await api.patch<ProjectDetail>(
+    `/projects/${projectId}`,
+    payload,
+  );
   return data;
 }
 

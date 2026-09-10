@@ -9,7 +9,11 @@ import type {
   DocumentItem,
   ProjectDetail,
 } from '@complianx/contracts/ai-systems';
-import { getProject, getProjectDocuments } from '../api';
+import {
+  getProject,
+  getProjectDocuments,
+  listProjectObligations,
+} from '../api';
 import { DOCUMENT_LABELS } from '../constants/documents';
 
 export default function CompliancePackagePage() {
@@ -26,6 +30,11 @@ export default function CompliancePackagePage() {
     queryKey: ['documents', projectId, activeCompanyId],
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getProjectDocuments(projectId),
+  });
+  const obligationsQuery = useQuery({
+    queryKey: ['obligations', projectId, activeCompanyId],
+    enabled: Boolean(token && projectId && activeCompanyId),
+    queryFn: () => listProjectObligations(projectId),
   });
 
   if (!initializing && !token) return <Navigate to="/login" replace />;
@@ -123,6 +132,67 @@ export default function CompliancePackagePage() {
           </div>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Package version history
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {Array.from(
+              (documentsQuery.data ?? []).reduce((groups, document) => {
+                const versions = groups.get(document.type) ?? [];
+                versions.push(document.version ?? 1);
+                groups.set(document.type, versions);
+                return groups;
+              }, new Map<string, number[]>()),
+            ).map(([type, versions]) => (
+              <div
+                key={type}
+                className="rounded-xl border border-slate-100 p-4"
+              >
+                <p className="text-sm font-medium text-slate-900">
+                  {DOCUMENT_LABELS[type] ?? type}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Versions{' '}
+                  {Array.from(new Set(versions))
+                    .sort((a, b) => b - a)
+                    .join(', ')}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Preparation summary
+            </h2>
+            <span className="text-sm text-slate-500">
+              {obligationsQuery.data?.filter(
+                (item) => item.approvalState !== 'APPROVED',
+              ).length ?? 0}{' '}
+              gaps
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <Summary
+              label="Requirements"
+              value={String(obligationsQuery.data?.length ?? 0)}
+            />
+            <Summary
+              label="Needs approval"
+              value={String(
+                obligationsQuery.data?.filter(
+                  (item) => item.approvalState !== 'APPROVED',
+                ).length ?? 0,
+              )}
+            />
+            <Summary
+              label="Audit events"
+              value={String(projectQuery.data?.statusEvents?.length ?? 0)}
+            />
+          </div>
+        </section>
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">
               Evidence index
@@ -167,5 +237,14 @@ export default function CompliancePackagePage() {
         </section>
       </div>
     </AppShell>
+  );
+}
+
+function Summary({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+      <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-slate-900">{value}</p>
+    </div>
   );
 }

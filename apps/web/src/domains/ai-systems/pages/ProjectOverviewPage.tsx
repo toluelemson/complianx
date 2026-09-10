@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
@@ -6,7 +7,14 @@ import type {
   ProjectDetail,
   SectionWithMeta,
 } from '@complianx/contracts/ai-systems';
-import { getProject, getProjectDocuments, getProjectSections } from '../api';
+import {
+  getProject,
+  getProjectDocuments,
+  getProjectSections,
+  getPreliminaryClassification,
+  listAssessmentAnswers,
+  saveAssessmentAnswers,
+} from '../api';
 
 export default function ProjectOverviewPage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
@@ -26,6 +34,36 @@ export default function ProjectOverviewPage() {
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getProjectDocuments(projectId),
   });
+  const classificationQuery = useQuery({
+    queryKey: ['preliminaryClassification', projectId, activeCompanyId],
+    enabled: Boolean(token && projectId && activeCompanyId),
+    queryFn: () => getPreliminaryClassification(projectId),
+  });
+  const answersQuery = useQuery({
+    queryKey: [
+      'assessmentAnswers',
+      projectId,
+      classificationQuery.data?.assessmentId,
+    ],
+    enabled: Boolean(classificationQuery.data?.assessmentId),
+    queryFn: () =>
+      listAssessmentAnswers(
+        projectId,
+        classificationQuery.data?.assessmentId ?? '',
+      ),
+  });
+  const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  useEffect(() => {
+    if (answersQuery.data)
+      setAnswers(
+        Object.fromEntries(
+          answersQuery.data.map((answer) => [
+            answer.questionKey,
+            answer.valueJson,
+          ]),
+        ),
+      );
+  }, [answersQuery.data]);
   if (!initializing && !token) return <Navigate to="/login" replace />;
   const completed = (sectionsQuery.data ?? []).filter(
     (section) => Object.keys(section.content ?? {}).length > 0,
@@ -93,6 +131,14 @@ export default function ProjectOverviewPage() {
             ))}
           </div>
         </section>
+        {classificationQuery.data?.assessmentId ? (
+          <Questionnaire
+            projectId={projectId}
+            assessmentId={classificationQuery.data.assessmentId}
+            answers={answers}
+            setAnswers={setAnswers}
+          />
+        ) : null}
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
           <h2 className="text-lg font-semibold text-amber-950">
             Preparation stage
@@ -127,6 +173,93 @@ export default function ProjectOverviewPage() {
         </section>
       </div>
     </AppShell>
+  );
+}
+
+function Questionnaire({
+  projectId,
+  assessmentId,
+  answers,
+  setAnswers,
+}: {
+  projectId: string;
+  assessmentId: string;
+  answers: Record<string, unknown>;
+  setAnswers: (value: Record<string, unknown>) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveAssessmentAnswers(projectId, assessmentId, answers);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Classification questionnaire
+          </h2>
+          <p className="text-sm text-slate-500">
+            Saved answers include author and timestamp.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save answers'}
+        </button>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="flex gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={answers.uses_sensitive_data === true}
+            onChange={(event) =>
+              setAnswers({
+                ...answers,
+                uses_sensitive_data: event.target.checked,
+              })
+            }
+          />
+          Uses sensitive or personal data
+        </label>
+        <label className="flex gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={answers.human_oversight_required === true}
+            onChange={(event) =>
+              setAnswers({
+                ...answers,
+                human_oversight_required: event.target.checked,
+              })
+            }
+          />
+          Requires human oversight
+        </label>
+        {answers.uses_sensitive_data === true ? (
+          <label className="text-sm text-slate-700 sm:col-span-2">
+            Sensitive data categories
+            <input
+              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2"
+              value={String(answers.sensitive_data_types ?? '')}
+              onChange={(event) =>
+                setAnswers({
+                  ...answers,
+                  sensitive_data_types: event.target.value,
+                })
+              }
+            />
+          </label>
+        ) : null}
+      </div>
+    </section>
   );
 }
 

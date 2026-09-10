@@ -358,6 +358,42 @@ function mapProjectDetail(
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async updateForUser(
+    projectId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateAiSystemCommand,
+  ) {
+    await this.assertOwnership(projectId, userId, companyId);
+    return this.prisma.project
+      .update({
+        where: { id: projectId },
+        data: {
+          name: dto.name,
+          industry: dto.industry,
+          description: dto.description,
+          businessPurpose: dto.businessPurpose,
+          intendedUse: dto.intendedUse,
+          intendedUsers: dto.intendedUsers,
+          affectedPersons: dto.affectedPersons,
+          deploymentGeography: dto.deploymentGeography,
+          operatorRoles: dto.operatorRoles as Prisma.InputJsonValue,
+          lifecycleStage: dto.lifecycleStage as LifecycleStage,
+          responsibleOwner: dto.responsibleOwner,
+          providerOrDeveloper: dto.providerOrDeveloper,
+          deployerOrUser: dto.deployerOrUser,
+          importer: dto.importer,
+          distributor: dto.distributor,
+          authorizedRepresentative: dto.authorizedRepresentative,
+          generatesContent: dto.generatesContent,
+          useCaseIndicators: dto.useCaseIndicators as Prisma.InputJsonValue,
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+        },
+        include: projectDetailInclude,
+      })
+      .then((project) => mapProjectDetail(project, 'OWNER'));
+  }
+
   private async resolveAccess(
     projectId: string,
     userId: string,

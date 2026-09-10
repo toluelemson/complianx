@@ -10,6 +10,10 @@ export default function ProjectRequirementsPage() {
   const { token, initializing, activeCompanyId } = useAuth();
   const client = useQueryClient();
   const [filter, setFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [ownerFilter, setOwnerFilter] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
   const query = useQuery({
     queryKey: ['obligations', projectId, activeCompanyId],
     enabled: Boolean(token && projectId && activeCompanyId),
@@ -25,7 +29,21 @@ export default function ProjectRequirementsPage() {
   });
   if (!initializing && !token) return <Navigate to="/login" replace />;
   const items = (query.data ?? []).filter(
-    (item) => filter === 'ALL' || item.approvalState === filter,
+    (item) =>
+      (filter === 'ALL' || item.approvalState === filter) &&
+      (statusFilter === 'ALL' || item.status === statusFilter) &&
+      (ownerFilter === 'ALL' || item.owner?.id === ownerFilter) &&
+      (priorityFilter === 'ALL' || item.priority === priorityFilter) &&
+      (categoryFilter === 'ALL' ||
+        (item.obligation.key ?? '').split('-')[0] === categoryFilter),
+  );
+  const allItems = query.data ?? [];
+  const categories = Array.from(
+    new Set(
+      allItems
+        .map((item) => (item.obligation.key ?? '').split('-')[0])
+        .filter(Boolean),
+    ),
   );
   return (
     <AppShell title="Requirements" projectId={projectId}>
@@ -44,7 +62,63 @@ export default function ProjectRequirementsPage() {
             Track ownership, priority, evidence, and approval state.
           </p>
         </div>
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          <select
+            aria-label="Filter requirement status"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          >
+            <option value="ALL">All statuses</option>
+            <option value="NOT_STARTED">Not started</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="READY_FOR_REVIEW">Ready for review</option>
+            <option value="SATISFIED">Satisfied</option>
+          </select>
+          <select
+            aria-label="Filter requirement owner"
+            value={ownerFilter}
+            onChange={(event) => setOwnerFilter(event.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          >
+            <option value="ALL">All owners</option>
+            {Array.from(
+              new Map(
+                allItems
+                  .filter((item) => item.owner)
+                  .map((item) => [item.owner!.id, item.owner!.email]),
+              ),
+            ).map(([id, email]) => (
+              <option key={id} value={id}>
+                {email}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter requirement priority"
+            value={priorityFilter}
+            onChange={(event) => setPriorityFilter(event.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          >
+            <option value="ALL">All priorities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+          <select
+            aria-label="Filter obligation category"
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          >
+            <option value="ALL">All categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category.replaceAll('_', ' ')}
+              </option>
+            ))}
+          </select>
           <select
             aria-label="Filter requirement approval state"
             value={filter}

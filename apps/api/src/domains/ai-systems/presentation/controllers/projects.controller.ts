@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -53,6 +54,20 @@ export class ProjectsController {
       id,
       req.user.userId,
       companyId,
+    );
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateProjectDto,
+  ) {
+    return this.projectsService.updateForUser(
+      id,
+      req.user.userId,
+      this.resolveCompanyId(req),
+      dto,
     );
   }
 

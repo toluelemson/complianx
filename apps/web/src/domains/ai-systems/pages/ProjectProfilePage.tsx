@@ -1,9 +1,10 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import type { ProjectDetail } from '@complianx/contracts/ai-systems';
-import { getProject } from '../api';
+import { getProject, updateProject } from '../api';
 
 const organizationFields = [
   ['industry', 'Industry'],
@@ -35,6 +36,14 @@ export default function ProjectProfilePage() {
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getProject(projectId),
   });
+  const client = useQueryClient();
+  const save = useMutation({
+    mutationFn: (payload: Record<string, unknown> & { name: string }) =>
+      updateProject(projectId, payload),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
   if (!initializing && !token) return <Navigate to="/login" replace />;
   const organization = profileKey === 'organization-profile';
   const fields = organization ? organizationFields : systemFields;
@@ -58,28 +67,58 @@ export default function ProjectProfilePage() {
             Reusable facts for {query.data?.name ?? 'this project'}.
           </p>
         </div>
-        <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-2">
+        <form
+          className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const values = Object.fromEntries(
+              new FormData(event.currentTarget).entries(),
+            );
+            save.mutate({ name: query.data?.name ?? '', ...values });
+          }}
+        >
           {fields.map(([key, label]) => (
-            <div key={key} className="rounded-xl border border-slate-100 p-4">
+            <label key={key} className="rounded-xl border border-slate-100 p-4">
               <p className="text-xs uppercase tracking-wide text-slate-400">
                 {label}
               </p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
-                {String(
-                  query.data?.[key as keyof ProjectDetail] ?? 'Not recorded',
-                )}
-              </p>
-            </div>
+              {key === 'lifecycleStage' ? (
+                <select
+                  name={key}
+                  defaultValue={String(
+                    query.data?.[key as keyof ProjectDetail] ?? 'UNKNOWN',
+                  )}
+                  className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                >
+                  <option value="UNKNOWN">Not set</option>
+                  <option value="DESIGN">Design</option>
+                  <option value="DEVELOPMENT">Development</option>
+                  <option value="PILOT">Pilot</option>
+                  <option value="PRODUCTION">Production</option>
+                  <option value="RETIRED">Retired</option>
+                </select>
+              ) : (
+                <textarea
+                  name={key}
+                  defaultValue={String(
+                    query.data?.[key as keyof ProjectDetail] ?? '',
+                  )}
+                  rows={key === 'description' || key === 'intendedUse' ? 3 : 2}
+                  className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                />
+              )}
+            </label>
           ))}
-        </section>
-        <div className="flex justify-end">
-          <Link
-            to={`/projects/${projectId}/system_overview`}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          >
-            Edit in workspace
-          </Link>
-        </div>
+          <div className="flex justify-end sm:col-span-2">
+            <button
+              type="submit"
+              disabled={save.isPending || !query.data}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {save.isPending ? 'Saving…' : 'Save profile'}
+            </button>
+          </div>
+        </form>
       </div>
     </AppShell>
   );
