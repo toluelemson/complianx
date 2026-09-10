@@ -37,6 +37,7 @@ model User {
   projects                        Project[]
   editedSections                  Section[]            @relation("SectionLastEditor")
   sectionComments                 SectionComment[]
+  resolvedComments                SectionComment[]      @relation("CommentResolver")
   sectionTemplates                SectionTemplate[]
   reminders                       Reminder[]
   projectStatusEvents             ProjectStatusEvent[]
@@ -49,6 +50,7 @@ model User {
   approverForProjects             Project[]            @relation("ProjectApprover")
   notifications                   Notification[]
   assessmentsCreated              Assessment[]         @relation("AssessmentCreator")
+  answeredAssessments              AssessmentAnswer[]   @relation("AssessmentAnswerer")
   ownedObligations                AiSystemObligation[] @relation("ObligationOwner")
   ownedComplianceActions          ComplianceAction[]   @relation("ActionOwner")
   evidenceLinks                   ObligationEvidence[] @relation("EvidenceLinker")
@@ -174,6 +176,12 @@ model SectionComment {
   section   Section  @relation(fields: [sectionId], references: [id])
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
+  resolvedAt DateTime?
+  resolvedById String?
+  resolvedBy User? @relation("CommentResolver", fields: [resolvedById], references: [id])
+  linkedEntityType String?
+  linkedEntityId String?
+  mentions Json?
 }
 
 model SectionTemplate {
@@ -225,6 +233,11 @@ model SuggestionFeedback {
 model Company {
   id                   String         @id @default(uuid())
   name                 String
+  legalName            String?
+  website              String?
+  industry             String?
+  address              String?
+  contactEmail         String?
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @default(now()) @updatedAt
   users                User[]
@@ -327,11 +340,14 @@ enum ProjectStatus {
 
 enum ProjectWorkflowStatus {
   DRAFT
+  INFORMATION_REQUIRED
+  COLLECTING_EVIDENCE
   READY_FOR_REVIEW
   IN_REVIEW
   CHANGES_REQUESTED
   RESUBMITTED
   APPROVED
+  MONITORING
   ARCHIVED
   REJECTED
   CANCELLED
@@ -375,6 +391,10 @@ model SectionArtifact {
   mimeType           String
   size               Int
   description        String?
+  source             String?
+  expiresAt          DateTime?
+  externalUrl        String?
+  provenanceNote     String?
   createdAt          DateTime             @default(now())
   sectionId          String
   section            Section              @relation(fields: [sectionId], references: [id])
@@ -467,8 +487,24 @@ model Assessment {
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
   classifications ClassificationResult[]
+  answersAudit    AssessmentAnswer[]
 
   @@index([projectId, createdAt])
+}
+
+model AssessmentAnswer {
+  id           String   @id @default(uuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  questionKey  String
+  valueJson    Json
+  answeredById String
+  answeredBy   User @relation("AssessmentAnswerer", fields: [answeredById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([assessmentId, questionKey])
+  @@index([assessmentId, updatedAt])
 }
 
 model ClassificationResult {
@@ -527,6 +563,8 @@ model AiSystemObligation {
   classificationResult   ClassificationResult? @relation(fields: [classificationResultId], references: [id])
   applicabilityReason    String?
   status                 ObligationStatus      @default(NOT_STARTED)
+  priority               ObligationPriority    @default(MEDIUM)
+  approvalState          ObligationApprovalState @default(DRAFT)
   ownerId                String?
   owner                  User?                 @relation("ObligationOwner", fields: [ownerId], references: [id])
   dueAt                  DateTime?
@@ -608,6 +646,20 @@ enum ObligationStatus {
   UNDER_REVIEW
   COMPLETE
   NOT_APPLICABLE
+}
+
+enum ObligationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ObligationApprovalState {
+  DRAFT
+  READY_FOR_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
 }
 
 enum ActionStatus {

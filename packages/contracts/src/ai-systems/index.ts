@@ -14,12 +14,19 @@ export type SectionComment = {
   body: string;
   createdAt: string;
   author?: UserRef;
+  resolvedAt?: string | null;
+  resolvedBy?: UserRef | null;
+  linkedEntityType?: string | null;
+  linkedEntityId?: string | null;
+  mentions?: string[];
 };
 
 export type StatusEvent = {
   id: string;
   status:
     | 'DRAFT'
+    | 'INFORMATION_REQUIRED'
+    | 'COLLECTING_EVIDENCE'
     | 'COMPLETE'
     | 'READY_FOR_REVIEW'
     | 'IN_REVIEW'
@@ -39,6 +46,10 @@ export type SectionArtifactItem = {
   id: string;
   originalName: string;
   description?: string | null;
+  source?: string | null;
+  expiresAt?: string | null;
+  externalUrl?: string | null;
+  provenanceNote?: string | null;
   createdAt: string;
   size: number;
   mimeType: string;
@@ -78,11 +89,17 @@ export type SectionWithMeta = {
 
 export type ProjectWorkflowStatus =
   | 'DRAFT'
+  | 'INFORMATION_REQUIRED'
+  | 'COLLECTING_EVIDENCE'
+  | 'INFORMATION_REQUIRED'
+  | 'COLLECTING_EVIDENCE'
   | 'READY_FOR_REVIEW'
   | 'IN_REVIEW'
   | 'CHANGES_REQUESTED'
   | 'RESUBMITTED'
   | 'APPROVED'
+  | 'MONITORING'
+  | 'MONITORING'
   | 'ARCHIVED'
   | 'REJECTED'
   | 'CANCELLED';

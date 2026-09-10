@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Req,
@@ -102,6 +103,22 @@ export class SectionsController {
       req.user.userId,
       companyId,
       dto,
+    );
+  }
+
+  @Patch(':sectionId/comments/:commentId/resolution')
+  resolveComment(
+    @Param('projectId') projectId: string,
+    @Param('commentId') commentId: string,
+    @Req() req: AuthenticatedRequest,
+    @Body('resolved') resolved: boolean,
+  ) {
+    return this.sectionsService.setCommentResolved(
+      projectId,
+      commentId,
+      req.user.userId,
+      this.resolveCompanyId(req),
+      resolved !== false,
     );
   }
 

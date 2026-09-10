@@ -48,6 +48,21 @@ export class CompanyController {
     );
   }
 
+  @Patch('profile')
+  updateProfile(@Request() req, @Body() profile: {
+    legalName?: string;
+    website?: string;
+    industry?: string;
+    address?: string;
+    contactEmail?: string;
+  }) {
+    return this.companyService.updateProfile(
+      req.user.userId,
+      this.resolveCompanyId(req),
+      profile,
+    );
+  }
+
   @Patch('members/:memberId/remove')
   removeMember(@Request() req, @Param('memberId') memberId: string) {
     const companyId = this.resolveCompanyId(req);

@@ -257,6 +257,8 @@ export class AssessmentsService {
         status: dto.status,
         ownerId: dto.ownerId,
         dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+        priority: dto.priority,
+        approvalState: dto.approvalState,
       },
       include: { obligation: true, actions: true },
     });

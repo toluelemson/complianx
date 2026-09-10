@@ -46,6 +46,29 @@ export class CompanyService {
     });
   }
 
+  async updateProfile(
+    userId: string,
+    companyId: string,
+    profile: {
+      legalName?: string;
+      website?: string;
+      industry?: string;
+      address?: string;
+      contactEmail?: string;
+    },
+  ) {
+    const membership = await this.ensureMembership(userId, companyId);
+    if (membership.role !== 'ADMIN') {
+      throw new ForbiddenException('Only company admins can edit the profile');
+    }
+    return this.prisma.company.update({
+      where: { id: companyId },
+      data: Object.fromEntries(
+        Object.entries(profile).map(([key, value]) => [key, value?.trim() || null]),
+      ),
+    });
+  }
+
   async removeMember(userId: string, companyId: string, memberId: string) {
     const membership = await this.ensureMembership(userId, companyId);
     if (membership.role !== 'ADMIN') {

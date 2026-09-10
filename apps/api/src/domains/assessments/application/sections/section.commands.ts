@@ -9,6 +9,9 @@ export interface UpdateSectionCommand {
 
 export interface CreateSectionCommentCommand {
   body: string;
+  mentions?: string[];
+  linkedEntityType?: string;
+  linkedEntityId?: string;
 }
 
 export interface SuggestSectionCommand {

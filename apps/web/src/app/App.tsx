@@ -125,6 +125,14 @@ function App() {
           }
         />
         <Route
+          path="/projects/:projectId/:sectionKey"
+          element={
+            <ProtectedRoute>
+              <ProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/ai-systems/:projectId"
           element={
             <ProtectedRoute>

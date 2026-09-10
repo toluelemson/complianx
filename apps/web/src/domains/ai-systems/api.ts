@@ -25,6 +25,17 @@ export async function listProjects() {
   return data;
 }
 
+export async function getOrganizationProfile() {
+  const { data } = await api.get<{ company: {
+    legalName?: string | null;
+    website?: string | null;
+    industry?: string | null;
+    address?: string | null;
+    contactEmail?: string | null;
+  } }>('/company');
+  return data.company;
+}
+
 export async function listAiSystems() {
   const { data } = await api.get<ProjectListItem[]>('/ai-systems');
   return data;
@@ -86,6 +97,8 @@ export async function listProjectObligations(projectId: string) {
     Array<{
       id: string;
       status: string;
+      priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+      approvalState: 'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED';
       applicabilityReason?: string | null;
       owner?: { id: string; email: string } | null;
       dueAt?: string | null;
@@ -96,6 +109,24 @@ export async function listProjectObligations(projectId: string) {
       actions: Array<{ id: string; status: string }>;
     }>
   >(`/ai-systems/${projectId}/obligations`);
+  return data;
+}
+
+export async function updateProjectObligation(
+  projectId: string,
+  obligationId: string,
+  payload: {
+    status?: string;
+    priority?: string;
+    approvalState?: string;
+    ownerId?: string;
+    dueAt?: string;
+  },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/obligations/${obligationId}`,
+    payload,
+  );
   return data;
 }
 
@@ -319,6 +350,10 @@ export async function uploadArtifact(
     file: File;
     description?: string;
     purpose?: 'GENERIC' | 'DATASET' | 'MODEL';
+    source?: string;
+    expiresAt?: string;
+    externalUrl?: string;
+    provenanceNote?: string;
   },
 ) {
   const formData = new FormData();
@@ -329,6 +364,10 @@ export async function uploadArtifact(
   if (payload.purpose) {
     formData.append('purpose', payload.purpose);
   }
+  if (payload.source) formData.append('source', payload.source);
+  if (payload.expiresAt) formData.append('expiresAt', payload.expiresAt);
+  if (payload.externalUrl) formData.append('externalUrl', payload.externalUrl);
+  if (payload.provenanceNote) formData.append('provenanceNote', payload.provenanceNote);
   const { data } = await api.post<SectionArtifactItem>(
     `/projects/${projectId}/sections/${payload.sectionId}/artifacts`,
     formData,
@@ -417,11 +456,27 @@ export async function addSectionComment(
   payload: {
     sectionId: string;
     body: string;
+    mentions?: string[];
+    linkedEntityType?: string;
+    linkedEntityId?: string;
   },
 ) {
   const { data } = await api.post(
     `/projects/${projectId}/sections/${payload.sectionId}/comments`,
     { body: payload.body },
+  );
+  return data;
+}
+
+export async function setCommentResolution(
+  projectId: string,
+  sectionId: string,
+  commentId: string,
+  resolved: boolean,
+) {
+  const { data } = await api.patch(
+    `/projects/${projectId}/sections/${sectionId}/comments/${commentId}/resolution`,
+    { resolved },
   );
   return data;
 }

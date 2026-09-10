@@ -27,7 +27,10 @@ import { ReopenProjectAfterSectionEditUseCase } from '../../../review-approval/a
 const sectionDetailInclude = Prisma.validator<Prisma.SectionInclude>()({
   lastEditor: { select: { id: true, email: true } },
   comments: {
-    include: { author: { select: { id: true, email: true } } },
+    include: {
+      author: { select: { id: true, email: true } },
+      resolvedBy: { select: { id: true, email: true } },
+    },
     orderBy: { createdAt: 'asc' },
   },
   statusEvents: {
@@ -71,12 +74,24 @@ function mapComment(comment: {
   body: string;
   createdAt: Date;
   author?: { id: string; email: string } | null;
+  resolvedAt?: Date | null;
+  resolvedBy?: { id: string; email: string } | null;
+  linkedEntityType?: string | null;
+  linkedEntityId?: string | null;
+  mentions?: unknown;
 }): SectionComment {
   return {
     id: comment.id,
     body: comment.body,
     createdAt: comment.createdAt.toISOString(),
     author: comment.author ?? undefined,
+    resolvedAt: comment.resolvedAt?.toISOString() ?? null,
+    resolvedBy: comment.resolvedBy ?? null,
+    linkedEntityType: comment.linkedEntityType ?? null,
+    linkedEntityId: comment.linkedEntityId ?? null,
+    mentions: Array.isArray(comment.mentions)
+      ? comment.mentions.filter((value): value is string => typeof value === 'string')
+      : undefined,
   };
 }
 
@@ -306,9 +321,13 @@ export class SectionsService {
         body: dto.body,
         sectionId,
         authorId: userId,
+        mentions: dto.mentions ?? undefined,
+        linkedEntityType: dto.linkedEntityType ?? null,
+        linkedEntityId: dto.linkedEntityId ?? null,
       },
       include: {
         author: { select: { id: true, email: true } },
+        resolvedBy: { select: { id: true, email: true } },
       },
     });
     const project = await this.prisma.project.findUnique({
@@ -372,6 +391,40 @@ export class SectionsService {
       },
       orderBy: { createdAt: 'asc' },
     }).then((comments) => comments.map(mapComment));
+  }
+
+  async setCommentResolved(
+    projectId: string,
+    commentId: string,
+    userId: string,
+    companyId: string,
+    resolved: boolean,
+  ) {
+    await this.projectsService.assertAccess(projectId, userId, companyId, {
+      allowOwner: true,
+      allowReviewer: true,
+      allowApprover: true,
+    });
+    const comment = await this.prisma.sectionComment.findUnique({
+      where: { id: commentId },
+      include: { section: true },
+    });
+    if (!comment || comment.section.projectId !== projectId) {
+      throw new NotFoundException('Comment not found');
+    }
+    return this.prisma.sectionComment
+      .update({
+        where: { id: commentId },
+        data: {
+          resolvedAt: resolved ? new Date() : null,
+          resolvedById: resolved ? userId : null,
+        },
+        include: {
+          author: { select: { id: true, email: true } },
+          resolvedBy: { select: { id: true, email: true } },
+        },
+      })
+      .then(mapComment);
   }
 
   async suggest(

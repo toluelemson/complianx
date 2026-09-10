@@ -12,6 +12,7 @@ import {
   createProject,
   classifyProjectIntake,
   listProjects,
+  getOrganizationProfile,
 } from '@/domains/ai-systems/api';
 import type { ProjectListItem } from '@complianx/contracts/ai-systems';
 import { TRACKABLE_STEP_COUNT } from '@/domains/ai-systems/constants/steps';
@@ -36,6 +37,11 @@ export default function DashboardPage() {
     queryKey: ['projects', activeCompanyId],
     enabled: Boolean(token && activeCompanyId),
     queryFn: listProjects,
+  });
+  const organizationProfileQuery = useQuery({
+    queryKey: ['organizationProfile', activeCompanyId],
+    enabled: Boolean(token && activeCompanyId),
+    queryFn: getOrganizationProfile,
   });
 
   const createMutation = useMutation({
@@ -468,6 +474,7 @@ export default function DashboardPage() {
           onClose={() => setModalOpen(false)}
           onSubmit={(values) => createMutation.mutate(values)}
           isSubmitting={createMutation.isPending}
+          organizationProfile={organizationProfileQuery.data}
         />
         <CloneProjectModal
           isOpen={Boolean(cloneTarget)}

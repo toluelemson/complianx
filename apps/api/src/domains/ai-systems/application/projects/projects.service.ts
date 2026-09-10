@@ -26,8 +26,11 @@ const projectDetailInclude = Prisma.validator<Prisma.ProjectInclude>()({
   sections: {
     include: {
       lastEditor: { select: { id: true, email: true } },
-      comments: {
-        include: { author: { select: { id: true, email: true } } },
+  comments: {
+    include: {
+      author: { select: { id: true, email: true } },
+      resolvedBy: { select: { id: true, email: true } },
+    },
         orderBy: { createdAt: 'asc' },
       },
       statusEvents: {
@@ -102,12 +105,24 @@ function mapSectionComment(comment: {
   body: string;
   createdAt: Date;
   author?: { id: string; email: string } | null;
+  resolvedAt?: Date | null;
+  resolvedBy?: { id: string; email: string } | null;
+  linkedEntityType?: string | null;
+  linkedEntityId?: string | null;
+  mentions?: Prisma.JsonValue;
 }): SectionComment {
   return {
     id: comment.id,
     body: comment.body,
     createdAt: comment.createdAt.toISOString(),
     author: comment.author ?? undefined,
+    resolvedAt: toIso(comment.resolvedAt),
+    resolvedBy: comment.resolvedBy ?? undefined,
+    linkedEntityType: comment.linkedEntityType,
+    linkedEntityId: comment.linkedEntityId,
+    mentions: Array.isArray(comment.mentions)
+      ? comment.mentions.filter((value): value is string => typeof value === 'string')
+      : undefined,
   };
 }
 

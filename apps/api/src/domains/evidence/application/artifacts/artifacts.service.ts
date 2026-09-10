@@ -85,6 +85,12 @@ export class ArtifactsService {
     file: EvidenceUpload | undefined,
     description?: string,
     purpose?: EvidencePurpose,
+    metadata?: {
+      source?: string;
+      expiresAt?: string;
+      externalUrl?: string;
+      provenanceNote?: string;
+    },
   ) {
     if (!file) {
       throw new BadRequestException('File is required');
@@ -109,6 +115,10 @@ export class ArtifactsService {
         mimeType: file.mimetype || 'application/octet-stream',
         size: file.size,
         description: description?.trim() ? description.trim() : null,
+        source: metadata?.source?.trim() || null,
+        expiresAt: metadata?.expiresAt ? new Date(metadata.expiresAt) : null,
+        externalUrl: metadata?.externalUrl?.trim() || null,
+        provenanceNote: metadata?.provenanceNote?.trim() || null,
         sectionId,
         projectId,
         uploadedById: userId,

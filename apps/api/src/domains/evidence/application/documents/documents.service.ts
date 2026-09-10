@@ -147,9 +147,64 @@ export class DocumentsService {
       where: { projectId },
       orderBy: { createdAt: 'asc' },
     });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        statusEvents: {
+          include: { actor: { select: { id: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+        obligations: {
+          include: {
+            obligation: { select: { key: true, title: true, legalReference: true } },
+            evidence: { select: { artifactId: true, documentId: true, linkType: true } },
+          },
+        },
+      },
+    });
+    if (!project) throw new NotFoundException('Project not found');
     const archiveStream = archiver('zip', { zlib: { level: 9 } });
     const passThrough = new PassThrough();
     archiveStream.pipe(passThrough);
+
+    archiveStream.append(
+      JSON.stringify(
+        {
+          schemaVersion: '1.0',
+          generatedAt: new Date().toISOString(),
+          project: {
+            id: project.id,
+            name: project.name,
+            workflowStatus: project.workflowStatus,
+            dueDate: project.dueDate,
+          },
+          documents: docs.map((doc) => ({
+            id: doc.id,
+            type: doc.type,
+            version: doc.version,
+            approvalState: doc.approvalState,
+            lifecycleStatus: doc.lifecycleStatus,
+            provenanceStatus: doc.provenanceStatus,
+            createdAt: doc.createdAt,
+          })),
+          requirements: project.obligations.map((item) => ({
+            id: item.id,
+            key: item.obligation.key,
+            title: item.obligation.title,
+            legalReference: item.obligation.legalReference,
+            status: item.status,
+            priority: item.priority,
+            approvalState: item.approvalState,
+            dueAt: item.dueAt,
+            evidence: item.evidence,
+          })),
+          auditTrail: project.statusEvents,
+        },
+        null,
+        2,
+      ),
+      { name: 'manifest.json' },
+    );
 
     await Promise.all(
       docs.map(async (doc) => {

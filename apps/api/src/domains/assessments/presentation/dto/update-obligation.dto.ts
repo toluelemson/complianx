@@ -1,4 +1,4 @@
-import { ObligationStatus } from '@prisma/client';
+import { ObligationApprovalState, ObligationPriority, ObligationStatus } from '@prisma/client';
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class UpdateObligationDto {
@@ -13,4 +13,12 @@ export class UpdateObligationDto {
   @IsOptional()
   @IsDateString()
   dueAt?: string;
+
+  @IsOptional()
+  @IsEnum(ObligationPriority)
+  priority?: ObligationPriority;
+
+  @IsOptional()
+  @IsEnum(ObligationApprovalState)
+  approvalState?: ObligationApprovalState;
 }

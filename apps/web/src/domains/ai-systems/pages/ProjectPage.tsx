@@ -27,9 +27,11 @@ import {
   linkObligationEvidence,
   listObligationEvidence,
   listProjectReviewers,
+  updateProjectObligation,
   listTemplates,
   reviewClassification,
   saveProjectSection,
+  setCommentResolution,
   sendSuggestionFeedback,
   suggestSection,
   updateProjectReminder,
@@ -133,7 +135,10 @@ function formatFileSize(bytes?: number) {
 }
 
 export default function ProjectPage() {
-  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
+  const { projectId: routeProjectId, sectionKey } = useParams<{
+    projectId: string;
+    sectionKey?: string;
+  }>();
   const projectId = routeProjectId ?? '';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -145,6 +150,23 @@ export default function ProjectPage() {
       navigate('/dashboard', { replace: true });
     }
   }, [navigate, routeProjectId]);
+  useEffect(() => {
+    const routeStep: Record<string, string> = {
+      overview: 'system_overview',
+      'organization-profile': 'system_overview',
+      'ai-system-profile': 'system_overview',
+      classification: 'risk_assessment',
+      requirements: 'review_generate',
+      evidence: 'data_governance',
+      documents: 'review_generate',
+      messages: 'review_generate',
+      'review-approval': 'review_generate',
+    };
+    const nextStep = sectionKey ? routeStep[sectionKey] : undefined;
+    if (nextStep && STEP_CONFIG.some((step) => step.id === nextStep)) {
+      setActiveStepId(nextStep);
+    }
+  }, [sectionKey]);
   useEffect(() => {
     const paramsCompanyId = new URLSearchParams(location.search).get(
       'companyId',
@@ -243,6 +265,16 @@ export default function ProjectPage() {
     queryFn: () => listProjectObligations(projectId),
   });
   const [obligationFilter, setObligationFilter] = useState('ALL');
+  const obligationUpdateMutation = useMutation({
+    mutationFn: (payload: { obligationId: string; field: string; value: string }) =>
+      updateProjectObligation(projectId, payload.obligationId, {
+        [payload.field]: payload.value,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['obligations', projectId] });
+    },
+    onError: () => toast.error('Unable to update requirement'),
+  });
   const visibleObligations = (obligationsQuery.data ?? []).filter(
     (item) => obligationFilter === 'ALL' || item.status === obligationFilter,
   );
@@ -278,11 +310,13 @@ export default function ProjectPage() {
       action: 'link' | 'unlink';
       obligationId: string;
       artifactId?: string;
+      documentId?: string;
       linkId?: string;
     }) =>
       payload.action === 'link'
         ? linkObligationEvidence(projectId, payload.obligationId, {
             artifactId: payload.artifactId,
+            documentId: payload.documentId,
           })
         : unlinkObligationEvidence(
             projectId,
@@ -378,6 +412,23 @@ export default function ProjectPage() {
   const { control, register, handleSubmit, reset, setValue } =
     useForm<FormValues>();
   const [commentBody, setCommentBody] = useState('');
+  const commentResolutionMutation = useMutation({
+    mutationFn: (payload: {
+      sectionId: string;
+      commentId: string;
+      resolved: boolean;
+    }) =>
+      setCommentResolution(
+        projectId,
+        payload.sectionId,
+        payload.commentId,
+        payload.resolved,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
+    },
+    onError: () => toast.error('Unable to update comment status'),
+  });
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiFieldSuggestions, setAiFieldSuggestions] = useState<
     Record<string, string>
@@ -437,6 +488,14 @@ export default function ProjectPage() {
     setArtifactDescription,
     artifactPurpose,
     setArtifactPurpose,
+    artifactSource,
+    setArtifactSource,
+    artifactExpiresAt,
+    setArtifactExpiresAt,
+    artifactExternalUrl,
+    setArtifactExternalUrl,
+    artifactProvenanceNote,
+    setArtifactProvenanceNote,
     clearArtifactSelection,
     artifactReviewDraft,
     reviewingArtifactId,
@@ -587,7 +646,7 @@ export default function ProjectPage() {
   };
 
   const commentMutation = useMutation({
-    mutationFn: (payload: { sectionId: string; body: string }) =>
+    mutationFn: (payload: { sectionId: string; body: string; mentions?: string[] }) =>
       addSectionComment(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
@@ -926,11 +985,14 @@ export default function ProjectPage() {
   });
   const PROJECT_STATUS_LABELS: Record<string, string> = {
     DRAFT: 'Draft',
+    INFORMATION_REQUIRED: 'Information required',
+    COLLECTING_EVIDENCE: 'Collecting evidence',
     READY_FOR_REVIEW: 'Ready for review',
     IN_REVIEW: 'In review',
     CHANGES_REQUESTED: 'Changes requested',
     RESUBMITTED: 'Resubmitted',
     APPROVED: 'Approved',
+    MONITORING: 'Monitoring',
     ARCHIVED: 'Archived',
     REJECTED: 'Rejected',
     CANCELLED: 'Cancelled',
@@ -954,6 +1016,7 @@ export default function ProjectPage() {
         : !isOwner ||
           workflowStatus === 'IN_REVIEW' ||
           workflowStatus === 'APPROVED' ||
+          workflowStatus === 'MONITORING' ||
           workflowStatus === 'ARCHIVED' ||
           workflowStatus === 'REJECTED' ||
           workflowStatus === 'CANCELLED' ||
@@ -964,6 +1027,7 @@ export default function ProjectPage() {
     workflowStatus === 'RESUBMITTED' ||
     workflowStatus === 'IN_REVIEW' ||
     workflowStatus === 'APPROVED' ||
+    workflowStatus === 'MONITORING' ||
     workflowStatus === 'ARCHIVED' ||
     workflowStatus === 'REJECTED' ||
     workflowStatus === 'CANCELLED';
@@ -1270,6 +1334,78 @@ export default function ProjectPage() {
                                 ? ` · Due ${new Date(item.dueAt).toLocaleDateString()}`
                                 : ''}
                             </p>
+                            {isOwner || canReviewEvidence ? (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <select
+                                  aria-label={`Priority for ${item.obligation.title}`}
+                                  value={item.priority}
+                                  onChange={(event) =>
+                                    obligationUpdateMutation.mutate({
+                                      obligationId: item.id,
+                                      field: 'priority',
+                                      value: event.target.value,
+                                    })
+                                  }
+                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
+                                >
+                                  <option value="LOW">Low priority</option>
+                                  <option value="MEDIUM">Medium priority</option>
+                                  <option value="HIGH">High priority</option>
+                                  <option value="CRITICAL">Critical priority</option>
+                                </select>
+                                <select
+                                  aria-label={`Approval state for ${item.obligation.title}`}
+                                  value={item.approvalState}
+                                  onChange={(event) =>
+                                    obligationUpdateMutation.mutate({
+                                      obligationId: item.id,
+                                      field: 'approvalState',
+                                      value: event.target.value,
+                                    })
+                                  }
+                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
+                                >
+                                  <option value="DRAFT">Draft</option>
+                                  <option value="READY_FOR_REVIEW">Ready for review</option>
+                                  <option value="APPROVED">Approved</option>
+                                  <option value="CHANGES_REQUESTED">Changes requested</option>
+                                </select>
+                                <select
+                                  aria-label={`Owner for ${item.obligation.title}`}
+                                  value={item.owner?.id ?? ''}
+                                  onChange={(event) =>
+                                    event.target.value
+                                      ? obligationUpdateMutation.mutate({
+                                          obligationId: item.id,
+                                          field: 'ownerId',
+                                          value: event.target.value,
+                                        })
+                                      : undefined
+                                  }
+                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
+                                >
+                                  <option value="">Unassigned</option>
+                                  {availableReviewers.map((reviewer) => (
+                                    <option key={reviewer.id} value={reviewer.id}>
+                                      {reviewer.email}
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="date"
+                                  aria-label={`Due date for ${item.obligation.title}`}
+                                  value={item.dueAt ? item.dueAt.slice(0, 10) : ''}
+                                  onChange={(event) =>
+                                    obligationUpdateMutation.mutate({
+                                      obligationId: item.id,
+                                      field: 'dueAt',
+                                      value: event.target.value,
+                                    })
+                                  }
+                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
+                                />
+                              </div>
+                            ) : null}
                           </div>
                           <span className="shrink-0 text-xs font-medium text-slate-400">
                             {evidenceByObligation.get(item.id)?.length ?? 0}{' '}
@@ -1315,12 +1451,14 @@ export default function ProjectPage() {
                             aria-label={`Link evidence to ${item.obligation.title}`}
                             value=""
                             onChange={(event) => {
-                              const artifactId = event.target.value;
-                              if (!artifactId) return;
+                              const selected = event.target.value;
+                              if (!selected) return;
                               evidenceLinkMutation.mutate({
                                 action: 'link',
                                 obligationId: item.id,
-                                artifactId,
+                                ...(selected.startsWith('doc:')
+                                  ? { documentId: selected.slice(4) }
+                                  : { artifactId: selected }),
                               });
                             }}
                             className="mt-2 w-full rounded-md border border-dashed border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-500"
@@ -1339,6 +1477,11 @@ export default function ProjectPage() {
                                   {artifact.originalName} · {artifact.sectionName}
                                 </option>
                               ))}
+                            {(projectQuery.data?.documents ?? []).map((document) => (
+                              <option key={`doc:${document.id}`} value={`doc:${document.id}`}>
+                                {DOCUMENT_LABELS[document.type] ?? document.type} · package
+                              </option>
+                            ))}
                           </select>
                         ) : null}
                       </li>
@@ -1778,6 +1921,38 @@ export default function ProjectPage() {
                                 <option value="DATASET">Dataset</option>
                                 <option value="MODEL">Model</option>
                               </select>
+                              <input
+                                type="text"
+                                value={artifactSource}
+                                onChange={(event) => setArtifactSource(event.target.value)}
+                                placeholder="Source or system of record"
+                                disabled={!isOwner}
+                                className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50"
+                              />
+                              <input
+                                type="date"
+                                value={artifactExpiresAt}
+                                onChange={(event) => setArtifactExpiresAt(event.target.value)}
+                                aria-label="Evidence expiry date"
+                                disabled={!isOwner}
+                                className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50"
+                              />
+                              <input
+                                type="url"
+                                value={artifactExternalUrl}
+                                onChange={(event) => setArtifactExternalUrl(event.target.value)}
+                                placeholder="External evidence link"
+                                disabled={!isOwner}
+                                className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50 sm:col-span-2"
+                              />
+                              <textarea
+                                value={artifactProvenanceNote}
+                                onChange={(event) => setArtifactProvenanceNote(event.target.value)}
+                                placeholder="Provenance note"
+                                rows={2}
+                                disabled={!isOwner}
+                                className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50 sm:col-span-2"
+                              />
                             </div>
                           </details>
                           <div className="flex items-center justify-end gap-2">
@@ -1842,6 +2017,12 @@ export default function ProjectPage() {
                                             })}
                                             {artifact.uploadedBy?.email
                                               ? ` · ${artifact.uploadedBy.email}`
+                                              : ''}
+                                            {artifact.source
+                                              ? ` · Source: ${artifact.source}`
+                                              : ''}
+                                            {artifact.expiresAt
+                                              ? ` · Expires ${new Date(artifact.expiresAt).toLocaleDateString()}`
                                               : ''}
                                           </p>
                                         </div>
@@ -2132,9 +2313,28 @@ export default function ProjectPage() {
                             (comment: SectionComment) => (
                               <div
                                 key={comment.id}
-                                className="rounded-xl border border-slate-200 bg-white p-3 text-sm"
+                                className={`rounded-xl border bg-white p-3 text-sm ${comment.resolvedAt ? 'border-emerald-200 opacity-75' : 'border-slate-200'}`}
                               >
-                                <p className="text-slate-700">{comment.body}</p>
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className={`text-slate-700 ${comment.resolvedAt ? 'line-through' : ''}`}>
+                                    {comment.body}
+                                  </p>
+                                  {isOwner || canReviewEvidence ? (
+                                    <button
+                                      type="button"
+                                      className="shrink-0 text-[11px] font-semibold text-slate-500 hover:text-slate-900"
+                                      onClick={() =>
+                                        commentResolutionMutation.mutate({
+                                          sectionId: currentSection.id,
+                                          commentId: comment.id,
+                                          resolved: !comment.resolvedAt,
+                                        })
+                                      }
+                                    >
+                                      {comment.resolvedAt ? 'Reopen' : 'Resolve'}
+                                    </button>
+                                  ) : null}
+                                </div>
                                 <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">
                                   {comment.author?.email ?? 'Unknown'} ·{' '}
                                   {new Date(comment.createdAt).toLocaleString(
@@ -2144,6 +2344,7 @@ export default function ProjectPage() {
                                       timeStyle: 'short',
                                     },
                                   )}
+                                  {comment.resolvedAt ? ' · Resolved' : ''}
                                 </p>
                               </div>
                             ),
@@ -2172,6 +2373,9 @@ export default function ProjectPage() {
                           commentMutation.mutate({
                             sectionId: currentSection.id,
                             body: commentBody.trim(),
+                            mentions: Array.from(
+                              commentBody.matchAll(/@([\w.+-]+@[\w.-]+)/g),
+                            ).map((match) => match[1]),
                           });
                         }}
                       >
@@ -2235,6 +2439,28 @@ export default function ProjectPage() {
                     disableAssignmentFields={disableAssignmentFields}
                     userId={user?.id}
                   />
+                  <details className="rounded-2xl border border-slate-200 bg-white p-4" open>
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                      Project audit history
+                    </summary>
+                    <div className="mt-3 space-y-2">
+                      {projectQuery.data?.statusEvents?.length ? (
+                        projectQuery.data.statusEvents.map((event) => (
+                          <div key={event.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                            <span>
+                              <strong className="text-slate-800">{PROJECT_STATUS_LABELS[event.status] ?? event.status}</strong>
+                              {event.actor?.email ? ` · ${event.actor.email}` : ''}
+                              {event.note ? ` · ${event.note}` : ''}
+                              {event.signature ? ` · Signed: ${event.signature}` : ''}
+                            </span>
+                            <time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleString()}</time>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-slate-500">No project status changes recorded yet.</p>
+                      )}
+                    </div>
+                  </details>
                   <div
                     className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
                     id="documents-panel"

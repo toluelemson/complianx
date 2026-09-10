@@ -1,4 +1,5 @@
 // AI systems creation UI.
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
@@ -32,6 +33,10 @@ interface NewProjectModalProps {
   onClose: () => void;
   onSubmit: (values: NewProjectFormValues) => void;
   isSubmitting?: boolean;
+  organizationProfile?: {
+    legalName?: string | null;
+    industry?: string | null;
+  };
 }
 
 export function NewProjectModal({
@@ -39,6 +44,7 @@ export function NewProjectModal({
   onClose,
   onSubmit,
   isSubmitting,
+  organizationProfile,
 }: NewProjectModalProps) {
   const { register, handleSubmit, reset } = useForm<NewProjectFormValues>({
     defaultValues: {
@@ -57,6 +63,15 @@ export function NewProjectModal({
       dueDate: '',
     },
   });
+
+  useEffect(() => {
+    if (isOpen && organizationProfile) {
+      reset((current) => ({
+        ...current,
+        industry: current.industry || organizationProfile.industry || '',
+      }));
+    }
+  }, [isOpen, organizationProfile, reset]);
 
   if (!isOpen) return null;
 

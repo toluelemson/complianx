@@ -24,6 +24,10 @@ export function useProjectEvidence(
   const [artifactDescription, setArtifactDescription] = useState('');
   const [artifactPurpose, setArtifactPurpose] =
     useState<EvidencePurpose>('GENERIC');
+  const [artifactSource, setArtifactSource] = useState('');
+  const [artifactExpiresAt, setArtifactExpiresAt] = useState('');
+  const [artifactExternalUrl, setArtifactExternalUrl] = useState('');
+  const [artifactProvenanceNote, setArtifactProvenanceNote] = useState('');
   const [artifactReviewDraft, setArtifactReviewDraft] = useState<
     Record<string, { status: ArtifactStatus; comment: string }>
   >({});
@@ -39,6 +43,10 @@ export function useProjectEvidence(
     setArtifactFile(null);
     setArtifactDescription('');
     setArtifactPurpose('GENERIC');
+    setArtifactSource('');
+    setArtifactExpiresAt('');
+    setArtifactExternalUrl('');
+    setArtifactProvenanceNote('');
     if (artifactInputRef.current) artifactInputRef.current.value = '';
     const nextDraft: Record<
       string,
@@ -61,6 +69,10 @@ export function useProjectEvidence(
       file: File;
       description?: string;
       purpose?: EvidencePurpose;
+      source?: string;
+      expiresAt?: string;
+      externalUrl?: string;
+      provenanceNote?: string;
     }) => uploadArtifact(projectId, payload),
     onSuccess: () => {
       onSectionsChanged();
@@ -127,6 +139,10 @@ export function useProjectEvidence(
       file: artifactFile,
       description: artifactDescription.trim() || undefined,
       purpose: artifactPurpose,
+      source: artifactSource.trim() || undefined,
+      expiresAt: artifactExpiresAt || undefined,
+      externalUrl: artifactExternalUrl.trim() || undefined,
+      provenanceNote: artifactProvenanceNote.trim() || undefined,
     });
   };
   const handleArtifactDelete = (artifactId: string) => {
@@ -186,6 +202,14 @@ export function useProjectEvidence(
     setArtifactDescription,
     artifactPurpose,
     setArtifactPurpose,
+    artifactSource,
+    setArtifactSource,
+    artifactExpiresAt,
+    setArtifactExpiresAt,
+    artifactExternalUrl,
+    setArtifactExternalUrl,
+    artifactProvenanceNote,
+    setArtifactProvenanceNote,
     artifactReviewDraft,
     reviewingArtifactId,
     reviewExpanded,

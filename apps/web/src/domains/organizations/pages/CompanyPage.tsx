@@ -15,6 +15,9 @@ export default function CompanyPage() {
   const { user, activeCompanyId, setActiveCompany } = useAuth();
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
+  const [profile, setProfile] = useState({
+    legalName: '', website: '', industry: '', address: '', contactEmail: '',
+  });
   const [createName, setCreateName] = useState('');
   const [leftCompany, setLeftCompany] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -51,6 +54,14 @@ export default function CompanyPage() {
       queryClient.invalidateQueries({ queryKey: ['company'] });
       setNewName('');
     },
+  });
+  const profileMutation = useMutation({
+    mutationFn: () => api.patch('/company/profile', profile).then((res) => res.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      toast.success('Organization profile saved');
+    },
+    onError: () => toast.error('Unable to save organization profile'),
   });
 
   const removeMemberMutation = useMutation({
@@ -118,6 +129,19 @@ export default function CompanyPage() {
       setLeftCompany(false);
     }
   }, [companyQuery.isSuccess, companyQuery.data]);
+
+  useEffect(() => {
+    const company = companyQuery.data?.company;
+    if (company) {
+      setProfile({
+        legalName: company.legalName ?? '',
+        website: company.website ?? '',
+        industry: company.industry ?? '',
+        address: company.address ?? '',
+        contactEmail: company.contactEmail ?? '',
+      });
+    }
+  }, [companyQuery.data?.company]);
 
   const renderCreateWorkspace = (message: { title: string; body: string }) => (
     <Card className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border-slate-200/90 bg-white/90 p-6 text-center shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
@@ -227,6 +251,49 @@ export default function CompanyPage() {
                   </Button>
                 </form>
               )}
+              <form
+                className="mt-6 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  profileMutation.mutate();
+                }}
+              >
+                <p className="sm:col-span-2 text-sm font-semibold text-slate-900">
+                  Organization profile
+                </p>
+                {([
+                  ['legalName', 'Legal name'],
+                  ['website', 'Website'],
+                  ['industry', 'Industry'],
+                  ['contactEmail', 'Contact email'],
+                ] as const).map(([key, label]) => (
+                  <label key={key} className="text-xs font-semibold text-slate-500">
+                    {label}
+                    <Input
+                      value={profile[key]}
+                      onChange={(event) => setProfile((current) => ({ ...current, [key]: event.target.value }))}
+                      className="mt-1"
+                      disabled={!isCompanyAdmin}
+                    />
+                  </label>
+                ))}
+                <label className="sm:col-span-2 text-xs font-semibold text-slate-500">
+                  Address
+                  <Input
+                    value={profile.address}
+                    onChange={(event) => setProfile((current) => ({ ...current, address: event.target.value }))}
+                    className="mt-1"
+                    disabled={!isCompanyAdmin}
+                  />
+                </label>
+                {isCompanyAdmin ? (
+                  <div className="sm:col-span-2 flex justify-end">
+                    <Button type="submit" disabled={profileMutation.isPending}>
+                      {profileMutation.isPending ? 'Saving...' : 'Save profile'}
+                    </Button>
+                  </div>
+                ) : null}
+              </form>
               {company && (
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-sm font-semibold text-slate-700">

@@ -63,6 +63,10 @@ export class ArtifactsController {
     @UploadedFile() file: Express.Multer.File,
     @Body('description') description?: string,
     @Body('purpose') purpose?: 'DATASET' | 'MODEL' | 'GENERIC',
+    @Body('source') source?: string,
+    @Body('expiresAt') expiresAt?: string,
+    @Body('externalUrl') externalUrl?: string,
+    @Body('provenanceNote') provenanceNote?: string,
   ) {
     const companyId = this.resolveCompanyId(req);
     return this.artifactsService.upload(
@@ -73,6 +77,7 @@ export class ArtifactsController {
       file,
       description,
       purpose,
+      { source, expiresAt, externalUrl, provenanceNote },
     );
   }
 
