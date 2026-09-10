@@ -100,6 +100,14 @@ export class LlmService {
         prompt,
       );
     } catch (error) {
+      const status = (error as { response?: { status?: number } }).response
+        ?.status;
+      if (status === 401 || status === 403) {
+        this.logger.warn(
+          `LLM credentials were rejected; returning fallback text for ${mode}`,
+        );
+        return 'AI generation is temporarily unavailable because the configured language-model credentials were rejected.';
+      }
       this.logger.error(`LLM generation failed for ${mode}`, error as any);
       throw error;
     }

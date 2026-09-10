@@ -1,10 +1,9 @@
 // AI systems domain route.
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import api from '@/platform/api/client';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import {
@@ -12,33 +11,21 @@ import {
   bulkTemplateAction,
   createProjectReminder,
   createTemplate,
-  deleteArtifact,
   deleteTemplate,
-  generateProjectDocuments,
-  getBillingPlan,
-  getBillingUsage,
   getGenerationReadiness,
   getProject,
   getProjectDocuments,
   getProjectSections,
-  getSectionAutosave,
   listProjectReminders,
   listProjectReviewers,
   listTemplates,
-  reviewArtifact,
-  runProjectWorkflowAction,
   saveProjectSection,
-  saveSectionAutosave,
   sendSuggestionFeedback,
   suggestSection,
   updateProjectReminder,
   updateTemplate,
-  uploadArtifact,
 } from '@/domains/ai-systems/api';
 import type {
-  ArtifactStatus,
-  BillingPlan,
-  BillingUsage,
   DocumentItem,
   FormValues,
   GenerationReadiness,
@@ -59,7 +46,6 @@ import {
   type StepField,
 } from '@/domains/ai-systems/constants/steps';
 import {
-  DEFAULT_DOCUMENT_SELECTION,
   DOCUMENT_GENERATION_OPTIONS,
   DOCUMENT_LABELS,
 } from '@/domains/ai-systems/constants/documents';
@@ -67,6 +53,17 @@ import { DocumentPreviewModal } from '@/domains/evidence/components/DocumentPrev
 import TemplateLibraryModal from '@/domains/reports/components/TemplateLibraryModal';
 import { ReviewApprovalPanel } from '@/domains/workflows/components/ReviewApprovalPanel';
 import { WizardSidebar } from '../components/WizardSidebar';
+import { ProjectPanel } from '../components/ProjectPanel';
+import { useProjectAutosave } from '../hooks/useProjectAutosave';
+import { useProjectWorkflow } from '../hooks/useProjectWorkflow';
+import { useProjectEvidence } from '../hooks/useProjectEvidence';
+import { useProjectDocuments } from '../hooks/useProjectDocuments';
+import {
+  canApproveProject as canApproveProjectForRole,
+  canRequestProjectChanges as canRequestProjectChangesForRole,
+  canStartProjectReview as canStartProjectReviewForRole,
+  isValidApprovalSignature,
+} from '../lib/project-page-logic';
 
 const monetizationEnabled =
   import.meta.env.VITE_MONETIZATION_ENABLED !== 'false';
@@ -129,13 +126,6 @@ export default function ProjectPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeStepId, setActiveStepId] = useState(STEP_CONFIG[0].id);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [previewDoc, setPreviewDoc] = useState<{
-    id: string;
-    type: string;
-  } | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const { token, user, activeCompanyId, setActiveCompany } = useAuth();
   const location = useLocation();
   useEffect(() => {
@@ -208,6 +198,37 @@ export default function ProjectPage() {
     ),
     queryFn: () => getGenerationReadiness(projectId),
   });
+  const documents = useProjectDocuments(
+    projectId,
+    token,
+    token,
+    projectQuery.data?.viewerRole === 'OWNER',
+    monetizationEnabled,
+    readinessQuery.data,
+    () => queryClient.invalidateQueries({ queryKey: documentsQueryKey }),
+  );
+  const {
+    planQuery,
+    usageQuery,
+    selectedDocumentTypes,
+    selectionIsDefault,
+    toggleDocumentType,
+    resetDocumentSelections,
+    docLimit,
+    docsUsed,
+    docsRemaining,
+    isPaidPlan,
+    generateMutation,
+    handleGenerateClick,
+    downloadingId,
+    previewDoc,
+    previewUrl,
+    previewLoading,
+    handleDownload,
+    handlePreview,
+    handleZipDownload,
+    closePreview,
+  } = documents;
   const templatesQuery = useQuery<TemplateItem[]>({
     queryKey: ['templates', activeStepId],
     enabled: Boolean(isFormStep),
@@ -224,9 +245,15 @@ export default function ProjectPage() {
   const isAdmin = user?.role === 'ADMIN';
   const isAssignedReviewer = viewerRole === 'REVIEWER';
   const isAssignedApprover = viewerRole === 'APPROVER';
-  const canApproveProject = isAssignedApprover || isAdmin;
-  const canRequestProjectChanges = isAssignedReviewer || isAdmin;
-  const canStartProjectReview = isAssignedReviewer || isAdmin;
+  const canApproveProject = canApproveProjectForRole(viewerRole, user?.role);
+  const canRequestProjectChanges = canRequestProjectChangesForRole(
+    viewerRole,
+    user?.role,
+  );
+  const canStartProjectReview = canStartProjectReviewForRole(
+    viewerRole,
+    user?.role,
+  );
   const canReviewEvidence = isAssignedReviewer || isAssignedApprover || isAdmin;
   const canAssignSelf =
     isOwner && (user?.role === 'REVIEWER' || user?.role === 'ADMIN');
@@ -239,6 +266,12 @@ export default function ProjectPage() {
   });
   const availableReviewers = useMemo(() => {
     const allowedRoles = new Set(['REVIEWER', 'ADMIN']);
+    return (reviewersQuery.data ?? []).filter((reviewer) =>
+      allowedRoles.has(reviewer.role),
+    );
+  }, [reviewersQuery.data]);
+  const availableApprovers = useMemo(() => {
+    const allowedRoles = new Set(['APPROVER', 'ADMIN']);
     return (reviewersQuery.data ?? []).filter((reviewer) =>
       allowedRoles.has(reviewer.role),
     );
@@ -264,36 +297,7 @@ export default function ProjectPage() {
   const [pendingSuggestionField, setPendingSuggestionField] = useState<
     string | null
   >(null);
-  const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  const artifactInputRef = useRef<HTMLInputElement | null>(null);
   const formValues = useWatch({ control }) as FormValues;
-  const [autosaveStatus, setAutosaveStatus] = useState<
-    'idle' | 'saving' | 'saved'
-  >('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [autosaveRecovery, setAutosaveRecovery] = useState<{
-    content: FormValues;
-    updatedAt: string;
-  } | null>(null);
-  const [selectedDocumentTypes, setSelectedDocumentTypes] = useState<string[]>(
-    () => [...DEFAULT_DOCUMENT_SELECTION],
-  );
-  const [artifactFile, setArtifactFile] = useState<File | null>(null);
-  const [artifactDescription, setArtifactDescription] = useState('');
-  const [artifactPurpose, setArtifactPurpose] = useState<
-    'GENERIC' | 'DATASET' | 'MODEL'
-  >('GENERIC');
-  const [artifactReviewDraft, setArtifactReviewDraft] = useState<
-    Record<string, { status: ArtifactStatus; comment: string }>
-  >({});
-  const [reviewingArtifactId, setReviewingArtifactId] = useState<string | null>(
-    null,
-  );
-  const [reviewExpanded, setReviewExpanded] = useState<Record<string, boolean>>(
-    {},
-  );
   const [selectedReviewerId, setSelectedReviewerId] = useState<string | null>(
     null,
   );
@@ -308,6 +312,10 @@ export default function ProjectPage() {
   const [bulkAction, setBulkAction] = useState<
     '' | 'share' | 'unshare' | 'delete'
   >('');
+  const [templateName, setTemplateName] = useState('');
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [approvalSignature, setApprovalSignature] = useState('');
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const sectionByName = useMemo(() => {
     const map = new Map<string, SectionWithMeta>();
     (sectionsQuery.data ?? []).forEach((section) =>
@@ -317,6 +325,45 @@ export default function ProjectPage() {
   }, [sectionsQuery.data]);
 
   const currentSection = sectionByName.get(activeStepId);
+  const evidence = useProjectEvidence(
+    projectId,
+    token,
+    currentSection,
+    isOwner,
+    canReviewEvidence,
+    () => queryClient.invalidateQueries({ queryKey: sectionsQueryKey }),
+  );
+  const {
+    artifactInputRef,
+    artifactFile,
+    artifactDescription,
+    setArtifactDescription,
+    artifactPurpose,
+    setArtifactPurpose,
+    clearArtifactSelection,
+    artifactReviewDraft,
+    reviewingArtifactId,
+    reviewExpanded,
+    setReviewExpanded,
+    handleArtifactFileChange,
+    handleArtifactUpload,
+    handleArtifactDownload,
+    handleArtifactDelete,
+    handleArtifactReviewStatusChange,
+    handleArtifactReviewCommentChange,
+    handleArtifactReviewSubmit,
+    artifactUploadMutation,
+    artifactDeleteMutation,
+    artifactReviewMutation,
+  } = evidence;
+  const {
+    autosaveStatus,
+    lastSavedAt,
+    autosaveRecovery,
+    dismissRecovery,
+    restoreRecovery,
+    markSaved,
+  } = useProjectAutosave(currentSection, formValues, isFormStep);
   useEffect(() => {
     if (projectQuery.data?.reviewerId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -333,50 +380,22 @@ export default function ProjectPage() {
       setSelectedApproverId(projectQuery.data.approverId);
       return;
     }
-    if (reviewersQuery.data?.length) {
-      setSelectedApproverId((prev) => prev ?? reviewersQuery.data[0].id);
+    if (availableApprovers.length) {
+      setSelectedApproverId((prev) => prev ?? availableApprovers[0].id);
     }
-  }, [reviewersQuery.data, projectQuery.data?.approverId]);
+  }, [availableApprovers, projectQuery.data?.approverId]);
 
   useEffect(() => {
     if (currentSection && activeStep.fields.length) {
       reset(currentSection.content ?? {});
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLastSavedAt(currentSection.updatedAt ?? null);
-      setAutosaveRecovery(null);
     } else if (activeStep.fields.length) {
       reset({});
-      setLastSavedAt(null);
-      setAutosaveRecovery(null);
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCommentBody('');
     setAiFieldSuggestions({});
     setAiSuggestion(null);
-    if (artifactInputRef.current) {
-      artifactInputRef.current.value = '';
-    }
-    setArtifactFile(null);
-    setArtifactDescription('');
   }, [currentSection, activeStep, reset]);
-
-  useEffect(() => {
-    if (!currentSection?.artifacts?.length) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setArtifactReviewDraft({});
-      return;
-    }
-    const nextDraft: Record<
-      string,
-      { status: ArtifactStatus; comment: string }
-    > = {};
-    currentSection.artifacts.forEach((artifact: SectionArtifactItem) => {
-      nextDraft[artifact.id] = {
-        status: artifact.status,
-        comment: artifact.reviewComment ?? '',
-      };
-    });
-    setArtifactReviewDraft(nextDraft);
-  }, [currentSection?.artifacts]);
 
   const saveMutation = useMutation({
     mutationFn: (payload: { stepId: string; values: FormValues }) =>
@@ -387,22 +406,10 @@ export default function ProjectPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
       toast.success('Section saved');
-      setLastSavedAt(new Date().toISOString());
+      markSaved();
     },
     onError: () => {
       toast.error('Unable to save section');
-    },
-  });
-
-  const generateMutation = useMutation({
-    mutationFn: (payload: { documentTypes: string[] }) =>
-      generateProjectDocuments(projectId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: documentsQueryKey });
-      toast.success('Compliance documents are being prepared');
-    },
-    onError: () => {
-      toast.error('Failed to trigger document generation');
     },
   });
 
@@ -410,8 +417,7 @@ export default function ProjectPage() {
     mutationFn: (payload: {
       templateId: string;
       updates: { name?: string; category?: string; shared?: boolean };
-    }) =>
-      updateTemplate(payload.templateId, payload.updates),
+    }) => updateTemplate(payload.templateId, payload.updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['templates', activeStepId] });
       toast.success('Template updated');
@@ -467,304 +473,6 @@ export default function ProjectPage() {
       action: bulkAction,
     });
   };
-  const artifactUploadMutation = useMutation({
-    mutationFn: (payload: {
-      sectionId: string;
-      file: File;
-      description?: string;
-      purpose?: 'GENERIC' | 'DATASET' | 'MODEL';
-    }) => uploadArtifact(projectId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
-      setArtifactFile(null);
-      setArtifactDescription('');
-      setArtifactPurpose('GENERIC');
-      if (artifactInputRef.current) {
-        artifactInputRef.current.value = '';
-      }
-      toast.success('Evidence uploaded');
-    },
-    onError: () => {
-      toast.error('Unable to upload evidence');
-    },
-  });
-
-  const artifactDeleteMutation = useMutation({
-    mutationFn: (artifactId: string) => deleteArtifact(artifactId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
-      toast.success('Evidence removed');
-    },
-    onError: () => {
-      toast.error('Unable to remove evidence');
-    },
-  });
-
-  const artifactReviewMutation = useMutation({
-    mutationFn: (payload: {
-      artifactId: string;
-      status: ArtifactStatus;
-      comment?: string;
-    }) =>
-      reviewArtifact(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
-      toast.success('Evidence review updated');
-    },
-    onError: () => {
-      toast.error('Unable to update review');
-    },
-    onSettled: () => {
-      setReviewingArtifactId(null);
-    },
-  });
-
-  const toggleDocumentType = (type: string) => {
-    setSelectedDocumentTypes((prev) =>
-      prev.includes(type)
-        ? prev.filter((entry) => entry !== type)
-        : (() => {
-            const nextSet = new Set([...prev, type]);
-            return DOCUMENT_GENERATION_OPTIONS.map(
-              (option) => option.type,
-            ).filter((optionType) => nextSet.has(optionType));
-          })(),
-    );
-  };
-
-  const resetDocumentSelections = () => {
-    setSelectedDocumentTypes([...DEFAULT_DOCUMENT_SELECTION]);
-  };
-
-  const planQuery = useQuery<BillingPlan>({
-    queryKey: ['billing', 'plan'],
-    queryFn: getBillingPlan,
-  });
-  const usageQuery = useQuery<BillingUsage>({
-    queryKey: ['billing', 'usage'],
-    queryFn: getBillingUsage,
-  });
-  const docLimit = !monetizationEnabled
-    ? Number.MAX_SAFE_INTEGER
-    : (planQuery.data?.limits?.docs ?? Number.MAX_SAFE_INTEGER);
-  const docsUsed = usageQuery.data?.docsGenerated ?? 0;
-  const docsRemaining =
-    docLimit === Number.MAX_SAFE_INTEGER
-      ? Number.MAX_SAFE_INTEGER
-      : Math.max(0, docLimit - docsUsed);
-  const currentPlan = planQuery.data?.plan ?? 'FREE';
-  const isPaidPlan = !monetizationEnabled || currentPlan !== 'FREE';
-
-  useEffect(() => {
-    if (!monetizationEnabled) return;
-    if (!planQuery.data || !usageQuery.data) return;
-    if (docLimit === Number.MAX_SAFE_INTEGER) return;
-    if (docsRemaining <= 0) return;
-    if (selectedDocumentTypes.length > docsRemaining) {
-      const allowed = Math.max(0, docsRemaining);
-      const nextSelection =
-        allowed === 0
-          ? []
-          : DOCUMENT_GENERATION_OPTIONS.slice(0, allowed).map(
-              (opt) => opt.type,
-            );
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedDocumentTypes(nextSelection);
-      if (allowed === 0) {
-        toast.error(
-          'You have no document credits left this month on your plan.',
-        );
-      } else {
-        toast(
-          `You can generate up to ${allowed} document${
-            allowed === 1 ? '' : 's'
-          } with your current plan this month.`,
-        );
-      }
-    }
-  }, [
-    docLimit,
-    docsRemaining,
-    planQuery.data,
-    selectedDocumentTypes.length,
-    usageQuery.data,
-  ]);
-
-  const handleGenerateClick = () => {
-    if (!isOwner) {
-      toast.error('Only the project owner can generate documentation');
-      return;
-    }
-    if (!selectedDocumentTypes.length) {
-      toast.error('Select at least one framework before generating');
-      return;
-    }
-    if (readinessQuery.data?.status === 'insufficient') {
-      toast.error(
-        'Add the missing project information before generating documentation.',
-      );
-      return;
-    }
-    if (
-      monetizationEnabled &&
-      docLimit !== Number.MAX_SAFE_INTEGER &&
-      docsRemaining <= 0
-    ) {
-      window.dispatchEvent(new Event('paywall'));
-      toast.error(
-        'You have reached your document limit. Upgrade to generate more.',
-      );
-      return;
-    }
-    if (
-      monetizationEnabled &&
-      docLimit !== Number.MAX_SAFE_INTEGER &&
-      selectedDocumentTypes.length > docsRemaining
-    ) {
-      window.dispatchEvent(new Event('paywall'));
-      toast.error(
-        `You can generate ${docsRemaining || 0} more document${
-          docsRemaining === 1 ? '' : 's'
-        } this month. Upgrade for more.`,
-      );
-      return;
-    }
-    generateMutation.mutate({ documentTypes: selectedDocumentTypes });
-  };
-
-  const handleArtifactFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    setArtifactFile(file ?? null);
-  };
-
-  const clearArtifactSelection = () => {
-    setArtifactFile(null);
-    if (artifactInputRef.current) {
-      artifactInputRef.current.value = '';
-    }
-  };
-
-  const handleArtifactUpload = () => {
-    if (!isOwner) {
-      toast.error('Only the project owner can upload evidence');
-      return;
-    }
-    if (!currentSection) {
-      toast.error('Save this section before attaching evidence');
-      return;
-    }
-    if (!artifactFile) {
-      toast.error('Select a file to upload');
-      return;
-    }
-    artifactUploadMutation.mutate({
-      sectionId: currentSection.id,
-      file: artifactFile,
-      description: artifactDescription.trim()
-        ? artifactDescription.trim()
-        : undefined,
-      purpose: artifactPurpose,
-    });
-  };
-
-  const fetchArtifactBlob = async (artifactId: string) => {
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-    const response = await fetch(
-      `${api.defaults.baseURL}/artifacts/${artifactId}/download`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-    if (!response.ok) {
-      throw new Error('Request failed');
-    }
-    return response.blob();
-  };
-
-  const handleArtifactDownload = async (artifact: SectionArtifactItem) => {
-    try {
-      const blob = await fetchArtifactBlob(artifact.id);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = artifact.originalName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-      toast.error('Unable to download evidence');
-    }
-  };
-
-  const handleArtifactDelete = (artifactId: string) => {
-    if (!isOwner) {
-      toast.error('Only the project owner can remove evidence');
-      return;
-    }
-    artifactDeleteMutation.mutate(artifactId);
-  };
-
-  const handleArtifactReviewStatusChange = (
-    artifactId: string,
-    status: ArtifactStatus,
-  ) => {
-    const fallbackComment =
-      artifactReviewDraft[artifactId]?.comment ??
-      currentSection?.artifacts?.find(
-        (artifact: SectionArtifactItem) => artifact.id === artifactId,
-      )?.reviewComment ??
-      '';
-    setArtifactReviewDraft((prev) => ({
-      ...prev,
-      [artifactId]: {
-        status,
-        comment: fallbackComment,
-      },
-    }));
-  };
-
-  const handleArtifactReviewCommentChange = (
-    artifactId: string,
-    comment: string,
-  ) => {
-    const fallbackStatus =
-      artifactReviewDraft[artifactId]?.status ??
-      currentSection?.artifacts?.find(
-        (artifact: SectionArtifactItem) => artifact.id === artifactId,
-      )?.status ??
-      'PENDING';
-    setArtifactReviewDraft((prev) => ({
-      ...prev,
-      [artifactId]: {
-        status: fallbackStatus,
-        comment,
-      },
-    }));
-  };
-
-  const handleArtifactReviewSubmit = (artifactId: string) => {
-    if (!canReviewEvidence) {
-      toast.error('Only assigned reviewers or approvers can review evidence');
-      return;
-    }
-    const draft = artifactReviewDraft[artifactId];
-    if (!draft) {
-      return;
-    }
-    setReviewingArtifactId(artifactId);
-    artifactReviewMutation.mutate({
-      artifactId,
-      status: draft.status,
-      comment: draft.comment.trim() ? draft.comment.trim() : undefined,
-    });
-  };
-
   const handleCopyToClipboard = async (
     value: string,
     successMessage: string,
@@ -779,113 +487,6 @@ export default function ProjectPage() {
     } catch {
       toast.error('Unable to copy value');
     }
-  };
-
-  const fetchDocumentBlob = async (docId: string) => {
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-    const response = await fetch(
-      `${api.defaults.baseURL}/documents/${docId}/download`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-    if (!response.ok) {
-      let message = 'Unable to download document';
-      try {
-        const data = await response.json();
-        message = data?.message?.message ?? data?.message ?? message;
-      } catch {
-        // Ignore JSON parsing failures and keep fallback message.
-      }
-      throw new Error(message);
-    }
-    return response.blob();
-  };
-
-  const handleDownload = async (docId: string, type: string) => {
-    try {
-      setDownloadingId(docId);
-      const blob = await fetchDocumentBlob(docId);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${type}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success('Download started');
-    } catch (error) {
-      console.error('Unable to download document', error);
-      toast.error(
-        error instanceof Error ? error.message : 'Unable to download document',
-      );
-    } finally {
-      setDownloadingId(null);
-    }
-  };
-
-  const handlePreview = async (doc: { id: string; type: string }) => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-    setPreviewDoc(doc);
-    setPreviewLoading(true);
-    try {
-      const blob = await fetchDocumentBlob(doc.id);
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-    } catch (error) {
-      console.error('Preview error', error);
-      toast.error(
-        error instanceof Error ? error.message : 'Unable to load preview',
-      );
-      setPreviewDoc(null);
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
-
-  const handleZipDownload = async () => {
-    try {
-      const response = await fetch(
-        `${api.defaults.baseURL}/projects/${projectId}/documents.zip`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-      if (!response.ok) {
-        throw new Error('zip-failed');
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `project-${projectId}-documents.zip`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      toast.success('ZIP download started');
-    } catch {
-      toast.error('Unable to download ZIP');
-    }
-  };
-
-  const closePreview = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setPreviewDoc(null);
-    setPreviewUrl(null);
-    setPreviewLoading(false);
   };
 
   const commentMutation = useMutation({
@@ -906,17 +507,29 @@ export default function ProjectPage() {
       toast.error('Save the section before creating a template');
       return;
     }
-    const name =
-      typeof window !== 'undefined'
-        ? window.prompt('Name this template', `${activeStep.title} template`)
-        : null;
-    if (!name) {
+    setTemplateName(`${activeStep.title} template`);
+    setTemplateDialogOpen(true);
+  };
+
+  const submitTemplate = (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = templateName.trim();
+    if (!name || !currentSection) {
+      toast.error('Enter a template name');
       return;
     }
-    saveTemplateMutation.mutate({
-      name,
-      content: currentSection.content ?? {},
-    });
+    saveTemplateMutation.mutate(
+      {
+        name,
+        content: currentSection.content ?? {},
+      },
+      {
+        onSuccess: () => {
+          setTemplateDialogOpen(false);
+          setTemplateName('');
+        },
+      },
+    );
   };
 
   const handleApplyTemplate = (template: TemplateItem) => {
@@ -940,7 +553,9 @@ export default function ProjectPage() {
     if (!suggestion) return;
     const currentValue = formValues[fieldName];
     const currentText =
-      typeof currentValue === 'string' ? currentValue : String(currentValue ?? '');
+      typeof currentValue === 'string'
+        ? currentValue
+        : String(currentValue ?? '');
     const appended =
       currentText.trim().length > 0
         ? `${currentText}\n${suggestion}`
@@ -1012,23 +627,6 @@ export default function ProjectPage() {
     },
   });
 
-  const autosaveMutation = useMutation({
-    mutationFn: (payload: {
-      sectionId: string;
-      content: FormValues;
-    }) => saveSectionAutosave(payload),
-    onMutate: () => setAutosaveStatus('saving'),
-    onSuccess: (data) => {
-      setAutosaveStatus('saved');
-      setLastSavedAt(data.updatedAt ?? new Date().toISOString());
-      setTimeout(() => setAutosaveStatus('idle'), 2000);
-    },
-    onError: () => {
-      setAutosaveStatus('idle');
-      toast.error('Autosave failed');
-    },
-  });
-
   const requestFieldSuggestion = (fieldName?: string) => {
     if (!currentSection) return;
     const targetField = fieldName ?? activeField ?? undefined;
@@ -1071,59 +669,6 @@ export default function ProjectPage() {
       liked,
     });
   };
-
-  const formatSavedLabel = () => {
-    if (autosaveStatus === 'saving') {
-      return 'Saving...';
-    }
-    if (lastSavedAt) {
-      return `Saved ${new Date(lastSavedAt).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      })}`;
-    }
-    return 'No autosave yet';
-  };
-
-  useEffect(() => {
-    if (!isFormStep || !currentSection) {
-      return;
-    }
-    if (autosaveDebounceRef.current) {
-      clearTimeout(autosaveDebounceRef.current);
-    }
-    autosaveDebounceRef.current = setTimeout(() => {
-      autosaveMutation.mutate({
-        sectionId: currentSection.id,
-        content: formValues,
-      });
-    }, 1500);
-    return () => {
-      if (autosaveDebounceRef.current) {
-        clearTimeout(autosaveDebounceRef.current);
-      }
-    };
-  }, [autosaveMutation, currentSection, formValues, isFormStep]);
-
-  useEffect(() => {
-    if (!currentSection) {
-      return;
-    }
-    getSectionAutosave(currentSection.id)
-      .then((autosave) => {
-        if (
-          autosave &&
-          new Date(autosave.updatedAt).getTime() >
-            new Date(currentSection.updatedAt ?? 0).getTime()
-        ) {
-          setAutosaveRecovery({
-            content: autosave.content,
-            updatedAt: autosave.updatedAt,
-          });
-        }
-      })
-      .catch(() => {});
-  }, [currentSection]);
 
   const saveTemplateMutation = useMutation({
     mutationFn: (payload: { name: string; content: FormValues }) =>
@@ -1182,151 +727,37 @@ export default function ProjectPage() {
     });
   };
 
-  const projectWorkflowMutation = useMutation({
-    mutationFn: (payload: {
-      endpoint: string;
-      body?: Record<string, unknown>;
-      successMessage: string;
-    }) =>
-      runProjectWorkflowAction({
-        endpoint: payload.endpoint,
-        body: payload.body,
-      }).then((data) => ({
-        data,
-        successMessage: payload.successMessage,
-      })),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectQueryKey });
-      toast.success('Project workflow updated');
-    },
-    onError: () => toast.error('Unable to update project workflow'),
-  });
-
   const workflowStatus = (projectQuery.data?.workflowStatus ??
     'DRAFT') as ProjectWorkflowStatus;
   const workflowVersion = projectQuery.data?.workflowVersion;
-
   const sendProjectForReview = () => {
-    if (monetizationEnabled && !isPaidPlan) {
-      window.dispatchEvent(new Event('paywall'));
-      toast.error('Upgrade to request reviews and approvals.');
-      return;
-    }
-    if (workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED') {
-      if (!canStartProjectReview) {
-        toast.error('Only assigned reviewers can start the review');
-        return;
-      }
-      projectWorkflowMutation.mutate({
-        endpoint: `/projects/${projectId}/workflow/start-review`,
-        body: {
-          note: reviewMessage.trim() || undefined,
-          expectedVersion: workflowVersion,
-        },
-        successMessage: 'Review started',
-      });
-      return;
-    }
-    if (workflowStatus === 'CHANGES_REQUESTED') {
-      if (!isOwner) {
-        toast.error('Only owners can resubmit projects');
-        return;
-      }
-      if (!allFieldsComplete) {
-        toast.error('Complete every required field before resubmitting');
-        return;
-      }
-      projectWorkflowMutation.mutate({
-        endpoint: `/projects/${projectId}/workflow/resubmit`,
-        body: {
-          note: reviewMessage.trim() || undefined,
-          expectedVersion: workflowVersion,
-        },
-        successMessage: 'Project resubmitted',
-      });
-      setReviewMessage('');
-      return;
-    }
-    if (!isOwner) {
-      toast.error('Only owners can send for review');
-      return;
-    }
-    if (!allFieldsComplete) {
-      toast.error('Complete every required field before sending for review');
-      return;
-    }
-    if (!selectedReviewerId) {
-      toast.error('Select a reviewer for this request');
-      return;
-    }
-    projectWorkflowMutation.mutate({
-      endpoint: `/projects/${projectId}/workflow/submit`,
-      body: {
-        reviewerId: selectedReviewerId,
-        approverId: selectedApproverId ?? undefined,
-        note: reviewMessage.trim() || undefined,
-        expectedVersion: workflowVersion,
-      },
-      successMessage: 'Project submitted for review',
-    });
+    workflow.sendForReview();
     setReviewMessage('');
   };
 
   const approveProject = () => {
-    if (!canApproveProject) {
-      toast.error('Only assigned approvers can approve');
+    if (!canApproveProject || !isPaidPlan || workflowStatus !== 'IN_REVIEW') {
+      workflow.approveWithSignature('');
       return;
     }
-    if (monetizationEnabled && !isPaidPlan) {
-      window.dispatchEvent(new Event('paywall'));
-      toast.error('Upgrade to approve projects.');
-      return;
-    }
-    if (workflowStatus !== 'IN_REVIEW') {
-      toast.error('Project must be in review before approving');
-      return;
-    }
-    const input =
-      typeof window !== 'undefined'
-        ? window.prompt('Enter signature to approve project')
-        : undefined;
-    const trimmed = input?.trim();
-    if (!trimmed) {
+    setApprovalSignature('');
+    setApprovalDialogOpen(true);
+  };
+
+  const submitApproval = (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmed = approvalSignature.trim();
+    if (!isValidApprovalSignature(trimmed)) {
       toast.error('Signature is required for approval');
       return;
     }
-    projectWorkflowMutation.mutate({
-      endpoint: `/projects/${projectId}/workflow/approve`,
-      body: {
-        signature: trimmed,
-        expectedVersion: workflowVersion,
-      },
-      successMessage: 'Project approved',
-    });
+    workflow.approveWithSignature(trimmed);
+    setApprovalDialogOpen(false);
+    setApprovalSignature('');
   };
 
   const requestChanges = () => {
-    if (!canRequestProjectChanges) {
-      toast.error('Only assigned reviewers can request changes');
-      return;
-    }
-    if (monetizationEnabled && !isPaidPlan) {
-      window.dispatchEvent(new Event('paywall'));
-      toast.error('Upgrade to request changes and run approvals.');
-      return;
-    }
-    if (!reviewMessage.trim()) {
-      toast.error('Add a review note before requesting changes');
-      return;
-    }
-    projectWorkflowMutation.mutate({
-      endpoint: `/projects/${projectId}/workflow/request-changes`,
-      body: {
-        note: reviewMessage.trim() || undefined,
-        expectedVersion: workflowVersion,
-      },
-      successMessage: 'Changes requested',
-    });
+    workflow.requestChanges();
   };
 
   const completedSteps = new Set(
@@ -1376,13 +807,29 @@ export default function ProjectPage() {
       })),
     [trackableStepIds, stepTitleMap, incompleteFieldsByStep, sectionByName],
   );
-  const allFieldsComplete = useMemo(
-    () =>
-      [...incompleteFieldsByStep.values()].every(
-        (fields) => fields.length === 0,
-      ),
-    [incompleteFieldsByStep],
+  const allFieldsComplete = [...incompleteFieldsByStep.values()].every(
+    (fields) => fields.length === 0,
   );
+  const workflow = useProjectWorkflow({
+    projectId,
+    status: workflowStatus,
+    version: workflowVersion,
+    isPaidPlan,
+    isOwner,
+    canStartReview: canStartProjectReview,
+    canApprove: canApproveProject,
+    canRequestChanges: canRequestProjectChanges,
+    allFieldsComplete,
+    reviewerId: selectedReviewerId,
+    approverId: selectedApproverId,
+    sectionIdsToComplete: sectionsQuery.data
+      ?.filter((section) => (section.workflowStatus ?? 'DRAFT') === 'DRAFT')
+      .map((section) => section.id) ?? [],
+    reviewMessage,
+    onPaywall: () => window.dispatchEvent(new Event('paywall')),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: projectQueryKey }),
+  });
   const PROJECT_STATUS_LABELS: Record<string, string> = {
     DRAFT: 'Draft',
     READY_FOR_REVIEW: 'Ready for review',
@@ -1400,23 +847,24 @@ export default function ProjectPage() {
   const sendForReviewLabel =
     workflowStatus === 'CHANGES_REQUESTED'
       ? 'Resubmit project'
-      : workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED'
-      ? 'Start review'
-      : 'Send for review';
+      : workflowStatus === 'READY_FOR_REVIEW' ||
+          workflowStatus === 'RESUBMITTED'
+        ? 'Start review'
+        : 'Send for review';
   const sendForReviewDisabled =
     !isPaidPlan ||
     (workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED'
       ? !canStartProjectReview
       : workflowStatus === 'CHANGES_REQUESTED'
-      ? !isOwner || !allFieldsComplete || !selectedReviewerId
-      : !isOwner ||
-        workflowStatus === 'IN_REVIEW' ||
-        workflowStatus === 'APPROVED' ||
-        workflowStatus === 'ARCHIVED' ||
-        workflowStatus === 'REJECTED' ||
-        workflowStatus === 'CANCELLED' ||
-        !selectedReviewerId ||
-        !allFieldsComplete);
+        ? !isOwner || !allFieldsComplete || !selectedReviewerId
+        : !isOwner ||
+          workflowStatus === 'IN_REVIEW' ||
+          workflowStatus === 'APPROVED' ||
+          workflowStatus === 'ARCHIVED' ||
+          workflowStatus === 'REJECTED' ||
+          workflowStatus === 'CANCELLED' ||
+          !selectedReviewerId ||
+          !allFieldsComplete);
   const disableAssignmentFields =
     workflowStatus === 'READY_FOR_REVIEW' ||
     workflowStatus === 'RESUBMITTED' ||
@@ -1425,13 +873,6 @@ export default function ProjectPage() {
     workflowStatus === 'ARCHIVED' ||
     workflowStatus === 'REJECTED' ||
     workflowStatus === 'CANCELLED';
-  const selectionIsDefault = useMemo(() => {
-    const selectedSet = new Set(selectedDocumentTypes);
-    if (selectedSet.size !== DEFAULT_DOCUMENT_SELECTION.length) {
-      return false;
-    }
-    return DEFAULT_DOCUMENT_SELECTION.every((type) => selectedSet.has(type));
-  }, [selectedDocumentTypes]);
   const artifactStatusStyles: Record<ArtifactStatus, string> = {
     PENDING: 'bg-amber-100 text-amber-800',
     APPROVED: 'bg-emerald-100 text-emerald-800',
@@ -1539,6 +980,16 @@ export default function ProjectPage() {
 
   const liveStatusText =
     autosaveStatus === 'saving' ? 'Live Syncing' : 'Live Editing';
+  const formatSavedLabel = () => {
+    if (autosaveStatus === 'saving') return 'Saving...';
+    if (lastSavedAt) {
+      return `Saved ${new Date(lastSavedAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`;
+    }
+    return 'No autosave yet';
+  };
   const liveStatusDotClass =
     autosaveStatus === 'saving'
       ? 'bg-emerald-500 animate-pulse'
@@ -1553,1482 +1004,1608 @@ export default function ProjectPage() {
   return (
     <AppShell title={projectQuery.data?.name ?? 'Project'}>
       <div className="hz-project-page">
-      <div className="hz-project-summary mb-6">
-        <div className="hz-project-panel rounded-2xl border border-slate-200 bg-white p-6">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="hz-project-summary mb-6">
+        <ProjectPanel>
+            <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold text-slate-600">
                 System workspace
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-800">
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${liveStatusDotClass}`}
-              />
-              {liveStatusText}
-            </span>
-            <span className="text-[11px] text-slate-400">
-              {liveStatusTimestamp}
-            </span>
-          </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">
-                Documentation readiness
-              </p>
-              <p className="text-xl font-semibold text-slate-900">
-                {Math.round(completionRate)}%
-              </p>
-              <p className="text-xs text-slate-500">
-                {completedCount} / {TRACKABLE_STEP_COUNT} control areas complete
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">
-                System owner
-              </p>
-              <p className="text-sm font-semibold text-slate-900">
-                {projectQuery.data?.owner?.email ?? '—'}
-              </p>
-              <p className="text-xs text-slate-500">
-                Created:{' '}
-                {projectQuery.data?.createdAt
-                  ? new Date(projectQuery.data.createdAt).toLocaleDateString()
-                  : 'N/A'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">
-                Next action
-              </p>
-              <p className="text-sm font-semibold text-slate-900">
-                {remindersQuery.data?.[0]?.message ?? 'No reminders'}
-              </p>
-              <p className="text-xs text-slate-500">
-                {remindersQuery.data?.[0]?.dueAt
-                  ? new Date(remindersQuery.data[0].dueAt).toLocaleDateString()
-                  : 'Set a reminder'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="hz-project-workspace grid gap-8 lg:grid-cols-[280px_1fr]">
-        <div ref={sidebarRef}>
-          <WizardSidebar
-            completionRate={completionRate}
-            completedCount={completedCount}
-            completedSteps={completedSteps}
-            sectionByName={sectionByName}
-            incompleteFieldsByStep={incompleteFieldsByStep}
-            activeStepId={activeStepId}
-            setActiveStepId={setActiveStepId}
-            projectQuery={projectQuery}
-          />
-        </div>
-
-        <section ref={wizardSectionRef} className="hz-project-content space-y-6">
-          <div className="flex justify-end lg:hidden">
-            <button
-              type="button"
-              onClick={scrollToSections}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-            >
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5">
-                <path
-                  d="M12 5.25V18.75M12 5.25l-4 4m4-4l4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-800">
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${liveStatusDotClass}`}
                 />
-              </svg>
-              Back to sections
-            </button>
-          </div>
-          <div className="hz-project-panel rounded-2xl border border-slate-200 bg-white p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+                {liveStatusText}
+              </span>
+              <span className="text-[11px] text-slate-400">
+                {liveStatusTimestamp}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <div>
-                <h2 className="text-xl font-semibold text-slate-900">
-                  {activeStep.title}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {activeStep.description}
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Documentation readiness
+                </p>
+                <p className="text-xl font-semibold text-slate-900">
+                  {Math.round(completionRate)}%
+                </p>
+                <p className="text-xs text-slate-500">
+                  {completedCount} / {TRACKABLE_STEP_COUNT} control areas
+                  complete
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  System owner
+                </p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {projectQuery.data?.owner?.email ?? '—'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Created:{' '}
+                  {projectQuery.data?.createdAt
+                    ? new Date(projectQuery.data.createdAt).toLocaleDateString()
+                    : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Next action
+                </p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {remindersQuery.data?.[0]?.message ?? 'No reminders'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {remindersQuery.data?.[0]?.dueAt
+                    ? new Date(
+                        remindersQuery.data[0].dueAt,
+                      ).toLocaleDateString()
+                    : 'Set a reminder'}
                 </p>
               </div>
             </div>
-            {autosaveRecovery && (
-              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-                <p>
-                  Unsaved edits from{' '}
-                  {new Date(autosaveRecovery.updatedAt).toLocaleString()}{' '}
-                  detected.
-                </p>
-                <div className="mt-2 flex gap-3">
-                  <button
-                    onClick={() => {
-                      reset(autosaveRecovery.content);
-                      setAutosaveRecovery(null);
-                      setLastSavedAt(autosaveRecovery.updatedAt);
-                    }}
-                    className="rounded-md bg-amber-600 px-3 py-1 text-white"
-                  >
-                    Restore
-                  </button>
-                  <button
-                    onClick={() => setAutosaveRecovery(null)}
-                    className="text-amber-700 underline"
-                  >
-                    Dismiss
-                  </button>
+          </ProjectPanel>
+        </div>
+        <div className="hz-project-workspace grid gap-8 lg:grid-cols-[280px_1fr]">
+          <div ref={sidebarRef}>
+            <WizardSidebar
+              completionRate={completionRate}
+              completedCount={completedCount}
+              completedSteps={completedSteps}
+              sectionByName={sectionByName}
+              incompleteFieldsByStep={incompleteFieldsByStep}
+              activeStepId={activeStepId}
+              setActiveStepId={setActiveStepId}
+              projectQuery={projectQuery}
+            />
+          </div>
+
+          <section
+            ref={wizardSectionRef}
+            className="hz-project-content space-y-6"
+          >
+            <div className="flex justify-end lg:hidden">
+              <button
+                type="button"
+                onClick={scrollToSections}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5">
+                  <path
+                    d="M12 5.25V18.75M12 5.25l-4 4m4-4l4 4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Back to sections
+              </button>
+            </div>
+            <ProjectPanel>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    {activeStep.title}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {activeStep.description}
+                  </p>
                 </div>
               </div>
-            )}
-            <p className="text-xs text-slate-400">{formatSavedLabel()}</p>
-            {currentSection?.updatedAt && (
-              <p className="text-xs text-slate-400">
-                Last saved{' '}
-                {new Date(currentSection.updatedAt).toLocaleString(undefined, {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
-                {currentSection.lastEditor?.email
-                  ? ` · ${currentSection.lastEditor.email}`
-                  : ''}
-              </p>
-            )}
-
-            {activeStep.fields.length ? (
-              <>
-                <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
-                  <button
-                    type="button"
-                    onClick={handleSaveTemplate}
-                    className="rounded-md border border-slate-200 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                    disabled={saveTemplateMutation.isPending}
-                  >
-                    Save as Template
-                  </button>
-                  {templatesQuery.data?.length ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs uppercase tracking-wide text-slate-400">
-                        Apply template:
-                      </span>
-                      <select
-                        onChange={(event) => {
-                          const selected = templatesQuery.data.find(
-                            (tpl) => tpl.id === event.target.value,
-                          );
-                          if (selected) {
-                            handleApplyTemplate(selected);
-                          }
-                        }}
-                        className="rounded-md border border-slate-200 px-2 py-1 text-sm"
-                      >
-                        <option value="">Select...</option>
-                        {templatesQuery.data.map((tpl) => (
-                          <option key={tpl.id} value={tpl.id}>
-                            {tpl.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : null}
-                </div>
-                {aiSuggestion && (
-                  <div className="mt-4 rounded-xl border border-dashed border-sky-200 bg-sky-50/60 p-3 text-sm text-slate-700">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-slate-900">AI Draft</p>
-                      <button
-                        className="text-xs text-slate-500 hover:text-slate-700"
-                        onClick={() => setAiSuggestion(null)}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">
-                      {aiSuggestion}
-                    </p>
+              {autosaveRecovery && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                  <p>
+                    Unsaved edits from{' '}
+                    {new Date(autosaveRecovery.updatedAt).toLocaleString()}{' '}
+                    detected.
+                  </p>
+                  <div className="mt-2 flex gap-3">
+                    <button
+                      onClick={() => {
+                        const content = restoreRecovery();
+                        if (content) reset(content);
+                      }}
+                      className="rounded-md bg-amber-600 px-3 py-1 text-white"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      onClick={dismissRecovery}
+                      className="text-amber-700 underline"
+                    >
+                      Dismiss
+                    </button>
                   </div>
-                )}
-                <form
-                  className="mt-6"
-                  onSubmit={handleSubmit((values) =>
-                    saveMutation.mutate({ stepId: activeStepId, values }),
-                  )}
-                >
-                  <fieldset className="space-y-4" disabled={!isOwner}>
-                    {activeStep.fields.map((field) => (
-                      <div key={field.name}>
-                        <div className="flex items-center justify-between text-sm font-medium text-slate-700">
-                          <label
-                            className="flex-1"
-                            htmlFor={`field-${field.name}`}
-                          >
-                            {field.label}
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => requestFieldSuggestion(field.name)}
-                            disabled={
-                              suggestionMutation.isPending || !currentSection
+                </div>
+              )}
+              <p className="text-xs text-slate-400">{formatSavedLabel()}</p>
+
+              {activeStep.fields.length ? (
+                <>
+                  <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
+                    <button
+                      type="button"
+                      onClick={handleSaveTemplate}
+                      className="rounded-md border border-slate-200 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                      disabled={saveTemplateMutation.isPending}
+                    >
+                      Save as Template
+                    </button>
+                    {templatesQuery.data?.length ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs uppercase tracking-wide text-slate-400">
+                          Apply template:
+                        </span>
+                        <select
+                          onChange={(event) => {
+                            const selected = templatesQuery.data.find(
+                              (tpl) => tpl.id === event.target.value,
+                            );
+                            if (selected) {
+                              handleApplyTemplate(selected);
                             }
-                            className="text-xs font-semibold text-sky-600 hover:text-sky-500 disabled:opacity-60"
-                          >
-                            Ask AI
-                          </button>
-                        </div>
-                        {field.type === 'textarea' ? (
-                          <textarea
-                            id={`field-${field.name}`}
-                            {...register(field.name)}
-                            rows={4}
-                            onFocus={() => setActiveField(field.name)}
-                            onBlur={() => setActiveField(null)}
-                            className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                          />
-                        ) : (
-                          <input
-                            id={`field-${field.name}`}
-                            {...register(field.name)}
-                            onFocus={() => setActiveField(field.name)}
-                            onBlur={() => setActiveField(null)}
-                            className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                          />
-                        )}
-                        {aiFieldSuggestions[field.name] && (
-                          <div className="mt-1 flex items-start justify-between rounded-md bg-sky-50 px-3 py-2 text-xs text-slate-600">
-                            <span className="pr-2">
-                              <span className="font-semibold text-slate-800">
-                                AI Suggestion:
-                              </span>{' '}
-                              {aiFieldSuggestions[field.name]}
-                            </span>
-                            <div className="flex flex-col items-end gap-1 text-[11px] font-semibold">
-                              <div className="flex gap-2 text-lg">
+                          }}
+                          className="rounded-md border border-slate-200 px-2 py-1 text-sm"
+                        >
+                          <option value="">Select...</option>
+                          {templatesQuery.data.map((tpl) => (
+                            <option key={tpl.id} value={tpl.id}>
+                              {tpl.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
+                  </div>
+                  {aiSuggestion && (
+                    <div className="mt-4 rounded-xl border border-dashed border-sky-200 bg-sky-50/60 p-3 text-sm text-slate-700">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-slate-900">AI Draft</p>
+                        <button
+                          className="text-xs text-slate-500 hover:text-slate-700"
+                          onClick={() => setAiSuggestion(null)}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">
+                        {aiSuggestion}
+                      </p>
+                    </div>
+                  )}
+                  <form
+                    className="mt-6"
+                    onSubmit={handleSubmit((values) =>
+                      saveMutation.mutate({ stepId: activeStepId, values }),
+                    )}
+                  >
+                    <fieldset className="space-y-4" disabled={!isOwner}>
+                      {activeStep.fields.map((field) => (
+                        <div key={field.name}>
+                          <div className="flex items-center justify-between text-sm font-medium text-slate-700">
+                            <label
+                              className="flex-1"
+                              htmlFor={`field-${field.name}`}
+                            >
+                              {field.label}
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => requestFieldSuggestion(field.name)}
+                              disabled={
+                                suggestionMutation.isPending || !currentSection
+                              }
+                              className="text-xs font-semibold text-sky-600 hover:text-sky-500 disabled:opacity-60"
+                            >
+                              Ask AI
+                            </button>
+                          </div>
+                          {field.type === 'textarea' ? (
+                            <textarea
+                              id={`field-${field.name}`}
+                              {...register(field.name)}
+                              rows={4}
+                              onFocus={() => setActiveField(field.name)}
+                              onBlur={() => setActiveField(null)}
+                              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                            />
+                          ) : (
+                            <input
+                              id={`field-${field.name}`}
+                              {...register(field.name)}
+                              onFocus={() => setActiveField(field.name)}
+                              onBlur={() => setActiveField(null)}
+                              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                            />
+                          )}
+                          {aiFieldSuggestions[field.name] && (
+                            <div className="mt-1 flex items-start justify-between rounded-md bg-sky-50 px-3 py-2 text-xs text-slate-600">
+                              <span className="pr-2">
+                                <span className="font-semibold text-slate-800">
+                                  AI Suggestion:
+                                </span>{' '}
+                                {aiFieldSuggestions[field.name]}
+                              </span>
+                              <div className="flex flex-col items-end gap-1 text-[11px] font-semibold">
+                                <div className="flex gap-2 text-lg">
+                                  <button
+                                    type="button"
+                                    title="Helpful"
+                                    onClick={() =>
+                                      currentSection &&
+                                      handleSuggestionFeedback(
+                                        currentSection.id,
+                                        field.name,
+                                        aiFieldSuggestions[field.name],
+                                        true,
+                                      )
+                                    }
+                                    className="text-emerald-500 hover:text-emerald-600"
+                                  >
+                                    👍
+                                  </button>
+                                  <button
+                                    type="button"
+                                    title="Not helpful"
+                                    onClick={() =>
+                                      currentSection &&
+                                      handleSuggestionFeedback(
+                                        currentSection.id,
+                                        field.name,
+                                        aiFieldSuggestions[field.name],
+                                        false,
+                                      )
+                                    }
+                                    className="text-rose-500 hover:text-rose-600"
+                                  >
+                                    👎
+                                  </button>
+                                </div>
                                 <button
                                   type="button"
-                                  title="Helpful"
                                   onClick={() =>
-                                    currentSection &&
-                                    handleSuggestionFeedback(
-                                      currentSection.id,
-                                      field.name,
-                                      aiFieldSuggestions[field.name],
-                                      true,
-                                    )
+                                    handleApplyFieldSuggestion(field.name)
                                   }
-                                  className="text-emerald-500 hover:text-emerald-600"
+                                  className="text-sky-600 hover:text-sky-500"
                                 >
-                                  👍
+                                  Apply
                                 </button>
                                 <button
                                   type="button"
-                                  title="Not helpful"
                                   onClick={() =>
-                                    currentSection &&
-                                    handleSuggestionFeedback(
-                                      currentSection.id,
-                                      field.name,
-                                      aiFieldSuggestions[field.name],
-                                      false,
-                                    )
+                                    handleAppendFieldSuggestion(field.name)
                                   }
-                                  className="text-rose-500 hover:text-rose-600"
+                                  className="text-slate-600 hover:text-slate-800"
                                 >
-                                  👎
+                                  Append
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setAiFieldSuggestions((prev) => {
+                                      const next = { ...prev };
+                                      delete next[field.name];
+                                      return next;
+                                    })
+                                  }
+                                  className="text-slate-400 hover:text-slate-600"
+                                >
+                                  Clear
                                 </button>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleApplyFieldSuggestion(field.name)
+                            </div>
+                          )}
+                          {aiFieldHistory[field.name]?.length ? (
+                            <div className="mt-1 rounded-md border border-slate-100 bg-white px-3 py-2 text-[11px] text-slate-500">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                Recent suggestions
+                              </p>
+                              <ul className="mt-1 space-y-1">
+                                {aiFieldHistory[field.name].map((item, idx) => (
+                                  <li
+                                    key={`${field.name}-hist-${idx}`}
+                                    className="flex items-center justify-between gap-2"
+                                  >
+                                    <span className="flex-1 truncate">
+                                      {item}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleApplyHistorySuggestion(
+                                          field.name,
+                                          item,
+                                        )
+                                      }
+                                      className="text-sky-600 hover:text-sky-500"
+                                    >
+                                      Apply
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                          {suggestionMutation.isPending &&
+                            pendingSuggestionField === field.name && (
+                              <p className="mt-1 text-[11px] text-slate-400">
+                                AI drafting suggestion...
+                              </p>
+                            )}
+                        </div>
+                      ))}
+                      <div className="flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={saveMutation.isPending}
+                          className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+                        >
+                          {saveMutation.isPending
+                            ? 'Saving...'
+                            : 'Save Section'}
+                        </button>
+                      </div>
+                    </fieldset>
+                  </form>
+                  <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">
+                          Evidence attachments
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          Upload supporting policies, evaluations, or reports
+                          that justify this section’s answers.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {currentSection?.artifacts?.length ? (
+                          <span className="text-xs font-semibold text-slate-400">
+                            {currentSection.artifacts.length} file
+                            {currentSection.artifacts.length === 1 ? '' : 's'}
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setManageModalOpen(true)}
+                          className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                        >
+                          Manage templates
+                        </button>
+                      </div>
+                    </div>
+                    {currentSection ? (
+                      <>
+                        <div className="mt-4 grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto]">
+                          <div>
+                            <input
+                              ref={artifactInputRef}
+                              type="file"
+                              className="hidden"
+                              onChange={handleArtifactFileChange}
+                              disabled={!isOwner}
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                isOwner && artifactInputRef.current?.click()
+                              }
+                              disabled={!isOwner}
+                              className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <span className="truncate text-slate-700">
+                                {artifactFile
+                                  ? artifactFile.name
+                                  : 'Select a file to attach'}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                {artifactFile
+                                  ? formatFileSize(artifactFile.size)
+                                  : ''}
+                              </span>
+                            </button>
+                          </div>
+                          <details className="md:col-span-2">
+                            <summary className="cursor-pointer rounded-md border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-500">
+                              Add file details
+                            </summary>
+                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                              <input
+                                type="text"
+                                value={artifactDescription}
+                                onChange={(event) =>
+                                  setArtifactDescription(event.target.value)
                                 }
-                                className="text-sky-600 hover:text-sky-500"
+                                placeholder="Optional description"
+                                disabled={!isOwner}
+                                className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50"
+                              />
+                              <select
+                                value={artifactPurpose}
+                                onChange={(e) =>
+                                  setArtifactPurpose(
+                                    e.target.value as
+                                      'GENERIC' | 'DATASET' | 'MODEL',
+                                  )
+                                }
+                                disabled={!isOwner}
+                                className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none disabled:bg-slate-50"
+                                title="Purpose"
                               >
-                                Apply
-                              </button>
+                                <option value="GENERIC">Generic</option>
+                                <option value="DATASET">Dataset</option>
+                                <option value="MODEL">Model</option>
+                              </select>
+                            </div>
+                          </details>
+                          <div className="flex items-center justify-end gap-2">
+                            {artifactFile ? (
                               <button
                                 type="button"
-                                onClick={() =>
-                                  handleAppendFieldSuggestion(field.name)
-                                }
-                                className="text-slate-600 hover:text-slate-800"
-                              >
-                                Append
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setAiFieldSuggestions((prev) => {
-                                    const next = { ...prev };
-                                    delete next[field.name];
-                                    return next;
-                                  })
-                                }
-                                className="text-slate-400 hover:text-slate-600"
+                                onClick={clearArtifactSelection}
+                                disabled={!isOwner}
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-50"
                               >
                                 Clear
                               </button>
-                            </div>
-                          </div>
-                        )}
-                        {aiFieldHistory[field.name]?.length ? (
-                          <div className="mt-1 rounded-md border border-slate-100 bg-white px-3 py-2 text-[11px] text-slate-500">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                              Recent suggestions
-                            </p>
-                            <ul className="mt-1 space-y-1">
-                              {aiFieldHistory[field.name].map((item, idx) => (
-                                <li
-                                  key={`${field.name}-hist-${idx}`}
-                                  className="flex items-center justify-between gap-2"
-                                >
-                                  <span className="flex-1 truncate">
-                                    {item}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleApplyHistorySuggestion(
-                                        field.name,
-                                        item,
-                                      )
-                                    }
-                                    className="text-sky-600 hover:text-sky-500"
-                                  >
-                                    Apply
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
-                        {suggestionMutation.isPending &&
-                          pendingSuggestionField === field.name && (
-                            <p className="mt-1 text-[11px] text-slate-400">
-                              AI drafting suggestion...
-                            </p>
-                          )}
-                      </div>
-                    ))}
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        disabled={saveMutation.isPending}
-                        className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
-                      >
-                        {saveMutation.isPending ? 'Saving...' : 'Save Section'}
-                      </button>
-                    </div>
-                  </fieldset>
-                </form>
-                <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-900">
-                        Evidence attachments
-                      </h4>
-                      <p className="text-xs text-slate-500">
-                        Upload supporting policies, evaluations, or reports that
-                        justify this section’s answers.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {currentSection?.artifacts?.length ? (
-                        <span className="text-xs font-semibold text-slate-400">
-                          {currentSection.artifacts.length} file
-                          {currentSection.artifacts.length === 1 ? '' : 's'}
-                        </span>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => setManageModalOpen(true)}
-                        className="text-xs font-semibold text-slate-600 hover:text-slate-900"
-                      >
-                        Manage templates
-                      </button>
-                    </div>
-                  </div>
-                  {currentSection ? (
-                    <>
-                      <div className="mt-4 grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto]">
-                        <div>
-                          <input
-                            ref={artifactInputRef}
-                            type="file"
-                            className="hidden"
-                            onChange={handleArtifactFileChange}
-                            disabled={!isOwner}
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              isOwner && artifactInputRef.current?.click()
-                            }
-                            disabled={!isOwner}
-                            className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <span className="truncate text-slate-700">
-                              {artifactFile
-                                ? artifactFile.name
-                                : 'Select a file to attach'}
-                            </span>
-                            <span className="text-xs text-slate-400">
-                              {artifactFile
-                                ? formatFileSize(artifactFile.size)
-                                : ''}
-                            </span>
-                          </button>
-                        </div>
-                        <details className="md:col-span-2">
-                          <summary className="cursor-pointer rounded-md border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-500">
-                            Add file details
-                          </summary>
-                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                            <input
-                              type="text"
-                              value={artifactDescription}
-                              onChange={(event) =>
-                                setArtifactDescription(event.target.value)
-                              }
-                              placeholder="Optional description"
-                              disabled={!isOwner}
-                              className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50"
-                            />
-                            <select
-                              value={artifactPurpose}
-                              onChange={(e) =>
-                                setArtifactPurpose(
-                                  e.target.value as
-                                    | 'GENERIC'
-                                    | 'DATASET'
-                                    | 'MODEL',
-                                )
-                              }
-                              disabled={!isOwner}
-                              className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none disabled:bg-slate-50"
-                              title="Purpose"
-                            >
-                              <option value="GENERIC">Generic</option>
-                              <option value="DATASET">Dataset</option>
-                              <option value="MODEL">Model</option>
-                            </select>
-                          </div>
-                        </details>
-                        <div className="flex items-center justify-end gap-2">
-                          {artifactFile ? (
+                            ) : null}
                             <button
                               type="button"
-                              onClick={clearArtifactSelection}
-                              disabled={!isOwner}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-50"
+                              onClick={handleArtifactUpload}
+                              disabled={
+                                !isOwner ||
+                                artifactUploadMutation.isPending ||
+                                !artifactFile
+                              }
+                              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                             >
-                              Clear
+                              {artifactUploadMutation.isPending
+                                ? 'Uploading...'
+                                : 'Upload evidence'}
                             </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={handleArtifactUpload}
-                            disabled={
-                              !isOwner ||
-                              artifactUploadMutation.isPending ||
-                              !artifactFile
-                            }
-                            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
-                          >
-                            {artifactUploadMutation.isPending
-                              ? 'Uploading...'
-                              : 'Upload evidence'}
-                          </button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-4 space-y-3">
-                        {currentSection.artifacts?.length ? (
-                          currentSection.artifacts.map(
-                            (artifact: SectionArtifactItem) => {
-                              const hasNewerVersion =
-                                currentSection.artifacts?.some(
-                                  (other: SectionArtifactItem) =>
-                                    other.version > artifact.version,
-                                ) ?? false;
-                              const reviewDraft =
-                                artifactReviewDraft[artifact.id];
-                              return (
-                                <div
-                                  key={artifact.id}
-                                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
-                                >
-                                  <div className="flex flex-col gap-2">
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                      <div>
-                                        <p className="font-semibold text-slate-900">
-                                          {artifact.originalName}
-                                        </p>
-                                        <p className="text-xs text-slate-500">
-                                          {artifact.description
-                                            ? `${artifact.description} · `
-                                            : ''}
-                                          {formatFileSize(artifact.size)} ·{' '}
-                                          {new Date(
-                                            artifact.createdAt,
-                                          ).toLocaleString(undefined, {
-                                            dateStyle: 'short',
-                                            timeStyle: 'short',
-                                          })}
-                                          {artifact.uploadedBy?.email
-                                            ? ` · ${artifact.uploadedBy.email}`
-                                            : ''}
-                                        </p>
-                                      </div>
-                                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
-                                          v{artifact.version}
-                                        </span>
-                                        <span
-                                          className={`rounded-full px-2 py-0.5 ${artifactStatusStyles[artifact.status]}`}
-                                        >
-                                          {
-                                            artifactStatusLabels[
-                                              artifact.status
-                                            ]
-                                          }
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                                      <span>
-                                        Citation:
-                                        <code className="ml-1 rounded bg-white px-1 py-0.5 text-[11px] text-slate-700">
-                                          {artifact.citationKey}
-                                        </code>
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleCopyToClipboard(
-                                            artifact.citationKey,
-                                            'Citation copied',
-                                          )
-                                        }
-                                        className="text-[11px] font-semibold text-sky-600 hover:text-sky-500"
-                                      >
-                                        Copy citation
-                                      </button>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                                      <span>
-                                        Checksum:
-                                        <code className="ml-1 rounded bg-white px-1 py-0.5 text-[11px] text-slate-700">
-                                          {artifact.checksum}
-                                        </code>
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleCopyToClipboard(
-                                            artifact.checksum,
-                                            'Checksum copied',
-                                          )
-                                        }
-                                        className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
-                                      >
-                                        Copy checksum
-                                      </button>
-                                    </div>
-                                    {artifact.previousArtifact ? (
-                                      <p className="text-[11px] text-slate-500">
-                                        Replaces{' '}
-                                        <span className="font-medium">
-                                          {
-                                            artifact.previousArtifact
-                                              .citationKey
-                                          }
-                                        </span>{' '}
-                                        (checksum{' '}
-                                        <code className="bg-white px-1 py-0.5 text-[10px] text-slate-700">
-                                          {artifact.previousArtifact.checksum}
-                                        </code>
-                                        ).
-                                      </p>
-                                    ) : null}
-                                    {artifact.reviewedBy?.email ? (
-                                      <p className="text-[11px] text-slate-500">
-                                        Reviewed by {artifact.reviewedBy.email}
-                                        {artifact.reviewedAt
-                                          ? ` on ${new Date(
-                                              artifact.reviewedAt,
+                        <div className="mt-4 space-y-3">
+                          {currentSection.artifacts?.length ? (
+                            currentSection.artifacts.map(
+                              (artifact: SectionArtifactItem) => {
+                                const hasNewerVersion =
+                                  currentSection.artifacts?.some(
+                                    (other: SectionArtifactItem) =>
+                                      other.version > artifact.version,
+                                  ) ?? false;
+                                const reviewDraft =
+                                  artifactReviewDraft[artifact.id];
+                                return (
+                                  <div
+                                    key={artifact.id}
+                                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
+                                  >
+                                    <div className="flex flex-col gap-2">
+                                      <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                          <p className="font-semibold text-slate-900">
+                                            {artifact.originalName}
+                                          </p>
+                                          <p className="text-xs text-slate-500">
+                                            {artifact.description
+                                              ? `${artifact.description} · `
+                                              : ''}
+                                            {formatFileSize(artifact.size)} ·{' '}
+                                            {new Date(
+                                              artifact.createdAt,
                                             ).toLocaleString(undefined, {
                                               dateStyle: 'short',
                                               timeStyle: 'short',
-                                            })}`
-                                          : ''}
-                                        {artifact.reviewComment
-                                          ? ` · “${artifact.reviewComment}”`
-                                          : ''}
-                                      </p>
-                                    ) : (
-                                      <p className="text-[11px] text-amber-600">
-                                        Awaiting reviewer approval.
-                                      </p>
-                                    )}
-                                    </div>
-                                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleArtifactDownload(artifact)
-                                      }
-                                      className="rounded-md border border-slate-200 px-3 py-1 text-slate-700 hover:border-slate-300 hover:text-slate-900"
-                                    >
-                                      Download
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleArtifactDelete(artifact.id)
-                                      }
-                                      disabled={
-                                        !isOwner ||
-                                        artifactDeleteMutation.isPending ||
-                                        hasNewerVersion
-                                      }
-                                      title={
-                                        hasNewerVersion
-                                          ? 'Remove later versions before deleting this file'
-                                          : undefined
-                                      }
-                                      className="rounded-md border border-rose-200 px-3 py-1 text-rose-600 hover:border-rose-300 hover:text-rose-700 disabled:opacity-50"
-                                    >
-                                      Remove
-                                    </button>
-                                    {canReviewEvidence ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setReviewExpanded((prev) => ({
-                                            ...prev,
-                                            [artifact.id]: !prev[artifact.id],
-                                          }))
-                                        }
-                                        className="rounded-md border border-slate-200 px-3 py-1 text-slate-700 hover:border-slate-300 hover:text-slate-900"
-                                      >
-                                        {reviewExpanded[artifact.id]
-                                          ? 'Hide review'
-                                          : 'Review'}
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                  {canReviewEvidence &&
-                                  reviewExpanded[artifact.id] ? (
-                                    <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
-                                      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-                                        <label
-                                          htmlFor={`artifact-status-${artifact.id}`}
-                                          className="font-semibold uppercase tracking-wide text-slate-400"
-                                        >
-                                          Review status
-                                        </label>
-                                        <select
-                                          id={`artifact-status-${artifact.id}`}
-                                          value={
-                                            reviewDraft?.status ??
-                                            artifact.status
-                                          }
-                                          onChange={(event) =>
-                                            handleArtifactReviewStatusChange(
-                                              artifact.id,
-                                              event.target
-                                                .value as ArtifactStatus,
-                                            )
-                                          }
-                                          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-                                        >
-                                          <option value="PENDING">
-                                            Pending
-                                          </option>
-                                          <option value="APPROVED">
-                                            Approved
-                                          </option>
-                                          <option value="REJECTED">
-                                            Rejected
-                                          </option>
-                                        </select>
+                                            })}
+                                            {artifact.uploadedBy?.email
+                                              ? ` · ${artifact.uploadedBy.email}`
+                                              : ''}
+                                          </p>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
+                                            v{artifact.version}
+                                          </span>
+                                          <span
+                                            className={`rounded-full px-2 py-0.5 ${artifactStatusStyles[artifact.status]}`}
+                                          >
+                                            {
+                                              artifactStatusLabels[
+                                                artifact.status
+                                              ]
+                                            }
+                                          </span>
+                                        </div>
                                       </div>
-                                      <textarea
-                                        value={reviewDraft?.comment ?? ''}
-                                        onChange={(event) =>
-                                          handleArtifactReviewCommentChange(
-                                            artifact.id,
-                                            event.target.value,
-                                          )
-                                        }
-                                        rows={3}
-                                        placeholder="Add reviewer notes or justification..."
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                                      />
-                                      <div className="flex justify-end">
+                                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                                        <span>
+                                          Citation:
+                                          <code className="ml-1 rounded bg-white px-1 py-0.5 text-[11px] text-slate-700">
+                                            {artifact.citationKey}
+                                          </code>
+                                        </span>
                                         <button
                                           type="button"
                                           onClick={() =>
-                                            handleArtifactReviewSubmit(
-                                              artifact.id,
+                                            handleCopyToClipboard(
+                                              artifact.citationKey,
+                                              'Citation copied',
                                             )
                                           }
-                                          disabled={
-                                            artifactReviewMutation.isPending &&
-                                            reviewingArtifactId === artifact.id
-                                          }
-                                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                          className="text-[11px] font-semibold text-sky-600 hover:text-sky-500"
                                         >
-                                          {artifactReviewMutation.isPending &&
-                                          reviewingArtifactId === artifact.id
-                                            ? 'Saving...'
-                                            : 'Save Review'}
+                                          Copy citation
                                         </button>
                                       </div>
+                                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                                        <span>
+                                          Checksum:
+                                          <code className="ml-1 rounded bg-white px-1 py-0.5 text-[11px] text-slate-700">
+                                            {artifact.checksum}
+                                          </code>
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleCopyToClipboard(
+                                              artifact.checksum,
+                                              'Checksum copied',
+                                            )
+                                          }
+                                          className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
+                                        >
+                                          Copy checksum
+                                        </button>
+                                      </div>
+                                      {artifact.previousArtifact ? (
+                                        <p className="text-[11px] text-slate-500">
+                                          Replaces{' '}
+                                          <span className="font-medium">
+                                            {
+                                              artifact.previousArtifact
+                                                .citationKey
+                                            }
+                                          </span>{' '}
+                                          (checksum{' '}
+                                          <code className="bg-white px-1 py-0.5 text-[10px] text-slate-700">
+                                            {artifact.previousArtifact.checksum}
+                                          </code>
+                                          ).
+                                        </p>
+                                      ) : null}
+                                      {artifact.reviewedBy?.email ? (
+                                        <p className="text-[11px] text-slate-500">
+                                          Reviewed by{' '}
+                                          {artifact.reviewedBy.email}
+                                          {artifact.reviewedAt
+                                            ? ` on ${new Date(
+                                                artifact.reviewedAt,
+                                              ).toLocaleString(undefined, {
+                                                dateStyle: 'short',
+                                                timeStyle: 'short',
+                                              })}`
+                                            : ''}
+                                          {artifact.reviewComment
+                                            ? ` · “${artifact.reviewComment}”`
+                                            : ''}
+                                        </p>
+                                      ) : (
+                                        <p className="text-[11px] text-amber-600">
+                                          Awaiting reviewer approval.
+                                        </p>
+                                      )}
                                     </div>
-                                  ) : null}
-                                </div>
-                              );
-                            },
-                          )
-                        ) : (
-                          <p className="text-sm text-slate-500">
-                            No evidence uploaded yet. Add policies, risk logs,
-                            or evaluation files to keep auditors aligned.
-                          </p>
-                        )}
+                                    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleArtifactDownload(artifact)
+                                        }
+                                        className="rounded-md border border-slate-200 px-3 py-1 text-slate-700 hover:border-slate-300 hover:text-slate-900"
+                                      >
+                                        Download
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleArtifactDelete(artifact.id)
+                                        }
+                                        disabled={
+                                          !isOwner ||
+                                          artifactDeleteMutation.isPending ||
+                                          hasNewerVersion
+                                        }
+                                        title={
+                                          hasNewerVersion
+                                            ? 'Remove later versions before deleting this file'
+                                            : undefined
+                                        }
+                                        className="rounded-md border border-rose-200 px-3 py-1 text-rose-600 hover:border-rose-300 hover:text-rose-700 disabled:opacity-50"
+                                      >
+                                        Remove
+                                      </button>
+                                      {canReviewEvidence ? (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setReviewExpanded((prev) => ({
+                                              ...prev,
+                                              [artifact.id]: !prev[artifact.id],
+                                            }))
+                                          }
+                                          className="rounded-md border border-slate-200 px-3 py-1 text-slate-700 hover:border-slate-300 hover:text-slate-900"
+                                        >
+                                          {reviewExpanded[artifact.id]
+                                            ? 'Hide review'
+                                            : 'Review'}
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                    {canReviewEvidence &&
+                                    reviewExpanded[artifact.id] ? (
+                                      <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
+                                        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                                          <label
+                                            htmlFor={`artifact-status-${artifact.id}`}
+                                            className="font-semibold uppercase tracking-wide text-slate-400"
+                                          >
+                                            Review status
+                                          </label>
+                                          <select
+                                            id={`artifact-status-${artifact.id}`}
+                                            value={
+                                              reviewDraft?.status ??
+                                              artifact.status
+                                            }
+                                            onChange={(event) =>
+                                              handleArtifactReviewStatusChange(
+                                                artifact.id,
+                                                event.target
+                                                  .value as ArtifactStatus,
+                                              )
+                                            }
+                                            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                                          >
+                                            <option value="PENDING">
+                                              Pending
+                                            </option>
+                                            <option value="APPROVED">
+                                              Approved
+                                            </option>
+                                            <option value="REJECTED">
+                                              Rejected
+                                            </option>
+                                          </select>
+                                        </div>
+                                        <textarea
+                                          value={reviewDraft?.comment ?? ''}
+                                          onChange={(event) =>
+                                            handleArtifactReviewCommentChange(
+                                              artifact.id,
+                                              event.target.value,
+                                            )
+                                          }
+                                          rows={3}
+                                          placeholder="Add reviewer notes or justification..."
+                                          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                                        />
+                                        <div className="flex justify-end">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handleArtifactReviewSubmit(
+                                                artifact.id,
+                                              )
+                                            }
+                                            disabled={
+                                              artifactReviewMutation.isPending &&
+                                              reviewingArtifactId ===
+                                                artifact.id
+                                            }
+                                            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                          >
+                                            {artifactReviewMutation.isPending &&
+                                            reviewingArtifactId === artifact.id
+                                              ? 'Saving...'
+                                              : 'Save Review'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              },
+                            )
+                          ) : (
+                            <p className="text-sm text-slate-500">
+                              No evidence uploaded yet. Add policies, risk logs,
+                              or evaluation files to keep auditors aligned.
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="mt-4 text-sm text-slate-500">
+                        Save this section before attaching evidence.
+                      </p>
+                    )}
+                  </div>
+                  {currentSection ? (
+                    <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-slate-900">
+                          Discussion
+                        </h4>
+                        <span className="text-xs text-slate-500">
+                          {currentSection.comments.length} comments
+                        </span>
                       </div>
-                    </>
-                  ) : (
-                    <p className="mt-4 text-sm text-slate-500">
-                      Save this section before attaching evidence.
-                    </p>
-                  )}
-                </div>
-                {currentSection ? (
-                  <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-slate-900">
-                        Discussion
-                      </h4>
-                      <span className="text-xs text-slate-500">
-                        {currentSection.comments.length} comments
-                      </span>
-                    </div>
                       <details className="rounded-xl border border-dashed border-slate-200 px-3 py-2">
                         <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                           Status history
                         </summary>
                         <div className="mt-2 space-y-1">
-                        {currentSection.statusEvents?.length ? (
-                          currentSection.statusEvents
-                            .slice(0, 3)
-                            .map((event: StatusEvent) => (
-                              <p
-                                key={event.id}
-                                className="text-[11px] text-slate-500"
-                              >
-                                <span className="font-semibold text-slate-700">
-                                  {event.status.replace('_', ' ')}
-                                </span>{' '}
-                                ·{' '}
-                                {new Date(event.createdAt).toLocaleString(
-                                  undefined,
-                                  {
-                                    dateStyle: 'short',
-                                    timeStyle: 'short',
-                                  },
-                                )}
-                                {event.actor?.email
-                                  ? ` · ${event.actor.email}`
-                                  : ''}
-                                {event.signature
-                                  ? ` · Signed ${event.signature}`
-                                  : ''}
-                                {event.note ? ` – ${event.note}` : ''}
-                              </p>
-                            ))
-                        ) : (
-                          <p className="text-[11px] text-slate-400">
-                            No status changes yet.
-                          </p>
-                        )}
+                          {currentSection.statusEvents?.length ? (
+                            currentSection.statusEvents
+                              .slice(0, 3)
+                              .map((event: StatusEvent) => (
+                                <p
+                                  key={event.id}
+                                  className="text-[11px] text-slate-500"
+                                >
+                                  <span className="font-semibold text-slate-700">
+                                    {event.status.replace('_', ' ')}
+                                  </span>{' '}
+                                  ·{' '}
+                                  {new Date(event.createdAt).toLocaleString(
+                                    undefined,
+                                    {
+                                      dateStyle: 'short',
+                                      timeStyle: 'short',
+                                    },
+                                  )}
+                                  {event.actor?.email
+                                    ? ` · ${event.actor.email}`
+                                    : ''}
+                                  {event.signature
+                                    ? ` · Signed ${event.signature}`
+                                    : ''}
+                                  {event.note ? ` – ${event.note}` : ''}
+                                </p>
+                              ))
+                          ) : (
+                            <p className="text-[11px] text-slate-400">
+                              No status changes yet.
+                            </p>
+                          )}
                         </div>
                       </details>
-                    <div className="mt-4 space-y-3">
-                      {currentSection.comments.length ? (
-                        currentSection.comments.map(
-                          (comment: SectionComment) => (
-                            <div
-                              key={comment.id}
-                              className="rounded-xl border border-slate-200 bg-white p-3 text-sm"
-                            >
-                              <p className="text-slate-700">{comment.body}</p>
-                              <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">
-                                {comment.author?.email ?? 'Unknown'} ·{' '}
-                                {new Date(comment.createdAt).toLocaleString(
+                      <div className="mt-4 space-y-3">
+                        {currentSection.comments.length ? (
+                          currentSection.comments.map(
+                            (comment: SectionComment) => (
+                              <div
+                                key={comment.id}
+                                className="rounded-xl border border-slate-200 bg-white p-3 text-sm"
+                              >
+                                <p className="text-slate-700">{comment.body}</p>
+                                <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">
+                                  {comment.author?.email ?? 'Unknown'} ·{' '}
+                                  {new Date(comment.createdAt).toLocaleString(
+                                    undefined,
+                                    {
+                                      dateStyle: 'short',
+                                      timeStyle: 'short',
+                                    },
+                                  )}
+                                </p>
+                              </div>
+                            ),
+                          )
+                        ) : (
+                          <p className="text-sm text-slate-500">
+                            No comments yet. Share context with reviewers below.
+                          </p>
+                        )}
+                      </div>
+                      <form
+                        className="mt-4 space-y-2"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          if (!currentSection || !commentBody.trim()) return;
+                          if (commentBody.trim().startsWith('/ai')) {
+                            suggestionFieldRef.current = activeField;
+                            suggestionMutation.mutate({
+                              hint: commentBody.trim().slice(3).trim(),
+                              partialContent: currentSection.content ?? {},
+                              targetField: activeField ?? undefined,
+                            });
+                            setCommentBody('');
+                            return;
+                          }
+                          commentMutation.mutate({
+                            sectionId: currentSection.id,
+                            body: commentBody.trim(),
+                          });
+                        }}
+                      >
+                        <textarea
+                          value={commentBody}
+                          onChange={(event) =>
+                            setCommentBody(event.target.value)
+                          }
+                          placeholder="Add a note or question... (type /ai to request suggestions)"
+                          rows={3}
+                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            type="submit"
+                            disabled={
+                              !commentBody.trim() || commentMutation.isPending
+                            }
+                            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                          >
+                            {commentMutation.isPending
+                              ? 'Posting...'
+                              : 'Post Comment'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    <div className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-sm text-slate-500">
+                      Save this section to start a collaboration thread.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  <ReviewApprovalPanel
+                    trackableSteps={trackableStepSummaries}
+                    projectStatusLabel={projectStatusLabel}
+                    projectStatusDisplay={projectStatusDisplay}
+                    onSendForReview={sendProjectForReview}
+                    sendForReviewLabel={sendForReviewLabel}
+                    onApprove={approveProject}
+                    onRequestChanges={requestChanges}
+                    reviewerId={selectedReviewerId}
+                    approverId={selectedApproverId}
+                    onReviewerChange={(value) =>
+                      setSelectedReviewerId(value || null)
+                    }
+                    onApproverChange={(value) =>
+                      setSelectedApproverId(value || null)
+                    }
+                    reviewMessage={reviewMessage}
+                    setReviewMessage={setReviewMessage}
+                    reviewers={reviewersQuery.data ?? []}
+                    availableReviewers={availableReviewers}
+                    canAssignSelf={canAssignSelf}
+                    canSendForReview={isOwner || canStartProjectReview}
+                    sendForReviewDisabled={sendForReviewDisabled}
+                    canApprove={canApproveProject && isPaidPlan}
+                    canRequestChanges={canRequestProjectChanges && isPaidPlan}
+                    disableAssignmentFields={disableAssignmentFields}
+                    userId={user?.id}
+                  />
+                  <div
+                    className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
+                    id="documents-panel"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Framework coverage
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Select which deliverables to create (
+                          {selectedDocumentTypes.length}/
+                          {DOCUMENT_GENERATION_OPTIONS.length} selected).
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={resetDocumentSelections}
+                        disabled={selectionIsDefault}
+                        className="text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-40"
+                      >
+                        Reset to defaults
+                      </button>
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {DOCUMENT_GENERATION_OPTIONS.map((option) => {
+                        const isSelected = selectedDocumentTypes.includes(
+                          option.type,
+                        );
+                        return (
+                          <label
+                            key={option.type}
+                            className={`flex cursor-pointer flex-col rounded-xl border px-4 py-3 text-left transition ${
+                              isSelected
+                                ? 'border-sky-400 bg-white shadow-sm shadow-sky-100'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                            } ${!isOwner ? 'opacity-60 cursor-not-allowed' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              disabled={!isOwner}
+                              checked={isSelected}
+                              onChange={() => toggleDocumentType(option.type)}
+                            />
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {option.label}
+                                </p>
+                                {option.framework ? (
+                                  <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">
+                                    {option.framework}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <span
+                                className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[0.65rem] font-semibold ${
+                                  isSelected
+                                    ? 'border-sky-500 bg-sky-500 text-white'
+                                    : 'border-slate-300 bg-slate-50 text-slate-400'
+                                }`}
+                              >
+                                {isSelected ? '✓' : '•'}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                              {option.description}
+                            </p>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {readinessQuery.data ? (
+                    <div
+                      className={`rounded-2xl border p-4 ${
+                        readinessQuery.data.status === 'ready'
+                          ? 'border-emerald-200 bg-emerald-50'
+                          : readinessQuery.data.status === 'partial'
+                            ? 'border-amber-200 bg-amber-50'
+                            : 'border-rose-200 bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            Documentation readiness: {readinessQuery.data.score}
+                            %
+                          </p>
+                          <p className="mt-1 text-sm text-slate-700">
+                            {readinessQuery.data.summary}
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-current/10 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+                          {readinessQuery.data.status}
+                        </span>
+                      </div>
+                      {readinessQuery.data.missingCriticalFields.length ? (
+                        <p className="mt-3 text-xs text-slate-600">
+                          Missing critical fields:{' '}
+                          {readinessQuery.data.missingCriticalFields.join(', ')}
+                        </p>
+                      ) : null}
+                      {readinessQuery.data.weakSections.length ? (
+                        <p className="mt-2 text-xs text-slate-600">
+                          Weak sections:{' '}
+                          {readinessQuery.data.weakSections.join(', ')}
+                        </p>
+                      ) : null}
+                      {readinessQuery.data.status === 'partial' ? (
+                        <p className="mt-2 text-xs font-medium text-amber-700">
+                          Generation is allowed, but the output will be treated
+                          as a draft with a readiness notice.
+                        </p>
+                      ) : null}
+                      {readinessQuery.data.status === 'insufficient' ? (
+                        <p className="mt-2 text-xs font-medium text-rose-700">
+                          Full document generation is blocked until the missing
+                          critical fields are filled in.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <button
+                    onClick={handleGenerateClick}
+                    disabled={
+                      !isOwner ||
+                      generateMutation.isPending ||
+                      !selectedDocumentTypes.length ||
+                      readinessQuery.data?.status === 'insufficient'
+                    }
+                    className="rounded-md bg-emerald-600 px-5 py-3 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                  >
+                    {generateMutation.isPending
+                      ? 'Generating...'
+                      : 'Generate Documentation'}
+                  </button>
+                  {generateMutation.isSuccess && (
+                    <p className="text-sm text-emerald-600">
+                      Generation in progress. Documents will appear below when
+                      ready.
+                    </p>
+                  )}
+                  {generateMutation.isError && (
+                    <p className="text-sm text-rose-600">
+                      {getApiErrorMessage(generateMutation.error) ??
+                        'Unable to generate documents. Ensure each section has been saved and try again.'}
+                    </p>
+                  )}
+                  {planQuery.data &&
+                    usageQuery.data &&
+                    docLimit !== Number.MAX_SAFE_INTEGER && (
+                      <p className="mt-2 text-xs font-semibold text-slate-500">
+                        Plan allowance: {docLimit} docs/month · Used {docsUsed}{' '}
+                        · Remaining {docsRemaining}. Select that many or fewer
+                        to generate.
+                      </p>
+                    )}
+                </div>
+              )}
+            </ProjectPanel>
+
+            <ProjectPanel>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Deliverables
+                </h3>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleZipDownload}
+                    className="text-sm font-medium text-slate-500 hover:text-slate-800"
+                  >
+                    Download ZIP
+                  </button>
+                  <button
+                    onClick={() => documentsQuery.refetch()}
+                    className="text-sm font-medium text-sky-600 hover:text-sky-500"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              {documentsQuery.data?.length ? (
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  {Array.from(documentsGrouping.groups.entries()).map(
+                    ([type, docs]) => {
+                      const latest = docs[0];
+                      const previous = docs.slice(1, 3);
+                      const version =
+                        documentsGrouping.versions.get(latest.id) ??
+                        docs.length;
+                      return (
+                        <div
+                          key={type}
+                          className="rounded-2xl border border-slate-200 p-4"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-sm uppercase tracking-wide text-slate-400">
+                                {DOCUMENT_LABELS[type] ?? type}
+                              </p>
+                              <h4 className="text-xl font-semibold text-slate-900">
+                                Version {version}
+                              </h4>
+                              <p className="text-xs text-slate-500">
+                                Updated{' '}
+                                {new Date(latest.createdAt).toLocaleString(
                                   undefined,
                                   {
-                                    dateStyle: 'short',
+                                    dateStyle: 'medium',
                                     timeStyle: 'short',
                                   },
                                 )}
                               </p>
                             </div>
-                          ),
-                        )
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                              {docs.length} total
+                            </span>
+                          </div>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <button
+                              onClick={() => handlePreview(latest)}
+                              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                              Preview
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDownload(latest.id, latest.type)
+                              }
+                              disabled={downloadingId === latest.id}
+                              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                            >
+                              {downloadingId === latest.id
+                                ? 'Downloading...'
+                                : 'Download'}
+                            </button>
+                          </div>
+                          {previous.length > 0 && (
+                            <details className="mt-4 border-t border-slate-100 pt-4">
+                              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                Version history ({previous.length})
+                              </summary>
+                              <ul className="mt-2 space-y-2 text-xs text-slate-500">
+                                {previous.map((doc: DocumentItem) => {
+                                  const ver =
+                                    documentsGrouping.versions.get(doc.id) ?? 1;
+                                  return (
+                                    <li
+                                      key={doc.id}
+                                      className="flex items-center justify-between"
+                                    >
+                                      <span>
+                                        v{ver} ·{' '}
+                                        {new Date(
+                                          doc.createdAt,
+                                        ).toLocaleDateString()}{' '}
+                                        {new Date(
+                                          doc.createdAt,
+                                        ).toLocaleTimeString([], {
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })}
+                                      </span>
+                                      <button
+                                        onClick={() =>
+                                          handleDownload(doc.id, doc.type)
+                                        }
+                                        className="text-sky-600 hover:text-sky-500"
+                                      >
+                                        Download
+                                      </button>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </details>
+                          )}
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-slate-500">
+                  {documentsQuery.isLoading
+                    ? 'Fetching documents...'
+                    : 'No documents yet. Generate them from the review step.'}
+                </p>
+              )}
+            </ProjectPanel>
+
+            <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
+              <summary className="cursor-pointer text-lg font-semibold text-slate-900">
+                Project intelligence
+              </summary>
+              <div className="mt-4 grid gap-6 lg:grid-cols-2">
+                <ProjectPanel>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    Insights
+                  </h3>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-xl border border-slate-100 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-400">
+                        Pending sections
+                      </p>
+                      <p className="mt-1 text-3xl font-semibold text-slate-900">
+                        {pendingSteps.length}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {pendingSteps.length
+                          ? pendingSteps
+                              .map((id) => stepTitleMap.get(id) ?? id)
+                              .slice(0, 2)
+                              .join(', ')
+                          : 'All compliance questions captured'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-100 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-400">
+                        Latest artifact
+                      </p>
+                      {latestDoc ? (
+                        <>
+                          <p className="mt-1 text-base font-semibold text-slate-900">
+                            {DOCUMENT_LABELS[latestDoc.type] ?? latestDoc.type}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Generated{' '}
+                            {new Date(latestDoc.createdAt).toLocaleString(
+                              undefined,
+                              {
+                                dateStyle: 'medium',
+                                timeStyle: 'short',
+                              },
+                            )}
+                          </p>
+                        </>
                       ) : (
-                        <p className="text-sm text-slate-500">
-                          No comments yet. Share context with reviewers below.
+                        <p className="mt-1 text-sm text-slate-500">
+                          Generate documents to populate this summary.
                         </p>
                       )}
                     </div>
-                    <form
-                      className="mt-4 space-y-2"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        if (!currentSection || !commentBody.trim()) return;
-                        if (commentBody.trim().startsWith('/ai')) {
-                          suggestionFieldRef.current = activeField;
-                          suggestionMutation.mutate({
-                            hint: commentBody.trim().slice(3).trim(),
-                            partialContent: currentSection.content ?? {},
-                            targetField: activeField ?? undefined,
-                          });
-                          setCommentBody('');
-                          return;
-                        }
-                        commentMutation.mutate({
-                          sectionId: currentSection.id,
-                          body: commentBody.trim(),
-                        });
-                      }}
-                    >
-                      <textarea
-                        value={commentBody}
-                        onChange={(event) => setCommentBody(event.target.value)}
-                        placeholder="Add a note or question... (type /ai to request suggestions)"
-                        rows={3}
-                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                      />
-                      <div className="flex justify-end">
-                        <button
-                          type="submit"
-                          disabled={
-                            !commentBody.trim() || commentMutation.isPending
-                          }
-                          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                        >
-                          {commentMutation.isPending
-                            ? 'Posting...'
-                            : 'Post Comment'}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                ) : (
-                  <div className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-sm text-slate-500">
-                    Save this section to start a collaboration thread.
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="mt-6 space-y-4">
-                <ReviewApprovalPanel
-                  trackableSteps={trackableStepSummaries}
-                  projectStatusLabel={projectStatusLabel}
-                  projectStatusDisplay={projectStatusDisplay}
-                  onSendForReview={sendProjectForReview}
-                  sendForReviewLabel={sendForReviewLabel}
-                  onApprove={approveProject}
-                  onRequestChanges={requestChanges}
-                  reviewerId={selectedReviewerId}
-                  approverId={selectedApproverId}
-                  onReviewerChange={(value) =>
-                    setSelectedReviewerId(value || null)
-                  }
-                  onApproverChange={(value) =>
-                    setSelectedApproverId(value || null)
-                  }
-                  reviewMessage={reviewMessage}
-                  setReviewMessage={setReviewMessage}
-                  reviewers={reviewersQuery.data ?? []}
-                  availableReviewers={availableReviewers}
-                  canAssignSelf={canAssignSelf}
-                  canSendForReview={isOwner || canStartProjectReview}
-                  sendForReviewDisabled={sendForReviewDisabled}
-                  canApprove={canApproveProject && isPaidPlan}
-                  canRequestChanges={canRequestProjectChanges && isPaidPlan}
-                  disableAssignmentFields={disableAssignmentFields}
-                  userId={user?.id}
-                />
-                <div
-                  className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
-                  id="documents-panel"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        Framework coverage
+                    <div className="rounded-xl border border-rose-100 bg-rose-50/60 p-4 md:col-span-2">
+                      <p className="text-xs uppercase tracking-wide text-rose-500">
+                        Risk highlight
                       </p>
-                      <p className="text-xs text-slate-500">
-                        Select which deliverables to create (
-                        {selectedDocumentTypes.length}/
-                        {DOCUMENT_GENERATION_OPTIONS.length} selected).
+                      <p className="mt-1 text-sm text-rose-900">
+                        {riskSummaryText}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={resetDocumentSelections}
-                      disabled={selectionIsDefault}
-                      className="text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-40"
-                    >
-                      Reset to defaults
-                    </button>
                   </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {DOCUMENT_GENERATION_OPTIONS.map((option) => {
-                      const isSelected = selectedDocumentTypes.includes(
-                        option.type,
-                      );
-                      return (
-                        <label
-                          key={option.type}
-                          className={`flex cursor-pointer flex-col rounded-xl border px-4 py-3 text-left transition ${
-                            isSelected
-                              ? 'border-sky-400 bg-white shadow-sm shadow-sky-100'
-                              : 'border-slate-200 bg-white hover:border-slate-300'
-                          } ${!isOwner ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        >
-                          <input
-                            type="checkbox"
-                            className="sr-only"
-                            disabled={!isOwner}
-                            checked={isSelected}
-                            onChange={() => toggleDocumentType(option.type)}
-                          />
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">
-                                {option.label}
-                              </p>
-                              {option.framework ? (
-                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">
-                                  {option.framework}
-                                </p>
-                              ) : null}
-                            </div>
-                            <span
-                              className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[0.65rem] font-semibold ${
-                                isSelected
-                                  ? 'border-sky-500 bg-sky-500 text-white'
-                                  : 'border-slate-300 bg-slate-50 text-slate-400'
-                              }`}
-                            >
-                              {isSelected ? '✓' : '•'}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                            {option.description}
-                          </p>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-                {readinessQuery.data ? (
-                  <div
-                    className={`rounded-2xl border p-4 ${
-                      readinessQuery.data.status === 'ready'
-                        ? 'border-emerald-200 bg-emerald-50'
-                        : readinessQuery.data.status === 'partial'
-                          ? 'border-amber-200 bg-amber-50'
-                          : 'border-rose-200 bg-rose-50'
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          Documentation readiness: {readinessQuery.data.score}%
-                        </p>
-                        <p className="mt-1 text-sm text-slate-700">
-                          {readinessQuery.data.summary}
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-current/10 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
-                        {readinessQuery.data.status}
-                      </span>
-                    </div>
-                    {readinessQuery.data.missingCriticalFields.length ? (
-                      <p className="mt-3 text-xs text-slate-600">
-                        Missing critical fields:{' '}
-                        {readinessQuery.data.missingCriticalFields.join(', ')}
-                      </p>
-                    ) : null}
-                    {readinessQuery.data.weakSections.length ? (
-                      <p className="mt-2 text-xs text-slate-600">
-                        Weak sections:{' '}
-                        {readinessQuery.data.weakSections.join(', ')}
-                      </p>
-                    ) : null}
-                    {readinessQuery.data.status === 'partial' ? (
-                      <p className="mt-2 text-xs font-medium text-amber-700">
-                        Generation is allowed, but the output will be treated as
-                        a draft with a readiness notice.
-                      </p>
-                    ) : null}
-                    {readinessQuery.data.status === 'insufficient' ? (
-                      <p className="mt-2 text-xs font-medium text-rose-700">
-                        Full document generation is blocked until the missing
-                        critical fields are filled in.
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-                <button
-                  onClick={handleGenerateClick}
-                  disabled={
-                    !isOwner ||
-                    generateMutation.isPending ||
-                    !selectedDocumentTypes.length ||
-                    readinessQuery.data?.status === 'insufficient'
-                  }
-                  className="rounded-md bg-emerald-600 px-5 py-3 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
-                >
-                  {generateMutation.isPending
-                    ? 'Generating...'
-                    : 'Generate Documentation'}
-                </button>
-                {generateMutation.isSuccess && (
-                  <p className="text-sm text-emerald-600">
-                    Generation in progress. Documents will appear below when
-                    ready.
-                  </p>
-                )}
-                {generateMutation.isError && (
-                  <p className="text-sm text-rose-600">
-                    {getApiErrorMessage(generateMutation.error) ??
-                      'Unable to generate documents. Ensure each section has been saved and try again.'}
-                  </p>
-                )}
-                {planQuery.data &&
-                  usageQuery.data &&
-                  docLimit !== Number.MAX_SAFE_INTEGER && (
-                    <p className="mt-2 text-xs font-semibold text-slate-500">
-                      Plan allowance: {docLimit} docs/month · Used {docsUsed} ·
-                      Remaining {docsRemaining}. Select that many or fewer to
-                      generate.
-                    </p>
-                  )}
-              </div>
-            )}
-          </div>
+                </ProjectPanel>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Deliverables
-              </h3>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleZipDownload}
-                  className="text-sm font-medium text-slate-500 hover:text-slate-800"
-                >
-                  Download ZIP
-                </button>
-                <button
-                  onClick={() => documentsQuery.refetch()}
-                  className="text-sm font-medium text-sky-600 hover:text-sky-500"
-                >
-                  Refresh
-                </button>
-              </div>
-            </div>
-            {documentsQuery.data?.length ? (
-              <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                {Array.from(documentsGrouping.groups.entries()).map(
-                  ([type, docs]) => {
-                    const latest = docs[0];
-                    const previous = docs.slice(1, 3);
-                    const version =
-                      documentsGrouping.versions.get(latest.id) ?? docs.length;
-                    return (
-                      <div
-                        key={type}
-                        className="rounded-2xl border border-slate-200 p-4"
-                      >
-                        <div className="flex items-start justify-between">
+                <ProjectPanel>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    Activity Timeline
+                  </h3>
+                  <div className="mt-4 space-y-4">
+                    {timelineEvents.length ? (
+                      timelineEvents.map((event) => (
+                        <div key={event.id} className="flex gap-3">
+                          <div
+                            className={`mt-1 h-3 w-3 rounded-full ${
+                              event.type === 'section'
+                                ? 'bg-sky-500'
+                                : 'bg-emerald-500'
+                            }`}
+                          />
                           <div>
-                            <p className="text-sm uppercase tracking-wide text-slate-400">
-                              {DOCUMENT_LABELS[type] ?? type}
+                            <p className="text-sm font-medium text-slate-900">
+                              {event.label}
                             </p>
-                            <h4 className="text-xl font-semibold text-slate-900">
-                              Version {version}
-                            </h4>
                             <p className="text-xs text-slate-500">
-                              Updated{' '}
-                              {new Date(latest.createdAt).toLocaleString(
+                              {new Date(event.timestamp).toLocaleString(
                                 undefined,
                                 {
                                   dateStyle: 'medium',
                                   timeStyle: 'short',
                                 },
                               )}
+                              {event.meta ? ` · ${event.meta}` : ''}
                             </p>
                           </div>
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                            {docs.length} total
-                          </span>
                         </div>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <button
-                            onClick={() => handlePreview(latest)}
-                            className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                          >
-                            Preview
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleDownload(latest.id, latest.type)
-                            }
-                            disabled={downloadingId === latest.id}
-                            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-                          >
-                            {downloadingId === latest.id
-                              ? 'Downloading...'
-                              : 'Download'}
-                          </button>
-                        </div>
-                          {previous.length > 0 && (
-                          <details className="mt-4 border-t border-slate-100 pt-4">
-                            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-400">
-                              Version history ({previous.length})
-                            </summary>
-                            <ul className="mt-2 space-y-2 text-xs text-slate-500">
-                              {previous.map((doc: DocumentItem) => {
-                                const ver =
-                                  documentsGrouping.versions.get(doc.id) ?? 1;
-                                return (
-                                  <li
-                                    key={doc.id}
-                                    className="flex items-center justify-between"
-                                  >
-                                    <span>
-                                      v{ver} ·{' '}
-                                      {new Date(
-                                        doc.createdAt,
-                                      ).toLocaleDateString()}{' '}
-                                      {new Date(
-                                        doc.createdAt,
-                                      ).toLocaleTimeString([], {
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                      })}
-                                    </span>
-                                    <button
-                                      onClick={() =>
-                                        handleDownload(doc.id, doc.type)
-                                      }
-                                      className="text-sky-600 hover:text-sky-500"
-                                    >
-                                      Download
-                                    </button>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </details>
-                        )}
-                      </div>
-                    );
-                  },
-                )}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-500">
-                {documentsQuery.isLoading
-                  ? 'Fetching documents...'
-                  : 'No documents yet. Generate them from the review step.'}
-              </p>
-            )}
-          </div>
-
-          <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
-            <summary className="cursor-pointer text-lg font-semibold text-slate-900">
-              Project intelligence
-            </summary>
-          <div className="mt-4 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h3 className="text-lg font-semibold text-slate-900">Insights</h3>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-xl border border-slate-100 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Pending sections
-                  </p>
-                  <p className="mt-1 text-3xl font-semibold text-slate-900">
-                    {pendingSteps.length}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {pendingSteps.length
-                      ? pendingSteps
-                          .map((id) => stepTitleMap.get(id) ?? id)
-                          .slice(0, 2)
-                          .join(', ')
-                      : 'All compliance questions captured'}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-100 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Latest artifact
-                  </p>
-                  {latestDoc ? (
-                    <>
-                      <p className="mt-1 text-base font-semibold text-slate-900">
-                        {DOCUMENT_LABELS[latestDoc.type] ?? latestDoc.type}
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500">
+                        No activity yet. Save a section or generate documents to
+                        see timeline updates.
                       </p>
-                      <p className="text-xs text-slate-500">
-                        Generated{' '}
-                        {new Date(latestDoc.createdAt).toLocaleString(
-                          undefined,
-                          {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          },
-                        )}
-                      </p>
-                    </>
+                    )}
+                  </div>
+                </ProjectPanel>
+                <ProjectPanel>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    Risk Heatmap
+                  </h3>
+                  {riskEntries.length ? (
+                    <div className="mt-4 overflow-auto">
+                      <table className="w-full border-collapse text-xs">
+                        <thead>
+                          <tr>
+                            <th className="border border-slate-200 px-2 py-1 text-left text-slate-500">
+                              Severity \ Likelihood
+                            </th>
+                            {likelihoodLevels.map((level) => (
+                              <th
+                                key={level}
+                                className="border border-slate-200 px-2 py-1 text-slate-600"
+                              >
+                                {level}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {riskHeatmap.map((row, rowIndex) => (
+                            <tr key={severityLevels[rowIndex]}>
+                              <td className="border border-slate-200 px-2 py-1 text-slate-600">
+                                {severityLevels[rowIndex]}
+                              </td>
+                              {row.map((cell, colIndex) => (
+                                <td
+                                  key={`${rowIndex}-${colIndex}`}
+                                  className="border border-slate-200 px-2 py-2 align-top"
+                                >
+                                  {cell.items.length ? (
+                                    <ul className="space-y-1">
+                                      {cell.items
+                                        .slice(0, 2)
+                                        .map((item, idx) => (
+                                          <li
+                                            key={idx}
+                                            className="rounded bg-rose-50 px-2 py-1 text-[11px] text-rose-700"
+                                          >
+                                            {item.description ||
+                                              item.risk ||
+                                              'Risk'}
+                                          </li>
+                                        ))}
+                                      {cell.items.length > 2 && (
+                                        <li className="text-[10px] text-slate-400">
+                                          +{cell.items.length - 2} more
+                                        </li>
+                                      )}
+                                    </ul>
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   ) : (
-                    <p className="mt-1 text-sm text-slate-500">
-                      Generate documents to populate this summary.
+                    <p className="mt-4 text-sm text-slate-500">
+                      Provide structured risk entries (severity & likelihood) to
+                      see this visualization.
+                    </p>
+                  )}
+                </ProjectPanel>
+              </div>
+            </details>
+
+            <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                Reminders
+              </summary>
+              <ProjectPanel className="mt-4">
+                <div className="flex items-center justify-end">
+                  <button
+                    onClick={() => remindersQuery.refetch()}
+                    className="text-sm font-medium text-sky-600 hover:text-sky-500"
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <form
+                  className="mt-4 grid gap-3 md:grid-cols-[2fr_1fr_auto]"
+                  onSubmit={handleReminderSubmit}
+                >
+                  <input
+                    value={reminderForm.message}
+                    onChange={(event) =>
+                      setReminderForm((prev) => ({
+                        ...prev,
+                        message: event.target.value,
+                      }))
+                    }
+                    placeholder="Follow up with legal..."
+                    className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={reminderForm.dueAt}
+                    onChange={(event) =>
+                      setReminderForm((prev) => ({
+                        ...prev,
+                        dueAt: event.target.value,
+                      }))
+                    }
+                    className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  />
+                  <button
+                    type="submit"
+                    disabled={createReminderMutation.isPending}
+                    className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                  >
+                    Add
+                  </button>
+                </form>
+                <div className="mt-4 space-y-3">
+                  {remindersQuery.data?.length ? (
+                    remindersQuery.data.map((reminder) => (
+                      <div
+                        key={reminder.id}
+                        className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3"
+                      >
+                        <div>
+                          <p
+                            className={`text-sm font-medium ${
+                              reminder.completed
+                                ? 'text-slate-400 line-through'
+                                : 'text-slate-900'
+                            }`}
+                          >
+                            {reminder.message}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Due{' '}
+                            {new Date(reminder.dueAt).toLocaleString(
+                              undefined,
+                              {
+                                dateStyle: 'medium',
+                                timeStyle: 'short',
+                              },
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() =>
+                            updateReminderMutation.mutate({
+                              id: reminder.id,
+                              completed: !reminder.completed,
+                            })
+                          }
+                          className="text-xs font-semibold text-sky-600 hover:text-sky-500"
+                        >
+                          {reminder.completed ? 'Reopen' : 'Mark done'}
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      No reminders yet. Schedule nudges to keep the project on
+                      track.
                     </p>
                   )}
                 </div>
-                <div className="rounded-xl border border-rose-100 bg-rose-50/60 p-4 md:col-span-2">
-                  <p className="text-xs uppercase tracking-wide text-rose-500">
-                    Risk highlight
-                  </p>
-                  <p className="mt-1 text-sm text-rose-900">
-                    {riskSummaryText}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Activity Timeline
-              </h3>
-              <div className="mt-4 space-y-4">
-                {timelineEvents.length ? (
-                  timelineEvents.map((event) => (
-                    <div key={event.id} className="flex gap-3">
-                      <div
-                        className={`mt-1 h-3 w-3 rounded-full ${
-                          event.type === 'section'
-                            ? 'bg-sky-500'
-                            : 'bg-emerald-500'
-                        }`}
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">
-                          {event.label}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {new Date(event.timestamp).toLocaleString(undefined, {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })}
-                          {event.meta ? ` · ${event.meta}` : ''}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500">
-                    No activity yet. Save a section or generate documents to see
-                    timeline updates.
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Risk Heatmap
-              </h3>
-              {riskEntries.length ? (
-                <div className="mt-4 overflow-auto">
-                  <table className="w-full border-collapse text-xs">
-                    <thead>
-                      <tr>
-                        <th className="border border-slate-200 px-2 py-1 text-left text-slate-500">
-                          Severity \ Likelihood
-                        </th>
-                        {likelihoodLevels.map((level) => (
-                          <th
-                            key={level}
-                            className="border border-slate-200 px-2 py-1 text-slate-600"
-                          >
-                            {level}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {riskHeatmap.map((row, rowIndex) => (
-                        <tr key={severityLevels[rowIndex]}>
-                          <td className="border border-slate-200 px-2 py-1 text-slate-600">
-                            {severityLevels[rowIndex]}
-                          </td>
-                          {row.map((cell, colIndex) => (
-                            <td
-                              key={`${rowIndex}-${colIndex}`}
-                              className="border border-slate-200 px-2 py-2 align-top"
-                            >
-                              {cell.items.length ? (
-                                <ul className="space-y-1">
-                                  {cell.items.slice(0, 2).map((item, idx) => (
-                                    <li
-                                      key={idx}
-                                      className="rounded bg-rose-50 px-2 py-1 text-[11px] text-rose-700"
-                                    >
-                                      {item.description || item.risk || 'Risk'}
-                                    </li>
-                                  ))}
-                                  {cell.items.length > 2 && (
-                                    <li className="text-[10px] text-slate-400">
-                                      +{cell.items.length - 2} more
-                                    </li>
-                                  )}
-                                </ul>
-                              ) : (
-                                <span className="text-slate-400">—</span>
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="mt-4 text-sm text-slate-500">
-                  Provide structured risk entries (severity & likelihood) to see
-                  this visualization.
-                </p>
-              )}
-            </div>
-          </div>
-          </details>
-
-          <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
-              Reminders
-            </summary>
-            <div className="mt-4">
-            <div className="flex items-center justify-end">
-              <button
-                onClick={() => remindersQuery.refetch()}
-                className="text-sm font-medium text-sky-600 hover:text-sky-500"
-              >
-                Refresh
-              </button>
-            </div>
+              </ProjectPanel>
+            </details>
+          </section>
+        </div>
+        {templateDialogOpen && (
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 p-4"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setTemplateDialogOpen(false);
+              }
+            }}
+          >
             <form
-              className="mt-4 grid gap-3 md:grid-cols-[2fr_1fr_auto]"
-              onSubmit={handleReminderSubmit}
+              onSubmit={submitTemplate}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="template-dialog-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
             >
-              <input
-                value={reminderForm.message}
-                onChange={(event) =>
-                  setReminderForm((prev) => ({
-                    ...prev,
-                    message: event.target.value,
-                  }))
-                }
-                placeholder="Follow up with legal..."
-                className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-              />
-              <input
-                type="datetime-local"
-                value={reminderForm.dueAt}
-                onChange={(event) =>
-                  setReminderForm((prev) => ({
-                    ...prev,
-                    dueAt: event.target.value,
-                  }))
-                }
-                className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-              />
-              <button
-                type="submit"
-                disabled={createReminderMutation.isPending}
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+              <h2
+                id="template-dialog-title"
+                className="text-lg font-semibold text-slate-900"
               >
-                Add
-              </button>
+                Save as template
+              </h2>
+              <label
+                htmlFor="template-name"
+                className="mt-4 block text-sm font-medium text-slate-700"
+              >
+                Template name
+              </label>
+              <input
+                id="template-name"
+                autoFocus
+                value={templateName}
+                onChange={(event) => setTemplateName(event.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              />
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTemplateDialogOpen(false)}
+                  className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveTemplateMutation.isPending}
+                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {saveTemplateMutation.isPending
+                    ? 'Saving...'
+                    : 'Save template'}
+                </button>
+              </div>
             </form>
-            <div className="mt-4 space-y-3">
-              {remindersQuery.data?.length ? (
-                remindersQuery.data.map((reminder) => (
-                  <div
-                    key={reminder.id}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3"
-                  >
-                    <div>
-                      <p
-                        className={`text-sm font-medium ${
-                          reminder.completed
-                            ? 'text-slate-400 line-through'
-                            : 'text-slate-900'
-                        }`}
-                      >
-                        {reminder.message}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Due{' '}
-                        {new Date(reminder.dueAt).toLocaleString(undefined, {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        })}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() =>
-                        updateReminderMutation.mutate({
-                          id: reminder.id,
-                          completed: !reminder.completed,
-                        })
-                      }
-                      className="text-xs font-semibold text-sky-600 hover:text-sky-500"
-                    >
-                      {reminder.completed ? 'Reopen' : 'Mark done'}
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">
-                  No reminders yet. Schedule nudges to keep the project on
-                  track.
-                </p>
-              )}
-            </div>
-            </div>
-          </details>
-        </section>
-      </div>
-      <TemplateLibraryModal
-        open={manageModalOpen}
-        onClose={() => setManageModalOpen(false)}
-        templates={templatesQuery.data ?? []}
-        selectedTemplates={selectedTemplates}
-        toggleSelection={toggleTemplateSelection}
-        bulkAction={bulkAction}
-        setBulkAction={setBulkAction}
-        executeBulkAction={executeBulkAction}
-        updateTemplate={(payload) => updateTemplateMutation.mutate(payload)}
-        deleteTemplate={(id) => deleteTemplateMutation.mutate(id)}
-        userId={user?.id}
-      />
+          </div>
+        )}
+        {approvalDialogOpen && (
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 p-4"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setApprovalDialogOpen(false);
+              }
+            }}
+          >
+            <form
+              onSubmit={submitApproval}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="approval-dialog-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            >
+              <h2
+                id="approval-dialog-title"
+                className="text-lg font-semibold text-slate-900"
+              >
+                Approve project
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Enter your signature to record this approval.
+              </p>
+              <label
+                htmlFor="approval-signature"
+                className="mt-4 block text-sm font-medium text-slate-700"
+              >
+                Signature
+              </label>
+              <input
+                id="approval-signature"
+                autoFocus
+                value={approvalSignature}
+                onChange={(event) => setApprovalSignature(event.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              />
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setApprovalDialogOpen(false)}
+                  className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={workflow.isPending}
+                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                >
+                  {workflow.isPending ? 'Approving...' : 'Approve project'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+        <TemplateLibraryModal
+          open={manageModalOpen}
+          onClose={() => setManageModalOpen(false)}
+          templates={templatesQuery.data ?? []}
+          selectedTemplates={selectedTemplates}
+          toggleSelection={toggleTemplateSelection}
+          bulkAction={bulkAction}
+          setBulkAction={setBulkAction}
+          executeBulkAction={executeBulkAction}
+          updateTemplate={(payload) => updateTemplateMutation.mutate(payload)}
+          deleteTemplate={(id) => deleteTemplateMutation.mutate(id)}
+          userId={user?.id}
+        />
       </div>
       <DocumentPreviewModal
         isOpen={Boolean(previewDoc)}

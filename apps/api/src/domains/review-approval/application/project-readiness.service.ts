@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BlockingCommentChecker } from './blocking-comment-checker';
-import {
-  IncompleteAssessmentError,
-  MissingEvidenceError,
-} from '../domain/workflow-errors';
+import { IncompleteAssessmentError } from '../domain/workflow-errors';
 import {
   ProjectWorkflowAggregate,
   WorkflowReadinessResult,
@@ -66,21 +63,27 @@ export class ProjectReadinessService {
           : 'Approver must be assigned',
       },
       {
-        key: 'required_sections_approved',
+        key: 'required_sections_complete',
         passed:
           project.sections.length > 0 &&
-          project.sections.every(
-            (section) =>
-              section.workflowStatus === SectionWorkflowStatus.APPROVED,
+          project.sections.every((section) =>
+            [
+              SectionWorkflowStatus.COMPLETE,
+              SectionWorkflowStatus.IN_REVIEW,
+              SectionWorkflowStatus.APPROVED,
+            ].includes(section.workflowStatus),
           ),
         message:
           project.sections.length > 0 &&
-          project.sections.every(
-            (section) =>
-              section.workflowStatus === SectionWorkflowStatus.APPROVED,
+          project.sections.every((section) =>
+            [
+              SectionWorkflowStatus.COMPLETE,
+              SectionWorkflowStatus.IN_REVIEW,
+              SectionWorkflowStatus.APPROVED,
+            ].includes(section.workflowStatus),
           )
-            ? 'All required sections are approved'
-            : 'All required sections must be approved',
+            ? 'All required sections are complete'
+            : 'Every section must be complete before approval',
       },
     ];
     const blocking = await this.blockingComments.checkProject(project.id);
@@ -99,9 +102,6 @@ export class ProjectReadinessService {
   async assertReadyForApproval(project: ProjectWorkflowAggregate) {
     const readiness = await this.getApprovalReadiness(project);
     const failing = readiness.checks.find((check) => !check.passed);
-    if (failing?.key === 'required_sections_approved') {
-      throw new MissingEvidenceError(failing.message);
-    }
     if (failing) {
       throw new IncompleteAssessmentError(failing.message);
     }

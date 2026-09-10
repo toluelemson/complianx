@@ -7,7 +7,7 @@ import {
   RefreshCcw,
   Sparkles,
 } from 'lucide-react';
-import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
+import { AppShell } from '@/app/layout/AppShell';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -533,8 +533,7 @@ export default function EuAiActGeneratorDemoPage() {
   };
 
   return (
-    <>
-      <SiteHeader />
+    <AppShell>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.07),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-7xl space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -762,7 +761,7 @@ export default function EuAiActGeneratorDemoPage() {
           </div>
         </div>
       </div>
-    </>
+    </AppShell>
   );
 }
 

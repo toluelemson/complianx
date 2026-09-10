@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
+import { Panel } from '@/shared/components/ui/panel';
 
 export default function CompanyPage() {
   const { user, activeCompanyId, setActiveCompany } = useAuth();
@@ -376,7 +377,7 @@ export default function CompanyPage() {
             </CardContent>
           </Card>
           {isCompanyAdmin && (
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+            <Panel className="mt-6">
               <p className="text-sm font-semibold text-slate-900">
                 Invitations
               </p>
@@ -438,7 +439,7 @@ export default function CompanyPage() {
                   ))
                 )}
               </div>
-            </div>
+            </Panel>
           )}
         </>
       )}

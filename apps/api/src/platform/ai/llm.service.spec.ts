@@ -32,4 +32,19 @@ describe('LlmService', () => {
       expect.anything(),
     );
   });
+
+  it('returns fallback text when the provider rejects credentials', async () => {
+    const post = jest.fn().mockRejectedValue({ response: { status: 401 } });
+    mockedAxios.create.mockReturnValue({ post } as any);
+
+    const config = new ConfigService({
+      LLM_BASE_URL: 'https://llm.local',
+      LLM_API_KEY: 'invalid-key',
+    });
+    const service = new LlmService(config);
+
+    await expect(
+      service.generate('model_card', { foo: 'bar' }),
+    ).resolves.toContain('temporarily unavailable');
+  });
 });

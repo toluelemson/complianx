@@ -227,7 +227,7 @@ model Invitation {
 
 model ProjectStatusEvent {
   id        String        @id @default(uuid())
-  status    ProjectStatus
+  status    ProjectWorkflowStatus
   note      String?
   signature String?
   createdAt DateTime      @default(now())
@@ -239,7 +239,7 @@ model ProjectStatusEvent {
 
 model SectionStatusEvent {
   id        String        @id @default(uuid())
-  status    SectionStatus
+  status    SectionWorkflowStatus
   note      String?
   signature String?
   createdAt DateTime      @default(now())

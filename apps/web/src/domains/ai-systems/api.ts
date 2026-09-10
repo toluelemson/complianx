@@ -306,3 +306,11 @@ export async function runProjectWorkflowAction(payload: {
   const { data } = await api.post(payload.endpoint, payload.body ?? {});
   return data;
 }
+
+export async function completeProjectSections(sectionIds: string[]) {
+  await Promise.all(
+    sectionIds.map((sectionId) =>
+      api.post(`/sections/${sectionId}/workflow/complete`, {}),
+    ),
+  );
+}

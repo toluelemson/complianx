@@ -96,27 +96,6 @@ export function AppShell({
     return sections;
   }, [user]);
   const closeMobileMenu = () => setMobileMenuOpen(false);
-  const renderDesktopNav = () =>
-    navSections.map((section, idx) => (
-      <div key={section.title} className="flex items-center gap-4">
-        {idx > 0 && (
-          <span
-            className="hidden h-5 w-px bg-slate-200 lg:block"
-            aria-hidden="true"
-          />
-        )}
-        {section.links.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            onClick={closeMobileMenu}
-            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-          >
-            {link.label}
-          </Link>
-        ))}
-      </div>
-    ));
   const renderSidebarNav = () =>
     navSections.map((section) => (
       <div key={section.title} className="hz-sidebar__section">
@@ -295,12 +274,7 @@ export function AppShell({
               </Button>
             </div>
           </div>
-          <div className="hidden items-center justify-between gap-6 border-t border-slate-200/70 py-3 lg:flex">
-            <nav className="min-w-0 overflow-x-auto">
-              <div className="flex min-w-max items-center gap-6">
-                {renderDesktopNav()}
-              </div>
-            </nav>
+          <div className="hidden items-center justify-end gap-6 border-t border-slate-200/70 py-3 lg:flex">
             <div className="flex shrink-0 items-center gap-3">
               {user?.companies && user.companies.length > 1 && (
                 <Select

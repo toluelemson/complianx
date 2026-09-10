@@ -1,10 +1,11 @@
 // Billing domain route.
 import { AppShell } from '@/app/layout/AppShell';
+import { Panel } from '@/shared/components/ui/panel';
 
 export default function BillingLandingPage() {
   return (
     <AppShell title="Billing" initialBillingOpen>
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6 text-center">
+      <Panel className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
         <p className="text-lg font-semibold text-slate-900">
           Opening billing settings…
         </p>
@@ -12,7 +13,8 @@ export default function BillingLandingPage() {
           We redirect you to the billing modal automatically. If nothing
           happens, open the modal using the Billing button in the header.
         </p>
-      </div>
+      </Panel>
     </AppShell>
   );
 }
+import { Panel } from '@/shared/components/ui/panel';
