@@ -1232,7 +1232,10 @@ export default function ProjectPage() {
     : 'Not saved yet';
 
   return (
-    <AppShell title={projectQuery.data?.name ?? 'Project'}>
+    <AppShell
+      title={projectQuery.data?.name ?? 'Project'}
+      projectId={projectId}
+    >
       <div className="hz-project-page">
         <div id="overview" className="hz-project-summary mb-6">
           <ProjectPanel>

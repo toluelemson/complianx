@@ -61,7 +61,7 @@ export default function CompliancePackagePage() {
   };
 
   return (
-    <AppShell title="Compliance package">
+    <AppShell title="Compliance package" projectId={projectId}>
       <div className="hz-console-content space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

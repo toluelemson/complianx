@@ -23,12 +23,14 @@ interface AppShellProps {
   title?: string;
   children: ReactNode;
   initialBillingOpen?: boolean;
+  projectId?: string;
 }
 
 export function AppShell({
   title,
   children,
   initialBillingOpen = false,
+  projectId,
 }: AppShellProps) {
   const { logout, user, activeCompanyId, setActiveCompany } = useAuth();
   const qc = useQueryClient();
@@ -92,11 +94,43 @@ export function AppShell({
     const sections = primary.length
       ? [{ title: 'Navigation', links: primary }]
       : [];
+    if (projectId) {
+      sections.push({
+        title: 'Project workspace',
+        links: [
+          {
+            label: 'Overview',
+            to: `/projects/${projectId}/overview`,
+            show: true,
+          },
+          {
+            label: 'Requirements',
+            to: `/projects/${projectId}/requirements`,
+            show: true,
+          },
+          {
+            label: 'Evidence',
+            to: `/projects/${projectId}/evidence`,
+            show: true,
+          },
+          {
+            label: 'Compliance package',
+            to: `/projects/${projectId}/compliance-package`,
+            show: true,
+          },
+          {
+            label: 'Review & approval',
+            to: `/projects/${projectId}/review-approval`,
+            show: true,
+          },
+        ],
+      });
+    }
     if (admin.length) {
       sections.push({ title: 'Admin', links: admin });
     }
     return sections;
-  }, [user]);
+  }, [projectId, user]);
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const renderSidebarNav = () =>
     navSections.map((section) => (

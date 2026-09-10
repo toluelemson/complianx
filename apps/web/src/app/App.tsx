@@ -46,6 +46,24 @@ const CompliancePackagePage = lazy(
 const ProjectPage = lazy(
   () => import('@/domains/ai-systems/pages/ProjectPage'),
 );
+const ProjectOverviewPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectOverviewPage'),
+);
+const ProjectMessagesPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectMessagesPage'),
+);
+const ProjectProfilePage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectProfilePage'),
+);
+const ProjectRequirementsPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectRequirementsPage'),
+);
+const ProjectEvidencePage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectEvidencePage'),
+);
+const ProjectReviewPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectReviewPage'),
+);
 const ProjectTrustPage = lazy(
   () => import('@/domains/assessments/pages/ProjectTrustPage'),
 );
@@ -132,6 +150,62 @@ function App() {
           element={
             <ProtectedRoute>
               <CompliancePackagePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/overview"
+          element={
+            <ProtectedRoute>
+              <ProjectOverviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/messages"
+          element={
+            <ProtectedRoute>
+              <ProjectMessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/organization-profile"
+          element={
+            <ProtectedRoute>
+              <ProjectProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/ai-system-profile"
+          element={
+            <ProtectedRoute>
+              <ProjectProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/requirements"
+          element={
+            <ProtectedRoute>
+              <ProjectRequirementsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/evidence"
+          element={
+            <ProtectedRoute>
+              <ProjectEvidencePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/review-approval"
+          element={
+            <ProtectedRoute>
+              <ProjectReviewPage />
             </ProtectedRoute>
           }
         />
