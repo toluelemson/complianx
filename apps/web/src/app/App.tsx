@@ -64,6 +64,9 @@ const ProjectEvidencePage = lazy(
 const ProjectReviewPage = lazy(
   () => import('@/domains/ai-systems/pages/ProjectReviewPage'),
 );
+const ProjectFindingsPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectFindingsPage'),
+);
 const ProjectQuestionnairePage = lazy(
   () => import('@/domains/ai-systems/pages/ProjectQuestionnairePage'),
 );
@@ -209,6 +212,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ProjectReviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/findings"
+          element={
+            <ProtectedRoute>
+              <ProjectFindingsPage />
             </ProtectedRoute>
           }
         />

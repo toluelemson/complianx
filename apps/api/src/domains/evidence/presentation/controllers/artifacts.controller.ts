@@ -64,6 +64,7 @@ export class ArtifactsController {
     @Body('description') description?: string,
     @Body('purpose') purpose?: 'DATASET' | 'MODEL' | 'GENERIC',
     @Body('source') source?: string,
+    @Body('validFrom') validFrom?: string,
     @Body('expiresAt') expiresAt?: string,
     @Body('externalUrl') externalUrl?: string,
     @Body('provenanceNote') provenanceNote?: string,
@@ -77,7 +78,7 @@ export class ArtifactsController {
       file,
       description,
       purpose,
-      { source, expiresAt, externalUrl, provenanceNote },
+      { source, validFrom, expiresAt, externalUrl, provenanceNote },
     );
   }
 
@@ -114,6 +115,7 @@ export class ArtifactsController {
       req.user.userId,
       dto.status,
       dto.comment,
+      this.resolveCompanyId(req),
     );
   }
 }

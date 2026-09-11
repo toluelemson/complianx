@@ -42,6 +42,22 @@ export type StatusEvent = {
   actor?: UserRef;
 };
 
+export type AuditEvent = {
+  id: string;
+  companyId: string;
+  projectId?: string | null;
+  entityType: string;
+  entityId: string;
+  action: string;
+  beforeSnapshot?: Record<string, unknown> | null;
+  afterSnapshot?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  eventHash: string;
+  previousHash?: string | null;
+  createdAt: string;
+  actor?: UserRef;
+};
+
 export type SectionArtifactItem = {
   id: string;
   originalName: string;

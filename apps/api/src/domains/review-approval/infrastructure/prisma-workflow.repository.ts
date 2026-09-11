@@ -252,10 +252,8 @@ export class PrismaWorkflowRepository
       });
       if (!current) throw new NotFoundException('Project not found');
       if (
-        toProjectWorkflowStatus(current.workflowStatus) !==
-          ProjectWorkflowStatus.DRAFT ||
-        (typeof request.expectedVersion === 'number' &&
-          current.workflowVersion !== request.expectedVersion)
+        typeof request.expectedVersion === 'number' &&
+        current.workflowVersion !== request.expectedVersion
       )
         throw new WorkflowVersionConflictError();
       const reviewerId = request.reviewerId ?? current.reviewerId;

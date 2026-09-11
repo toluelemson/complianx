@@ -31,12 +31,36 @@ export class ReadinessReportController {
     );
   }
 
+  @Post('package')
+  createPackage(
+    @Param('aiSystemId') aiSystemId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.reports.createPackage(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+    );
+  }
+
   @Get()
   list(
     @Param('aiSystemId') aiSystemId: string,
     @Req() req: AuthenticatedRequest,
   ) {
     return this.reports.list(aiSystemId, req.user.userId, this.companyId(req));
+  }
+
+  @Get('packages')
+  listPackages(
+    @Param('aiSystemId') aiSystemId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.reports.listPackages(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+    );
   }
 
   @Get(':reportId')

@@ -2,6 +2,7 @@ import api from '@/platform/api/client';
 import type { NewProjectFormValues } from './components/NewProjectModal';
 import type {
   ArtifactStatus,
+  AuditEvent,
   AutosaveRecord,
   BillingPlan,
   BillingUsage,
@@ -19,6 +20,13 @@ import type {
   TemplateItem,
   TemplateUpdatePayload,
 } from '@complianx/contracts/ai-systems';
+
+export async function listProjectAuditEvents(projectId: string) {
+  const { data } = await api.get<AuditEvent[]>(
+    `/projects/${projectId}/audit-events`,
+  );
+  return data;
+}
 
 export async function listProjects() {
   const { data } = await api.get<ProjectListItem[]>('/projects');
@@ -181,6 +189,48 @@ export async function listProjectObligations(projectId: string) {
   }));
 }
 
+export async function listProjectFindings(projectId: string) {
+  const { data } = await api.get<
+    Array<{
+      id: string;
+      source: string;
+      severity: string;
+      status: string;
+      description: string;
+      owner?: { id: string; email: string } | null;
+      obligation?: { obligation?: { key?: string; title: string } } | null;
+      actions: Array<{ id: string; status: string }>;
+    }>
+  >(`/ai-systems/${projectId}/findings`);
+  return data;
+}
+
+export async function createProjectFinding(
+  projectId: string,
+  payload: {
+    obligationId?: string;
+    source: 'ASSESSMENT' | 'EVIDENCE_REVIEW' | 'MONITORING' | 'MANUAL_REVIEW';
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    description: string;
+    ownerId?: string;
+  },
+) {
+  const { data } = await api.post(`/ai-systems/${projectId}/findings`, payload);
+  return data;
+}
+
+export async function updateProjectFinding(
+  projectId: string,
+  findingId: string,
+  payload: { status?: string; resolutionSummary?: string },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/findings/${findingId}`,
+    payload,
+  );
+  return data;
+}
+
 export async function updateProjectObligation(
   projectId: string,
   obligationId: string,
@@ -340,6 +390,30 @@ export async function generateProjectDocuments(
   const { data } = await api.post<DocumentItem[]>(
     `/projects/${projectId}/generate`,
     payload,
+  );
+  return data;
+}
+
+export type CompliancePackageRecord = {
+  id: string;
+  projectId: string;
+  version: number;
+  status: string;
+  manifest: Record<string, unknown>;
+  manifestHash: string;
+  createdAt: string;
+};
+
+export async function createCompliancePackage(projectId: string) {
+  const { data } = await api.post<CompliancePackageRecord>(
+    `/ai-systems/${projectId}/reports/package`,
+  );
+  return data;
+}
+
+export async function listCompliancePackages(projectId: string) {
+  const { data } = await api.get<CompliancePackageRecord[]>(
+    `/ai-systems/${projectId}/reports/packages`,
   );
   return data;
 }

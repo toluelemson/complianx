@@ -3,6 +3,9 @@ import {
   AssessmentStatus,
   ClassificationReviewStatus,
   ObligationStatus,
+  FindingStatus,
+  FindingSeverity,
+  FindingSource,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../../platform/database/prisma.service';
@@ -12,6 +15,9 @@ import { CreateComplianceActionDto } from '../../presentation/dto/create-complia
 import { UpdateComplianceActionDto } from '../../presentation/dto/update-compliance-action.dto';
 import { UpdateObligationDto } from '../../presentation/dto/update-obligation.dto';
 import { ReviewClassificationDto } from '../../presentation/dto/review-classification.dto';
+import { AuditService } from '../../../audit/application/audit.service';
+import { CreateFindingDto } from '../../presentation/dto/create-finding.dto';
+import { UpdateFindingDto } from '../../presentation/dto/update-finding.dto';
 
 @Injectable()
 export class AssessmentsService {
@@ -19,6 +25,7 @@ export class AssessmentsService {
     private readonly prisma: PrismaService,
     private readonly projects: ProjectsService,
     private readonly classification: EuAiActClassificationService,
+    private readonly audit: AuditService,
   ) {}
 
   async create(
@@ -62,7 +69,7 @@ export class AssessmentsService {
     if (entries.length !== Object.keys(answers).length) {
       throw new NotFoundException('Invalid assessment question key');
     }
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.assessment.update({
         where: { id: assessment.id },
         data: {
@@ -93,6 +100,17 @@ export class AssessmentsService {
       }
       return updated;
     });
+    await this.audit.record({
+      companyId,
+      projectId: assessment.projectId,
+      actorId: userId,
+      entityType: 'Assessment',
+      entityId: assessment.id,
+      action: 'ANSWERS_UPDATED',
+      afterSnapshot: answers as Prisma.InputJsonValue,
+      metadata: { questionKeys: entries.map(([key]) => key) },
+    });
+    return updated;
   }
 
   async listAnswers(assessmentId: string, userId: string, companyId: string) {
@@ -139,7 +157,7 @@ export class AssessmentsService {
       answers,
       assessment.packVersion,
     );
-    return this.prisma.$transaction(async (tx) => {
+    const classification = await this.prisma.$transaction(async (tx) => {
       await tx.assessment.update({
         where: { id: assessment.id },
         data: { status: AssessmentStatus.CLASSIFIED },
@@ -154,7 +172,13 @@ export class AssessmentsService {
           ambiguityFlags: result.ambiguity_flags as Prisma.InputJsonValue,
           frameworkKey: 'eu-ai-act',
           regulatoryContentVersion: assessment.packVersion.version,
-          ruleSetVersion: 'eu-ai-act-rules-1',
+          ruleSetVersion:
+            assessment.packVersion.ruleSetVersion ??
+            'classification-rules-1.0.0',
+          questionnaireVersion:
+            assessment.packVersion.questionnaireVersion ??
+            'classification-questionnaire-1.0.0',
+          evaluatedById: userId,
           inputFacts: assessment.answers as Prisma.InputJsonValue,
           rulesTriggered: result.reasoning_trace as Prisma.InputJsonValue,
           missingInformation:
@@ -171,6 +195,22 @@ export class AssessmentsService {
       );
       return classification;
     });
+    await this.audit.record({
+      companyId,
+      projectId: assessment.projectId,
+      actorId: userId,
+      entityType: 'ClassificationResult',
+      entityId: classification.id,
+      action: 'CLASSIFIED',
+      afterSnapshot: classification.resultSnapshot as Prisma.InputJsonValue,
+      metadata: {
+        assessmentId: assessment.id,
+        packVersion: assessment.packVersion.version,
+        ruleSetVersion: classification.ruleSetVersion,
+        questionnaireVersion: classification.questionnaireVersion,
+      },
+    });
+    return classification;
   }
 
   async classifyProjectIntake(
@@ -251,7 +291,7 @@ export class AssessmentsService {
     if (dto.status === 'OVERRIDDEN' && !dto.overrideCategory) {
       throw new NotFoundException('An override category is required');
     }
-    return this.prisma.classificationResult.update({
+    const updated = await this.prisma.classificationResult.update({
       where: { id: classification.id },
       data: {
         category: dto.overrideCategory ?? classification.category,
@@ -270,6 +310,24 @@ export class AssessmentsService {
             : undefined,
       },
     });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'ClassificationResult',
+      entityId: classification.id,
+      action: 'CLASSIFICATION_REVIEWED',
+      beforeSnapshot: {
+        category: classification.category,
+        reviewStatus: classification.reviewStatus,
+      },
+      afterSnapshot: {
+        category: updated.category,
+        reviewStatus: updated.reviewStatus,
+        humanOverride: updated.humanOverride,
+      },
+    });
+    return updated;
   }
 
   async listObligations(projectId: string, userId: string, companyId: string) {
@@ -286,6 +344,240 @@ export class AssessmentsService {
       },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  async getObligationTraceability(
+    projectId: string,
+    obligationId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    await this.authorizeProject(projectId, userId, companyId);
+    const obligation = await this.prisma.aiSystemObligation.findFirst({
+      where: { id: obligationId, projectId },
+      include: {
+        obligation: { include: { packVersion: true } },
+        classificationResult: {
+          select: {
+            id: true,
+            category: true,
+            reviewStatus: true,
+            resultSnapshot: true,
+            reasoningTrace: true,
+            legalReferences: true,
+            regulatoryContentVersion: true,
+            ruleSetVersion: true,
+            questionnaireVersion: true,
+            evaluatedAt: true,
+            evaluatedById: true,
+          },
+        },
+        evidence: {
+          include: {
+            artifact: true,
+            document: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+        actions: { orderBy: { createdAt: 'asc' } },
+        findings: { include: { actions: true }, orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!obligation) throw new NotFoundException('Obligation not found');
+    const packages = await this.prisma.compliancePackage.findMany({
+      where: { projectId, companyId },
+      select: { id: true, version: true, createdAt: true, manifest: true },
+      orderBy: { version: 'desc' },
+    });
+    return {
+      legalReference: obligation.obligation.legalReference,
+      packVersion: {
+        id: obligation.obligation.packVersion.id,
+        key: obligation.obligation.packVersion.key,
+        version: obligation.obligation.packVersion.version,
+        legalInstrument: obligation.obligation.packVersion.legalInstrument,
+        sourceUrl: obligation.obligation.packVersion.sourceUrl,
+      },
+      applicability: {
+        status: obligation.status,
+        reason: obligation.applicabilityReason,
+        classification: obligation.classificationResult,
+      },
+      implementation: {
+        priority: obligation.priority,
+        ownerId: obligation.ownerId,
+        dueAt: obligation.dueAt,
+        approvalState: obligation.approvalState,
+      },
+      evidence: obligation.evidence,
+      findings: obligation.findings,
+      actions: obligation.actions,
+      packageInclusion: packages.map((pkg) => ({
+        id: pkg.id,
+        version: pkg.version,
+        createdAt: pkg.createdAt,
+        included: JSON.stringify(pkg.manifest).includes(obligation.id),
+      })),
+    };
+  }
+
+  async listFindings(projectId: string, userId: string, companyId: string) {
+    await this.authorizeProject(projectId, userId, companyId);
+    await this.ensureEvidenceFindings(projectId, companyId, userId);
+    return this.prisma.finding.findMany({
+      where: { projectId },
+      include: {
+        obligation: { include: { obligation: true } },
+        owner: { select: { id: true, email: true } },
+        actions: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  private async ensureEvidenceFindings(
+    projectId: string,
+    companyId: string,
+    actorId: string,
+  ) {
+    const obligations = await this.prisma.aiSystemObligation.findMany({
+      where: { projectId },
+      include: {
+        obligation: { select: { title: true } },
+        evidence: {
+          include: { artifact: { select: { status: true, expiresAt: true } } },
+        },
+      },
+    });
+    const now = new Date();
+    for (const obligation of obligations) {
+      for (const link of obligation.evidence) {
+        const artifact = link.artifact;
+        const issue =
+          artifact?.status === 'REJECTED'
+            ? 'Evidence was rejected during review.'
+            : artifact?.expiresAt && artifact.expiresAt < now
+              ? 'Evidence has expired.'
+              : null;
+        if (!issue) continue;
+        const description = `${obligation.obligation.title}: ${issue}`;
+        const existing = await this.prisma.finding.findFirst({
+          where: {
+            projectId,
+            obligationId: obligation.id,
+            source: FindingSource.EVIDENCE_REVIEW,
+            description,
+            status: {
+              notIn: [FindingStatus.RESOLVED, FindingStatus.ACCEPTED_RISK],
+            },
+          },
+        });
+        if (existing) continue;
+        const finding = await this.prisma.finding.create({
+          data: {
+            projectId,
+            obligationId: obligation.id,
+            source: FindingSource.EVIDENCE_REVIEW,
+            severity: FindingSeverity.HIGH,
+            description,
+            evidenceBasis: {
+              evidenceLinkId: link.id,
+              artifactId: link.artifactId,
+            },
+          },
+        });
+        await this.audit.record({
+          companyId,
+          projectId,
+          actorId,
+          entityType: 'Finding',
+          entityId: finding.id,
+          action: 'CREATED_FROM_EVIDENCE',
+          afterSnapshot: { description, evidenceLinkId: link.id },
+        });
+      }
+    }
+  }
+
+  async createFinding(
+    projectId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateFindingDto,
+  ) {
+    await this.authorizeProject(projectId, userId, companyId);
+    if (dto.obligationId) {
+      const obligation = await this.prisma.aiSystemObligation.findFirst({
+        where: { id: dto.obligationId, projectId },
+      });
+      if (!obligation) throw new NotFoundException('Obligation not found');
+    }
+    const finding = await this.prisma.finding.create({
+      data: {
+        projectId,
+        obligationId: dto.obligationId,
+        source: dto.source,
+        severity: dto.severity,
+        description: dto.description,
+        ownerId: dto.ownerId,
+      },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'Finding',
+      entityId: finding.id,
+      action: 'CREATED',
+      afterSnapshot: finding as unknown as Prisma.InputJsonValue,
+    });
+    return finding;
+  }
+
+  async updateFinding(
+    projectId: string,
+    findingId: string,
+    userId: string,
+    companyId: string,
+    dto: UpdateFindingDto,
+  ) {
+    await this.authorizeProject(projectId, userId, companyId);
+    const existing = await this.prisma.finding.findFirst({
+      where: { id: findingId, projectId },
+    });
+    if (!existing) throw new NotFoundException('Finding not found');
+    if (
+      dto.status &&
+      dto.status !== existing.status &&
+      dto.status !== FindingStatus.REOPENED &&
+      existing.status === FindingStatus.RESOLVED
+    ) {
+      throw new NotFoundException('Resolved findings can only be reopened');
+    }
+    const finding = await this.prisma.finding.update({
+      where: { id: findingId },
+      data: {
+        status: dto.status,
+        severity: dto.severity,
+        description: dto.description,
+        ownerId: dto.ownerId,
+        resolutionSummary: dto.resolutionSummary,
+        reviewerDecision: dto.reviewerDecision,
+        resolvedAt:
+          dto.status === FindingStatus.RESOLVED ? new Date() : undefined,
+      },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'Finding',
+      entityId: findingId,
+      action: 'UPDATED',
+      beforeSnapshot: existing as unknown as Prisma.InputJsonValue,
+      afterSnapshot: finding as unknown as Prisma.InputJsonValue,
+    });
+    return finding;
   }
 
   async updateObligation(
@@ -321,7 +613,7 @@ export class AssessmentsService {
       if (!ownerMembership)
         throw new NotFoundException('Requirement owner not found');
     }
-    return this.prisma.aiSystemObligation.update({
+    const updated = await this.prisma.aiSystemObligation.update({
       where: { id: obligationId },
       data: {
         status: dto.status,
@@ -332,6 +624,29 @@ export class AssessmentsService {
       },
       include: { obligation: true, actions: true },
     });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'AiSystemObligation',
+      entityId: obligationId,
+      action: 'UPDATED',
+      beforeSnapshot: {
+        status: existing.status,
+        priority: existing.priority,
+        ownerId: existing.ownerId,
+        dueAt: existing.dueAt?.toISOString() ?? null,
+        approvalState: existing.approvalState,
+      },
+      afterSnapshot: {
+        status: updated.status,
+        priority: updated.priority,
+        ownerId: updated.ownerId,
+        dueAt: updated.dueAt?.toISOString() ?? null,
+        approvalState: updated.approvalState,
+      },
+    });
+    return updated;
   }
 
   async createAction(
@@ -346,15 +661,32 @@ export class AssessmentsService {
       where: { id: obligationId, projectId },
     });
     if (!obligation) throw new NotFoundException('Obligation not found');
-    return this.prisma.complianceAction.create({
+    const action = await this.prisma.complianceAction.create({
       data: {
         obligationId,
         title: dto.title,
         description: dto.description,
         ownerId: dto.ownerId,
         dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+        priority: dto.priority,
       },
     });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'ComplianceAction',
+      entityId: action.id,
+      action: 'CREATED',
+      afterSnapshot: {
+        obligationId,
+        title: action.title,
+        status: action.status,
+        ownerId: action.ownerId,
+        dueAt: action.dueAt?.toISOString() ?? null,
+      },
+    });
+    return action;
   }
 
   async updateAction(
@@ -372,7 +704,7 @@ export class AssessmentsService {
     if (!action || action.obligation.projectId !== projectId) {
       throw new NotFoundException('Compliance action not found');
     }
-    return this.prisma.complianceAction.update({
+    const updated = await this.prisma.complianceAction.update({
       where: { id: actionId },
       data: {
         title: dto.title,
@@ -380,8 +712,36 @@ export class AssessmentsService {
         status: dto.status,
         ownerId: dto.ownerId,
         dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+        priority: dto.priority,
+        closureEvidenceId: dto.closureEvidenceId,
+        closureNotes: dto.closureNotes,
+        closedAt:
+          dto.status === 'DONE' || dto.status === 'COMPLETED'
+            ? new Date()
+            : undefined,
       },
     });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'ComplianceAction',
+      entityId: actionId,
+      action: 'UPDATED',
+      beforeSnapshot: {
+        title: action.title,
+        status: action.status,
+        ownerId: action.ownerId,
+        dueAt: action.dueAt?.toISOString() ?? null,
+      },
+      afterSnapshot: {
+        title: updated.title,
+        status: updated.status,
+        ownerId: updated.ownerId,
+        dueAt: updated.dueAt?.toISOString() ?? null,
+      },
+    });
+    return updated;
   }
 
   async get(assessmentId: string, userId: string, companyId: string) {

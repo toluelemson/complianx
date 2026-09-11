@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
@@ -13,6 +13,8 @@ import {
   getProject,
   getProjectDocuments,
   listProjectObligations,
+  createCompliancePackage,
+  listCompliancePackages,
 } from '../api';
 import { DOCUMENT_LABELS } from '../constants/documents';
 
@@ -21,6 +23,28 @@ export default function CompliancePackagePage() {
   const { token, initializing, activeCompanyId } = useAuth();
   const [downloading, setDownloading] = useState(false);
   const [now] = useState(() => Date.now());
+  const queryClient = useQueryClient();
+  const packagesQuery = useQuery({
+    queryKey: ['compliance-packages', projectId, activeCompanyId],
+    enabled: Boolean(token && projectId && activeCompanyId),
+    queryFn: () => listCompliancePackages(projectId),
+  });
+  const createPackageMutation = useMutation({
+    mutationFn: () => createCompliancePackage(projectId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['compliance-packages', projectId, activeCompanyId],
+      });
+      toast.success('Compliance package snapshot created');
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Unable to create package snapshot',
+      );
+    },
+  });
   const projectQuery = useQuery<ProjectDetail>({
     queryKey: ['project', projectId, activeCompanyId],
     enabled: Boolean(token && projectId && activeCompanyId),
@@ -95,6 +119,16 @@ export default function CompliancePackagePage() {
           >
             {downloading ? 'Preparing…' : 'Download package'}
           </button>
+          <button
+            type="button"
+            onClick={() => createPackageMutation.mutate()}
+            disabled={createPackageMutation.isPending}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
+          >
+            {createPackageMutation.isPending
+              ? 'Saving…'
+              : 'Save manifest snapshot'}
+          </button>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
@@ -127,6 +161,41 @@ export default function CompliancePackagePage() {
             {!documentsQuery.isLoading && !documentsQuery.data?.length ? (
               <p className="py-6 text-sm text-slate-500">
                 No package documents yet.
+              </p>
+            ) : null}
+          </div>
+        </section>
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Manifest history
+            </h2>
+            <span className="text-sm text-slate-500">
+              {packagesQuery.data?.length ?? 0} snapshots
+            </span>
+          </div>
+          <div className="mt-4 divide-y divide-slate-100">
+            {(packagesQuery.data ?? []).map((pkg) => (
+              <div
+                key={pkg.id}
+                className="flex flex-wrap justify-between gap-3 py-3 text-sm"
+              >
+                <div>
+                  <p className="font-medium text-slate-900">
+                    Package v{pkg.version}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {pkg.status} · {pkg.manifestHash.slice(0, 12)}…
+                  </p>
+                </div>
+                <span className="text-xs text-slate-400">
+                  {new Date(pkg.createdAt).toLocaleString()}
+                </span>
+              </div>
+            ))}
+            {!packagesQuery.data?.length ? (
+              <p className="py-4 text-sm text-slate-500">
+                No manifest snapshots created yet.
               </p>
             ) : null}
           </div>

@@ -12,6 +12,7 @@ import { AnalyticsModule } from './analytics.module';
 import { ReadinessReportController } from './presentation/controllers/readiness-report.controller';
 import { ReadinessReportService } from './application/readiness-report/readiness-report.service';
 import { CompanyModule } from '../organizations/company.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CompanyModule } from '../organizations/company.module';
     ReportingFoundationModule,
     AnalyticsModule,
     CompanyModule,
+    AuditModule,
   ],
   controllers: [GeneratorController, ReadinessReportController],
   providers: [GeneratorService, ReadinessReportService, MonetizationService],

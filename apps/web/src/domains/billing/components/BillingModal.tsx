@@ -61,18 +61,29 @@ export default function BillingModal({ isOpen, onClose }: Props) {
   const isPaidPlan = plan !== 'FREE';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2 backdrop-blur-sm">
-      <Card className="w-full max-w-2xl rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.45)]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <Card
+        className="max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-[1.25rem] border-slate-200/90 bg-white shadow-[0_35px_100px_-40px_rgba(15,23,42,0.45)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="billing-dialog-title"
+      >
         <CardContent className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-lg font-semibold tracking-[-0.02em] text-slate-900">
+              <h2
+                id="billing-dialog-title"
+                className="text-lg font-semibold tracking-[-0.02em] text-slate-900"
+              >
                 Billing overview
-              </p>
-              <p className="text-sm text-slate-500">
-                Review your current limits and manage your subscription in one
-                place.
-              </p>
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">Plan and usage</p>
             </div>
             <Button
               onClick={onClose}
@@ -96,122 +107,137 @@ export default function BillingModal({ isOpen, onClose }: Props) {
               Close
             </Button>
           </div>
-          <div className="mt-4 grid gap-4 text-sm md:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Current plan
-              </p>
-              <p className="mt-1 text-base font-semibold text-slate-900">
-                {plan}
-              </p>
-              <p className="mt-2 text-slate-600">
-                Monthly limits · Documents:{' '}
-                {limits.docs === Number.MAX_SAFE_INTEGER
-                  ? 'Unlimited'
-                  : limits.docs}{' '}
-                · Analyses:{' '}
-                {limits.trust === Number.MAX_SAFE_INTEGER
-                  ? 'Unlimited'
-                  : limits.trust}{' '}
-                · Reviews:{' '}
-                {limits.reviews === Number.MAX_SAFE_INTEGER
-                  ? 'Unlimited'
-                  : limits.reviews}
-              </p>
-              <p className="mt-2 text-slate-600">
-                AI systems:{' '}
-                {limits.activeAiSystems === Number.MAX_SAFE_INTEGER
-                  ? 'Unlimited'
-                  : (limits.activeAiSystems ?? '—')}{' '}
-                · Users:{' '}
-                {limits.users === Number.MAX_SAFE_INTEGER
-                  ? 'Unlimited'
-                  : (limits.users ?? '—')}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Review and approval:{' '}
-                {limits.reviewApproval ? 'Included' : 'Paid plan'} · Version
-                history: {limits.versionHistory ? 'Included' : 'Paid plan'}
-              </p>
+          {planQuery.isPending || usageQuery.isPending ? (
+            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+              Loading billing details…
             </div>
-            <div className="rounded-xl border border-slate-200 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Usage ({usage.month || 'this month'})
-              </p>
-              <p className="mt-2 text-slate-600">
-                Documents generated:{' '}
-                <span className="font-semibold text-slate-900">
-                  {usage.docsGenerated}
-                </span>
-              </p>
-              <p className="text-slate-600">
-                Trust analyses:{' '}
-                <span className="font-semibold text-slate-900">
-                  {usage.trustAnalyses}
-                </span>
-              </p>
-              <p className="text-slate-600">
-                Reviews logged:{' '}
-                <span className="font-semibold text-slate-900">
-                  {usage.reviewsLogged}
-                </span>
-              </p>
+          ) : planQuery.isError || usageQuery.isError ? (
+            <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
+              Billing details are temporarily unavailable. Please try again.
+              <Button
+                onClick={() => {
+                  void planQuery.refetch();
+                  void usageQuery.refetch();
+                }}
+                variant="outline"
+                size="sm"
+                className="mt-3 border-rose-300 bg-white text-rose-700"
+              >
+                Retry
+              </Button>
             </div>
-          </div>
-          <div className="mt-6 rounded-xl border border-slate-100 bg-slate-50 p-4">
+          ) : (
+            <div className="mt-6 grid gap-4 text-sm md:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Current plan
+                </p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {plan}
+                </p>
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-600">
+                  <div>
+                    <dt className="text-slate-400">Documents</dt>
+                    <dd className="font-semibold text-slate-800">
+                      {formatLimit(limits.docs)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-400">Analyses</dt>
+                    <dd className="font-semibold text-slate-800">
+                      {formatLimit(limits.trust)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-400">Reviews</dt>
+                    <dd className="font-semibold text-slate-800">
+                      {formatLimit(limits.reviews)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-400">AI systems</dt>
+                    <dd className="font-semibold text-slate-800">
+                      {formatLimit(limits.activeAiSystems)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Usage ({usage.month || 'this month'})
+                </p>
+                <dl className="mt-3 space-y-2 text-xs text-slate-600">
+                  <div className="flex justify-between gap-4">
+                    <dt>Documents generated</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {usage.docsGenerated}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Trust analyses</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {usage.trustAnalyses}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Reviews logged</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {usage.reviewsLogged}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          )}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Actions</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {isPaidPlan ? 'Manage your plan' : 'Unlock more capacity'}
+                </p>
                 <p className="text-xs text-slate-500">
-                  Choose the option that best fits your next step.
+                  {isPaidPlan
+                    ? 'Update payment or subscription settings.'
+                    : 'Upgrade when your team is ready.'}
                 </p>
               </div>
-              <div className="hidden flex-wrap items-center gap-3 lg:flex">
-                <div className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600">
-                  Pro features
-                </div>
-                <div className="text-[11px] text-slate-500">
-                  Unlimited documents, advanced review controls, and priority
-                  support.
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {isPaidPlan ? (
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {isPaidPlan ? (
+                <Button
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  variant="outline"
+                  size="sm"
+                >
+                  {portalMutation.isPending
+                    ? 'Opening portal…'
+                    : 'Manage subscription'}
+                </Button>
+              ) : (
+                <>
                   <Button
-                    onClick={() => portalMutation.mutate()}
-                    disabled={portalMutation.isPending}
+                    onClick={() => checkoutMutation.mutate({ plan: 'PRO' })}
+                    disabled={checkoutMutation.isPending}
+                    size="sm"
+                    className="bg-primary text-primary-foreground hover:bg-[#e21236]"
+                  >
+                    {checkoutMutation.isPending
+                      ? 'Redirecting…'
+                      : 'Upgrade to Pro'}
+                  </Button>
+                  <Button
+                    onClick={() =>
+                      checkoutMutation.mutate({ plan: 'ENTERPRISE' })
+                    }
+                    disabled={checkoutMutation.isPending}
                     variant="outline"
                     size="sm"
                   >
-                    {portalMutation.isPending
-                      ? 'Opening portal…'
-                      : 'Manage subscription'}
+                    Talk to sales
                   </Button>
-                ) : (
-                  <>
-                    <Button
-                      onClick={() => checkoutMutation.mutate({ plan: 'PRO' })}
-                      disabled={checkoutMutation.isPending}
-                      size="sm"
-                      className="bg-primary text-primary-foreground hover:bg-[#e21236]"
-                    >
-                      {checkoutMutation.isPending
-                        ? 'Redirecting…'
-                        : 'Upgrade to Pro'}
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        checkoutMutation.mutate({ plan: 'ENTERPRISE' })
-                      }
-                      disabled={checkoutMutation.isPending}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Talk to sales
-                    </Button>
-                  </>
-                )}
-              </div>
+                </>
+              )}
             </div>
             {statusMessage && (
               <p className="mt-3 text-xs text-slate-500">{statusMessage}</p>
@@ -221,21 +247,14 @@ export default function BillingModal({ isOpen, onClose }: Props) {
                 Unable to contact billing service. Please try again.
               </p>
             )}
-            <div className="mt-4 space-y-2 rounded-lg border border-dashed border-slate-200 bg-white/80 px-3 py-2 text-xs text-slate-600">
-              <p className="font-semibold text-slate-900">Pro unlocks</p>
-              <p className="text-[11px] text-slate-500">
-                Upgrade for unlimited document exports, collaborative review
-                workflows, and faster support response.
-              </p>
-              <ul className="space-y-1 text-[11px] text-slate-600">
-                <li>• Unlimited AI documentation generation</li>
-                <li>• Multi-reviewer workflows with role-based approvals</li>
-                <li>• Priority support and roadmap previews</li>
-              </ul>
-            </div>
           </div>
         </CardContent>
       </Card>
     </div>
   );
+}
+
+function formatLimit(value?: number) {
+  if (value === Number.MAX_SAFE_INTEGER) return 'Unlimited';
+  return value ?? '—';
 }

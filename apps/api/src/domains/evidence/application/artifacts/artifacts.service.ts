@@ -19,6 +19,7 @@ import type {
   EvidenceReviewStatus,
   EvidenceUpload,
 } from './artifact.commands';
+import { AuditService } from '../../../audit/application/audit.service';
 
 @Injectable()
 export class ArtifactsService {
@@ -28,6 +29,7 @@ export class ArtifactsService {
     private readonly prisma: PrismaService,
     private readonly projectsService: ProjectsService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
+    private readonly audit: AuditService,
   ) {}
 
   private async ensureSection(projectId: string, sectionId: string) {
@@ -87,6 +89,7 @@ export class ArtifactsService {
     purpose?: EvidencePurpose,
     metadata?: {
       source?: string;
+      validFrom?: string;
       expiresAt?: string;
       externalUrl?: string;
       provenanceNote?: string;
@@ -108,7 +111,7 @@ export class ArtifactsService {
     await this.storage.write(this.storageBucket, storedName, file.buffer);
     const normalizedPurpose =
       purpose === 'DATASET' || purpose === 'MODEL' ? purpose : 'GENERIC';
-    return this.prisma.sectionArtifact.create({
+    const artifact = await this.prisma.sectionArtifact.create({
       data: {
         originalName: file.originalname,
         storedName,
@@ -116,6 +119,7 @@ export class ArtifactsService {
         size: file.size,
         description: description?.trim() ? description.trim() : null,
         source: metadata?.source?.trim() || null,
+        validFrom: metadata?.validFrom ? new Date(metadata.validFrom) : null,
         expiresAt: metadata?.expiresAt ? new Date(metadata.expiresAt) : null,
         externalUrl: metadata?.externalUrl?.trim() || null,
         provenanceNote: metadata?.provenanceNote?.trim() || null,
@@ -141,6 +145,21 @@ export class ArtifactsService {
         },
       },
     });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'SectionArtifact',
+      entityId: artifact.id,
+      action: 'CREATED',
+      afterSnapshot: {
+        checksum: artifact.checksum,
+        version: artifact.version,
+        validFrom: artifact.validFrom?.toISOString() ?? null,
+        expiresAt: artifact.expiresAt?.toISOString() ?? null,
+      },
+    });
+    return artifact;
   }
 
   async remove(artifactId: string, userId: string, companyId: string) {
@@ -202,6 +221,7 @@ export class ArtifactsService {
     reviewerId: string,
     status: EvidenceReviewStatus,
     comment?: string,
+    companyId?: string,
   ) {
     const artifact = await this.prisma.sectionArtifact.findUnique({
       where: { id: artifactId },
@@ -222,7 +242,7 @@ export class ArtifactsService {
         'Only workspace reviewers may approve evidence',
       );
     }
-    return this.prisma.sectionArtifact.update({
+    const updated = await this.prisma.sectionArtifact.update({
       where: { id: artifactId },
       data: {
         status,
@@ -243,5 +263,24 @@ export class ArtifactsService {
         },
       },
     });
+    if (companyId) {
+      await this.audit.record({
+        companyId,
+        projectId: artifact.projectId,
+        actorId: reviewerId,
+        entityType: 'SectionArtifact',
+        entityId: artifactId,
+        action: 'REVIEWED',
+        beforeSnapshot: {
+          status: artifact.status,
+          reviewComment: artifact.reviewComment,
+        },
+        afterSnapshot: {
+          status: updated.status,
+          reviewComment: updated.reviewComment,
+        },
+      });
+    }
+    return updated;
   }
 }

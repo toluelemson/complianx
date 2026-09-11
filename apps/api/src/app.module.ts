@@ -15,6 +15,7 @@ import { SubscriptionsModule } from './domains/subscriptions/subscriptions.modul
 import { NotificationsModule } from './domains/notifications/notifications.module';
 import { ContactModule } from './domains/marketing/contact.module';
 import { ReviewApprovalModule } from './domains/review-approval/review-approval.module';
+import { AuditModule } from './domains/audit/audit.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ReviewApprovalModule } from './domains/review-approval/review-approval.
     NotificationsModule,
     ContactModule,
     ReviewApprovalModule,
+    AuditModule,
     SubscriptionsModule,
   ],
 })

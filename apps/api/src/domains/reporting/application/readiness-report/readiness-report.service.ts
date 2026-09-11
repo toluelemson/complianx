@@ -1,5 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../platform/database/prisma.service';
+import { createHash } from 'node:crypto';
 import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
 import { PdfService } from '../../../../platform/pdf/pdf.service';
 import { ReadinessService } from '../readiness/readiness.service';
@@ -8,6 +10,7 @@ import {
   FILE_STORAGE,
   type FileStorage,
 } from '../../../../platform/files/file-storage.port';
+import { AuditService } from '../../../audit/application/audit.service';
 
 @Injectable()
 export class ReadinessReportService {
@@ -20,6 +23,7 @@ export class ReadinessReportService {
     private readonly composition: ReportCompositionService,
     private readonly pdf: PdfService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
+    private readonly audit: AuditService,
   ) {}
 
   async create(projectId: string, userId: string, companyId: string) {
@@ -69,6 +73,144 @@ export class ReadinessReportService {
         score: true,
         readinessStatus: true,
         fileUrl: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async createPackage(projectId: string, userId: string, companyId: string) {
+    await this.authorize(projectId, userId, companyId);
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, companyId },
+      include: {
+        company: { select: { id: true, name: true } },
+        documents: true,
+        statusEvents: { orderBy: { createdAt: 'asc' } },
+        assessments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            packVersion: true,
+            classifications: { orderBy: { createdAt: 'desc' }, take: 1 },
+          },
+        },
+        obligations: {
+          include: {
+            obligation: true,
+            evidence: { include: { artifact: true, document: true } },
+            actions: true,
+          },
+        },
+        findings: { include: { actions: true } },
+      },
+    });
+    if (!project) throw new NotFoundException('AI System not found');
+    const assessment = project.assessments[0];
+    const classification = assessment?.classifications[0];
+    const manifest = {
+      manifestVersion: 'neuraldocx-package-1.0.0',
+      generatedAt: new Date().toISOString(),
+      generatedById: userId,
+      project: { id: project.id, name: project.name },
+      organization: project.company,
+      aiSystemProfile: {
+        description: project.description,
+        intendedUse: project.intendedUse,
+        lifecycleStage: project.lifecycleStage,
+        deploymentGeography: project.deploymentGeography,
+        operatorRoles: project.operatorRoles,
+      },
+      regulatory: {
+        legalInstrument: assessment?.packVersion.legalInstrument,
+        packVersion: assessment?.packVersion.version,
+        ruleSetVersion: assessment?.packVersion.ruleSetVersion,
+        questionnaireVersion: assessment?.packVersion.questionnaireVersion,
+      },
+      classification: classification
+        ? {
+            id: classification.id,
+            category: classification.category,
+            reviewStatus: classification.reviewStatus,
+            snapshot: classification.resultSnapshot,
+          }
+        : null,
+      obligations: project.obligations.map((item) => ({
+        id: item.id,
+        key: item.obligation.key,
+        title: item.obligation.title,
+        legalReference: item.obligation.legalReference,
+        status: item.status,
+        approvalState: item.approvalState,
+        applicabilityReason: item.applicabilityReason,
+        evidence: item.evidence.map((link) => ({
+          id: link.id,
+          linkType: link.linkType,
+          notes: link.notes,
+          artifactId: link.artifactId,
+          documentId: link.documentId,
+          artifactStatus: link.artifact?.status,
+        })),
+        actions: item.actions,
+      })),
+      findings: project.findings,
+      documents: project.documents.map((document) => ({
+        id: document.id,
+        type: document.type,
+        version: document.version,
+        url: document.url,
+        approvalState: document.approvalState,
+        lifecycleStatus: document.lifecycleStatus,
+        provenanceStatus: document.provenanceStatus,
+      })),
+      review: {
+        workflowStatus: project.workflowStatus,
+        statusEvents: project.statusEvents,
+      },
+    };
+    const manifestHash = createHash('sha256')
+      .update(JSON.stringify(manifest))
+      .digest('hex');
+    const latest = await this.prisma.compliancePackage.aggregate({
+      where: { projectId },
+      _max: { version: true },
+    });
+    const packageRecord = await this.prisma.compliancePackage.create({
+      data: {
+        projectId,
+        companyId,
+        generatedById: userId,
+        packVersionId: assessment?.packVersionId,
+        version: (latest._max.version ?? 0) + 1,
+        status: 'SNAPSHOT',
+        manifest: manifest as unknown as Prisma.InputJsonValue,
+        manifestHash,
+      },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'CompliancePackage',
+      entityId: packageRecord.id,
+      action: 'GENERATED',
+      afterSnapshot: { version: packageRecord.version, manifestHash },
+      metadata: { packVersion: assessment?.packVersion.version },
+    });
+    return packageRecord;
+  }
+
+  async listPackages(projectId: string, userId: string, companyId: string) {
+    await this.authorize(projectId, userId, companyId);
+    return this.prisma.compliancePackage.findMany({
+      where: { projectId, companyId },
+      orderBy: [{ version: 'desc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        projectId: true,
+        version: true,
+        status: true,
+        manifest: true,
+        manifestHash: true,
         createdAt: true,
       },
     });

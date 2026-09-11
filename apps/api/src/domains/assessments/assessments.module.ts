@@ -9,6 +9,7 @@ import { CompanyModule } from '../organizations/company.module';
 import { AssessmentsController } from './presentation/controllers/assessments.controller';
 import { AssessmentsService } from './application/classification/assessments.service';
 import { ObligationsController } from './presentation/controllers/obligations.controller';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ObligationsController } from './presentation/controllers/obligations.co
     RegulatoryFrameworksModule,
     AiSystemsModule,
     CompanyModule,
+    AuditModule,
   ],
   controllers: [AssessmentsController, ObligationsController],
   providers: [AssessmentsService],

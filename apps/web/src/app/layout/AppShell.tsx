@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/platform/api/client';
@@ -70,6 +70,33 @@ export function AppShell({
   const unread = countQuery.data?.count ?? 0;
   const [billingOpen, setBillingOpen] = useState(initialBillingOpen);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [rememberedProjectId] = useState(() => {
+    try {
+      return window.localStorage.getItem('neuraldocx:last-project-id');
+    } catch {
+      return null;
+    }
+  });
+  const [projectToolsOpen, setProjectToolsOpen] = useState(true);
+  const location = useLocation();
+  const activeProjectId = projectId ?? rememberedProjectId;
+  const projectToolRoute = [
+    '/organization-profile',
+    '/ai-system-profile',
+    '/compliance-workspace',
+    '/messages',
+    '/compliance-package',
+  ].some((suffix) => location.pathname.endsWith(suffix));
+  const projectToolsExpanded = projectToolsOpen || projectToolRoute;
+
+  useEffect(() => {
+    if (!projectId) return;
+    try {
+      window.localStorage.setItem('neuraldocx:last-project-id', projectId);
+    } catch {
+      // Some browser contexts block storage; the in-memory value still works.
+    }
+  }, [projectId]);
   useEffect(() => {
     const handler = (event: Event) => {
       if (event.type === 'paywall') {
@@ -82,110 +109,160 @@ export function AppShell({
   const navSections = useMemo(() => {
     const primary = [
       { label: 'Dashboard', to: '/dashboard', show: true },
-      { label: 'AI systems', to: '/dashboard#systems', show: true },
       { label: 'Reviews', to: '/reviews', show: true },
-      { label: 'All documents', to: '/documents', show: !projectId },
+      { label: 'Documents', to: '/documents', show: true },
       { label: 'Organization', to: '/company', show: Boolean(user) },
       { label: 'Settings', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
     const admin = [
       { label: 'Roles', to: '/admin/roles', show: user?.role === 'ADMIN' },
     ].filter((link) => link.show);
-    const sections = primary.length
-      ? [{ title: 'Navigation', links: primary }]
-      : [];
-    if (projectId) {
+    const sections: Array<{
+      title: string;
+      links: typeof primary;
+      collapsible?: boolean;
+    }> = primary.length ? [{ title: 'Navigation', links: primary }] : [];
+    if (activeProjectId) {
       sections.push({
-        title: 'This project',
+        title: 'Project workspace',
         links: [
           {
             label: 'Overview',
-            to: `/projects/${projectId}/overview`,
-            show: true,
-          },
-          {
-            label: 'Organization profile',
-            to: `/projects/${projectId}/organization-profile`,
-            show: true,
-          },
-          {
-            label: 'AI system profile',
-            to: `/projects/${projectId}/ai-system-profile`,
+            to: `/projects/${activeProjectId}/overview`,
             show: true,
           },
           {
             label: 'Classification',
-            to: `/projects/${projectId}/classification`,
-            show: true,
-          },
-          {
-            label: 'Guided assessment',
-            to: `/projects/${projectId}/compliance-workspace`,
+            to: `/projects/${activeProjectId}/classification`,
             show: true,
           },
           {
             label: 'Requirements',
-            to: `/projects/${projectId}/requirements`,
+            to: `/projects/${activeProjectId}/requirements`,
             show: true,
           },
           {
             label: 'Evidence',
-            to: `/projects/${projectId}/evidence`,
+            to: `/projects/${activeProjectId}/evidence`,
+            show: true,
+          },
+          {
+            label: 'Findings & actions',
+            to: `/projects/${activeProjectId}/findings`,
+            show: true,
+          },
+          {
+            label: 'Review & approval',
+            to: `/projects/${activeProjectId}/review-approval`,
+            show: true,
+          },
+        ],
+      });
+      sections.push({
+        title: 'Project tools',
+        links: [
+          {
+            label: 'Organization profile',
+            to: `/projects/${activeProjectId}/organization-profile`,
+            show: true,
+          },
+          {
+            label: 'AI system profile',
+            to: `/projects/${activeProjectId}/ai-system-profile`,
+            show: true,
+          },
+          {
+            label: 'Guided assessment',
+            to: `/projects/${activeProjectId}/compliance-workspace`,
             show: true,
           },
           {
             label: 'Messages',
-            to: `/projects/${projectId}/messages`,
+            to: `/projects/${activeProjectId}/messages`,
             show: true,
           },
           {
-            label: 'Package',
-            to: `/projects/${projectId}/compliance-package`,
-            show: true,
-          },
-          {
-            label: 'Review',
-            to: `/projects/${projectId}/review-approval`,
+            label: 'Compliance package',
+            to: `/projects/${activeProjectId}/compliance-package`,
             show: true,
           },
         ],
+        collapsible: true,
       });
     }
     if (admin.length) {
       sections.push({ title: 'Admin', links: admin });
     }
     return sections;
-  }, [projectId, user]);
+  }, [activeProjectId, user]);
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const renderSidebarNav = () =>
     navSections.map((section) => (
       <div key={section.title} className="hz-sidebar__section">
-        <p className="hz-sidebar__label">{section.title}</p>
-        {section.links.map((link) => (
-          <Link key={link.to} to={link.to} className="hz-sidebar__link">
-            {link.label}
-          </Link>
-        ))}
+        {section.collapsible ? (
+          <button
+            type="button"
+            className="hz-sidebar__label hz-sidebar__label--button"
+            aria-expanded={projectToolsExpanded}
+            onClick={() => setProjectToolsOpen((open) => !open)}
+          >
+            <span>{section.title}</span>
+            <span aria-hidden="true">{projectToolsExpanded ? '−' : '+'}</span>
+          </button>
+        ) : (
+          <p className="hz-sidebar__label">{section.title}</p>
+        )}
+        {(!section.collapsible || projectToolsExpanded) &&
+          section.links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className="hz-sidebar__link"
+              end={link.to.endsWith('/overview')}
+            >
+              {link.label}
+            </NavLink>
+          ))}
       </div>
     ));
   const renderMobileNav = () =>
     navSections.map((section) => (
       <div key={section.title} className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          {section.title}
-        </p>
-        <div className="flex flex-col gap-1">
-          {section.links.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              onClick={closeMobileMenu}
-              className="rounded-md px-2 py-1 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
+        {section.collapsible ? (
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide text-slate-400"
+            aria-expanded={projectToolsExpanded}
+            onClick={() => setProjectToolsOpen((open) => !open)}
+          >
+            <span>{section.title}</span>
+            <span aria-hidden="true">{projectToolsExpanded ? '−' : '+'}</span>
+          </button>
+        ) : (
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {section.title}
+          </p>
+        )}
+        {(!section.collapsible || projectToolsExpanded) && (
+          <div className="flex flex-col gap-1">
+            {section.links.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                onClick={closeMobileMenu}
+                className={({ isActive }) =>
+                  `rounded-md px-2 py-1 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-slate-100 text-slate-950'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
       </div>
     ));
   const renderNotificationsTrigger = () => (
