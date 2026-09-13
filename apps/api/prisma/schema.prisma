@@ -27,6 +27,7 @@ model User {
   jobTitle                        String?
   phone                           String?
   timezone                        String?
+  preferredLocale                 String                 @default("en")
   createdAt                       DateTime               @default(now())
   updatedAt                       DateTime               @updatedAt
   role                            Role                   @default(USER)

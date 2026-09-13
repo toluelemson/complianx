@@ -19,6 +19,7 @@ interface ProfileResponse {
   jobTitle?: string | null;
   phone?: string | null;
   timezone?: string | null;
+  preferredLocale?: string;
 }
 
 interface ProfileForm {
@@ -27,6 +28,7 @@ interface ProfileForm {
   jobTitle?: string | null;
   phone?: string | null;
   timezone?: string | null;
+  preferredLocale?: string;
 }
 
 const timezoneOptions = [
@@ -52,6 +54,7 @@ export default function ProfilePage() {
       jobTitle: '',
       phone: '',
       timezone: 'UTC',
+      preferredLocale: 'en',
     },
   });
 
@@ -63,6 +66,7 @@ export default function ProfilePage() {
         jobTitle: profileQuery.data.jobTitle ?? '',
         phone: profileQuery.data.phone ?? '',
         timezone: profileQuery.data.timezone ?? 'UTC',
+        preferredLocale: profileQuery.data.preferredLocale ?? 'en',
       });
     }
   }, [profileQuery.data, form]);
@@ -78,6 +82,7 @@ export default function ProfilePage() {
         jobTitle: data.jobTitle ?? '',
         phone: data.phone ?? '',
         timezone: data.timezone ?? 'UTC',
+        preferredLocale: data.preferredLocale ?? 'en',
       });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
@@ -162,6 +167,15 @@ export default function ProfilePage() {
                     className="rounded-2xl"
                     {...form.register('firstName')}
                   />
+                </label>
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium text-slate-700">Language</span>
+                  <Select className="rounded-2xl" {...form.register('preferredLocale')}>
+                    <option value="en">English</option>
+                    <option value="de">Deutsch</option>
+                    <option value="fr">Français</option>
+                    <option value="et">Eesti</option>
+                  </Select>
                 </label>
                 <label className="grid gap-1 text-sm">
                   <span className="font-medium text-slate-700">Last name</span>

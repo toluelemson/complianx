@@ -97,6 +97,7 @@ export class UsersService {
         jobTitle: dto.jobTitle ?? undefined,
         phone: dto.phone ?? undefined,
         timezone: dto.timezone ?? undefined,
+        preferredLocale: dto.preferredLocale ?? undefined,
       },
     });
     return this.sanitize(user);
