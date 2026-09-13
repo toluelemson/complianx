@@ -216,28 +216,29 @@ export default function ProjectPage() {
     enabled: Boolean(projectId && activeCompanyId),
     queryFn: () => getProject(projectId),
   });
+  const projectAvailable = projectQuery.isSuccess;
 
   const sectionsQuery = useQuery<SectionWithMeta[]>({
     queryKey: sectionsQueryKey,
-    enabled: Boolean(projectId && activeCompanyId),
+    enabled: projectAvailable,
     queryFn: () => getProjectSections(projectId),
   });
 
   const documentsQuery = useQuery<DocumentItem[]>({
     queryKey: documentsQueryKey,
-    enabled: Boolean(projectId && activeCompanyId),
+    enabled: projectAvailable,
     queryFn: () => getProjectDocuments(projectId),
   });
   const readinessQuery = useQuery<GenerationReadiness>({
     queryKey: ['generationReadiness', projectId, activeCompanyId],
     enabled: Boolean(
-      projectId && activeCompanyId && projectQuery.data?.viewerRole === 'OWNER',
+      projectAvailable && projectQuery.data?.viewerRole === 'OWNER',
     ),
     queryFn: () => getGenerationReadiness(projectId),
   });
   const classificationQuery = useQuery({
     queryKey: ['preliminaryClassification', projectId, activeCompanyId],
-    enabled: Boolean(projectId && activeCompanyId),
+    enabled: projectAvailable,
     queryFn: () => getPreliminaryClassification(projectId),
   });
   const classificationReviewMutation = useMutation({
@@ -265,7 +266,7 @@ export default function ProjectPage() {
   const assessmentId = classificationQuery.data?.assessmentId;
   const answersQuery = useQuery({
     queryKey: ['assessmentAnswers', projectId, assessmentId, activeCompanyId],
-    enabled: Boolean(projectId && assessmentId && activeCompanyId),
+    enabled: Boolean(projectAvailable && assessmentId),
     queryFn: () => listAssessmentAnswers(projectId, assessmentId ?? ''),
   });
   const [questionnaireAnswers, setQuestionnaireAnswers] = useState<
@@ -295,7 +296,7 @@ export default function ProjectPage() {
   }, [answersQuery.data]);
   const obligationsQuery = useQuery({
     queryKey: ['obligations', projectId, activeCompanyId],
-    enabled: Boolean(projectId && activeCompanyId),
+    enabled: projectAvailable,
     queryFn: () => listProjectObligations(projectId),
   });
   const [obligationFilter, setObligationFilter] = useState('ALL');
@@ -339,7 +340,7 @@ export default function ProjectPage() {
   const obligationEvidenceQueries = useQueries({
     queries: (obligationsQuery.data ?? []).map((item) => ({
       queryKey: ['obligationEvidence', projectId, item.id, activeCompanyId],
-      enabled: Boolean(projectId && activeCompanyId),
+      enabled: projectAvailable,
       queryFn: () => listObligationEvidence(projectId, item.id),
     })),
   });
@@ -437,7 +438,7 @@ export default function ProjectPage() {
 
   const remindersQuery = useQuery<ReminderItem[]>({
     queryKey: remindersQueryKey,
-    enabled: Boolean(projectId && activeCompanyId),
+    enabled: projectAvailable,
     queryFn: () => listProjectReminders(projectId),
   });
   const viewerRole = projectQuery.data?.viewerRole ?? 'OWNER';

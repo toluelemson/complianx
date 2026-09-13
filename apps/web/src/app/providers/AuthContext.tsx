@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { setAuthToken, setCompanyId } from '../../platform/api/client';
+import {
+  readBrowserStorage,
+  removeBrowserStorage,
+  writeBrowserStorage,
+} from '../../platform/browser-storage';
 
 export interface CompanyMembership {
   companyId: string;
@@ -49,14 +54,14 @@ function readStoredAuth() {
   if (typeof window === 'undefined') {
     return undefined;
   }
-  const stored = localStorage.getItem('aicd_auth');
+  const stored = readBrowserStorage('aicd_auth');
   if (!stored) {
     return undefined;
   }
   try {
     return JSON.parse(stored) as StoredAuth;
   } catch {
-    localStorage.removeItem('aicd_auth');
+    removeBrowserStorage('aicd_auth');
     return undefined;
   }
 }
@@ -109,10 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     nextCompanyId?: string,
   ) => {
     if (!nextUser || !nextToken) {
-      localStorage.removeItem('aicd_auth');
+      removeBrowserStorage('aicd_auth');
       return;
     }
-    localStorage.setItem(
+    writeBrowserStorage(
       'aicd_auth',
       JSON.stringify({
         user: nextUser,
@@ -129,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ) => {
     if (companyId === undefined) {
       setActiveCompanyId(undefined);
-      localStorage.removeItem('aicd_auth');
+      removeBrowserStorage('aicd_auth');
       return;
     }
     const storedUser = nextUser ?? user;
@@ -137,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setActiveCompanyId(validatedCompanyId);
     const storedToken = nextToken ?? token;
     if (!validatedCompanyId || !storedUser || !storedToken) {
-      localStorage.removeItem('aicd_auth');
+      removeBrowserStorage('aicd_auth');
       return;
     }
     persistAuth(storedUser, storedToken, validatedCompanyId);
@@ -159,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(undefined);
     setToken(undefined);
     setAuthToken(undefined);
-    localStorage.removeItem('aicd_auth');
+    removeBrowserStorage('aicd_auth');
     changeActiveCompany(undefined);
     setCompanyId(undefined);
   };

@@ -40,24 +40,25 @@ export default function ProjectOverviewPage() {
     enabled,
     queryFn: () => getProject(projectId),
   });
+  const projectAvailable = enabled && projectQuery.isSuccess;
   const sectionsQuery = useQuery<SectionWithMeta[]>({
     queryKey: ['sections', projectId, activeCompanyId],
-    enabled,
+    enabled: projectAvailable,
     queryFn: () => getProjectSections(projectId),
   });
   const documentsQuery = useQuery({
     queryKey: ['documents', projectId, activeCompanyId],
-    enabled,
+    enabled: projectAvailable,
     queryFn: () => getProjectDocuments(projectId),
   });
   const classificationQuery = useQuery({
     queryKey: ['preliminary-classification', projectId, activeCompanyId],
-    enabled,
+    enabled: projectAvailable,
     queryFn: () => getPreliminaryClassification(projectId),
   });
   const obligationsQuery = useQuery({
     queryKey: ['obligations', projectId, activeCompanyId],
-    enabled,
+    enabled: projectAvailable,
     queryFn: () => listProjectObligations(projectId),
   });
   const requirements = obligationsQuery.data ?? [];
@@ -69,12 +70,34 @@ export default function ProjectOverviewPage() {
         requirement.id,
         activeCompanyId,
       ],
-      enabled,
+      enabled: projectAvailable,
       queryFn: () => listObligationEvidence(projectId, requirement.id),
     })),
   });
 
   if (!initializing && !token) return <Navigate to="/login" replace />;
+
+  if (projectQuery.isError) {
+    return (
+      <AppShell title="AI system unavailable">
+        <div className="hz-console-content">
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
+            <h1 className="text-xl font-semibold">AI system unavailable</h1>
+            <p className="mt-2 text-sm text-amber-900">
+              This AI system may have been removed, or it is not available in
+              the selected workspace.
+            </p>
+            <Link
+              to="/dashboard"
+              className="mt-5 inline-flex rounded-lg bg-amber-950 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Return to dashboard
+            </Link>
+          </section>
+        </div>
+      </AppShell>
+    );
+  }
 
   const sections = sectionsQuery.data ?? [];
   const evidenceByRequirement = Object.fromEntries(

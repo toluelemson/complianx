@@ -104,7 +104,7 @@ export default function ProjectQuestionnairePage() {
   useEffect(() => {
     if (
       pack &&
-      classification.isFetched &&
+      classification.isSuccess &&
       !classification.data &&
       !assessmentId &&
       !startedAutomatically.current
@@ -120,7 +120,7 @@ export default function ProjectQuestionnairePage() {
   }, [
     assessmentId,
     classification.data,
-    classification.isFetched,
+    classification.isSuccess,
     pack,
     projectId,
   ]);
