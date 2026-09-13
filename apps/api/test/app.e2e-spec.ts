@@ -99,5 +99,21 @@ describe('API security (e2e)', () => {
       .set('x-company-id', 'e2e-company')
       .expect(200);
     expect(obligations.body).toEqual(expect.any(Array));
+    const sections = await request(app.getHttpServer())
+      .get(`/api/projects/${system.body.id}/sections`)
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .set('x-company-id', 'e2e-company')
+      .expect(200);
+    expect(sections.body).toEqual(expect.any(Array));
+    if (sections.body[0]) {
+      const upload = await request(app.getHttpServer())
+        .post(`/api/projects/${system.body.id}/sections/${sections.body[0].id}/artifacts`)
+        .set('Authorization', `Bearer ${login.body.token}`)
+        .set('x-company-id', 'e2e-company')
+        .attach('file', Buffer.from('E2E evidence'), 'evidence.txt')
+        .expect(201);
+      expect(upload.body.checksum).toEqual(expect.any(String));
+      expect(upload.body.version).toBe(1);
+    }
   });
 });
