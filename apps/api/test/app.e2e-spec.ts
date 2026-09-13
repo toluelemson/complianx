@@ -62,4 +62,18 @@ describe('API security (e2e)', () => {
         expect(body.companyId).toBe('e2e-company');
       });
   });
+
+  it('registers an AI system inside the active tenant', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'e2e-user@example.invalid', password: 'e2e-test-password' })
+      .expect(201);
+    const response = await request(app.getHttpServer())
+      .post('/api/ai-systems')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .set('x-company-id', 'e2e-company')
+      .send({ name: `E2E AI system ${Date.now()}` })
+      .expect(201);
+    expect(response.body.companyId).toBe('e2e-company');
+  });
 });
