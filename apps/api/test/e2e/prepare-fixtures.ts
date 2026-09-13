@@ -15,11 +15,17 @@ async function main() {
   const passwordHash = await bcrypt.hash('e2e-test-password', 4);
   const user = await prisma.user.upsert({
     where: { id: 'e2e-user' },
-    update: { passwordHash, companyId: company.id, defaultCompanyId: company.id },
+    update: {
+      passwordHash,
+      companyId: company.id,
+      defaultCompanyId: company.id,
+      emailVerified: true,
+    },
     create: {
       id: 'e2e-user',
       email: 'e2e-user@example.invalid',
       passwordHash,
+      emailVerified: true,
       companyId: company.id,
       defaultCompanyId: company.id,
     },

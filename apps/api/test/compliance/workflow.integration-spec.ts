@@ -372,7 +372,7 @@ describe('PostgreSQL compliance workflows', () => {
       reviewerDecision: null,
     });
   });
-  it('calculates complete versus incomplete packages and preserves file bytes and applicability snapshots', async () => {
+  it('creates complete packages, blocks regressions, and preserves file bytes and applicability snapshots', async () => {
     const f = await fixture();
     const first = await reports.createPackage(
       f.project.id,
@@ -414,13 +414,9 @@ describe('PostgreSQL compliance workflows', () => {
       where: { id: f.obligation.id },
       data: { applicabilityReason: 'Changed reason', status: 'IN_PROGRESS' },
     });
-    const second = await reports.createPackage(
-      f.project.id,
-      f.owner.id,
-      f.company.id,
-    );
-    expect(second.status).toBe('INCOMPLETE');
-    expect(second.version).toBe(first.version + 1);
+    await expect(
+      reports.createPackage(f.project.id, f.owner.id, f.company.id),
+    ).rejects.toThrow('Compliance package generation is blocked');
     const download = await reports.downloadPackage(
       f.project.id,
       first.id,
@@ -495,23 +491,29 @@ describe('PostgreSQL compliance workflows', () => {
     );
     remove.mockRestore();
   });
-  it('marks missing files and expired evidence incomplete, without silently regenerating files', async () => {
+  it('blocks packages with missing files and expired evidence without silently regenerating files', async () => {
     const f = await fixture();
     await storage.remove('documents', f.document.url);
     await prisma.sectionArtifact.update({
       where: { id: f.artifact.id },
       data: { expiresAt: new Date(0) },
     });
-    const pkg = await reports.createPackage(
-      f.project.id,
-      f.owner.id,
-      f.company.id,
-    );
-    expect(pkg.status).toBe('INCOMPLETE');
-    expect(JSON.stringify(pkg.manifest)).toContain('Missing file:');
-    expect(JSON.stringify(pkg.manifest)).toContain(
-      'lacks valid supporting evidence',
-    );
+    await expect(
+      reports.createPackage(f.project.id, f.owner.id, f.company.id),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        message: 'Compliance package generation is blocked',
+        gaps: expect.arrayContaining([
+          expect.stringContaining('Missing file:'),
+          expect.stringContaining('lacks valid supporting evidence'),
+        ]),
+      }),
+    });
+    expect(
+      await prisma.compliancePackage.count({
+        where: { projectId: f.project.id },
+      }),
+    ).toBe(0);
   });
   it('creates idempotent system findings from the worker, never from GET', async () => {
     const f = await fixture();

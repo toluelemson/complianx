@@ -298,8 +298,14 @@ export class ReadinessReportService {
                     `evidence/${link.artifact.id}-${basename(link.artifact.originalName)}`,
                   );
                 }
+              }
+            if (gaps.length) {
+              throw new BadRequestException({
+                message: 'Compliance package generation is blocked',
+                gaps,
+              });
             }
-            const status = gaps.length ? 'INCOMPLETE' : 'COMPLETE';
+            const status = 'COMPLETE';
             const latest = await tx.compliancePackage.aggregate({
               where: { projectId },
               _max: { version: true },
@@ -370,8 +376,27 @@ export class ReadinessReportService {
                 statusEvents: project.statusEvents,
               },
             };
+            const pendingPackage = await tx.compliancePackage.create({
+              data: {
+                projectId,
+                companyId,
+                generatedById: userId,
+                packVersionId: assessment?.packVersionId,
+                version: (latest._max.version ?? 0) + 1,
+                status,
+                manifest: manifest as unknown as Prisma.InputJsonValue,
+                manifestHash: '',
+              },
+            });
+            const persistedManifest = (
+              await tx.compliancePackage.findUniqueOrThrow({
+                where: { id: pendingPackage.id },
+                select: { manifest: true },
+              })
+            ).manifest;
+            const serializedManifest = JSON.stringify(persistedManifest);
             const manifestHash = createHash('sha256')
-              .update(JSON.stringify(manifest))
+              .update(serializedManifest)
               .digest('hex');
             const archive = archiver('zip', { zlib: { level: 9 } });
             const archiveChunks: Buffer[] = [];
@@ -381,7 +406,7 @@ export class ReadinessReportService {
               archive.on('error', reject);
               archive.on('warning', reject);
             });
-            archive.append(JSON.stringify(manifest), { name: 'manifest.json' });
+            archive.append(serializedManifest, { name: 'manifest.json' });
             for (const file of contents)
               archive.append(file.bytes, { name: file.path });
             await Promise.all([archive.finalize(), archived]);
@@ -390,17 +415,11 @@ export class ReadinessReportService {
             const archiveHash = createHash('sha256')
               .update(archiveBytes)
               .digest('hex');
-            const packageRecord = await tx.compliancePackage.create({
+            const packageRecord = await tx.compliancePackage.update({
+              where: { id: pendingPackage.id },
               data: {
-                projectId,
-                companyId,
-                generatedById: userId,
-                packVersionId: assessment?.packVersionId,
-                version: (latest._max.version ?? 0) + 1,
-                status,
                 archiveFile,
                 archiveHash,
-                manifest: manifest as unknown as Prisma.InputJsonValue,
                 manifestHash,
               },
             });
@@ -500,19 +519,35 @@ export class ReadinessReportService {
       .update(JSON.stringify(record.manifest))
       .digest('hex');
     const manifestValid = manifestHash === record.manifestHash;
-    if (!manifestValid) errors.push('Manifest hash does not match stored manifest');
+    if (!manifestValid)
+      errors.push('Manifest hash does not match stored manifest');
     const metadata = record.manifest as Record<string, any>;
-    if (metadata.project?.id !== projectId) errors.push('Manifest project does not match package project');
-    if (metadata.organization?.id !== companyId) errors.push('Manifest organization does not match package organization');
-    if (metadata.package?.version && metadata.package.version !== record.version) errors.push('Manifest package version does not match record');
+    if (metadata.project?.id !== projectId)
+      errors.push('Manifest project does not match package project');
+    if (metadata.organization?.id !== companyId)
+      errors.push('Manifest organization does not match package organization');
+    if (
+      metadata.package?.version &&
+      metadata.package.version !== record.version
+    )
+      errors.push('Manifest package version does not match record');
     let archiveValid = false;
-    if (!record.archiveFile || !record.archiveHash || !this.storage.exists('packages', record.archiveFile)) {
+    if (
+      !record.archiveFile ||
+      !record.archiveHash ||
+      !this.storage.exists('packages', record.archiveFile)
+    ) {
       errors.push('Package archive is missing');
     } else {
-      const archiveBytes = await fs.readFile(this.storage.resolve('packages', record.archiveFile));
-      const archiveHash = createHash('sha256').update(archiveBytes).digest('hex');
+      const archiveBytes = await fs.readFile(
+        this.storage.resolve('packages', record.archiveFile),
+      );
+      const archiveHash = createHash('sha256')
+        .update(archiveBytes)
+        .digest('hex');
       archiveValid = archiveHash === record.archiveHash;
-      if (!archiveValid) errors.push('Archive hash does not match stored archive');
+      if (!archiveValid)
+        errors.push('Archive hash does not match stored archive');
     }
     return {
       valid: manifestValid && archiveValid && errors.length === 0,
