@@ -1,6 +1,6 @@
-# Complianx
+# Neuraldocx
 
-Complianx helps teams document AI systems, assess compliance and trust, collect evidence, run review and approval workflows, and generate reports.
+Neuraldocx helps teams document AI systems, assess compliance and trust, collect evidence, run review and approval workflows, and generate reports.
 
 ## Repository structure
 
@@ -69,7 +69,7 @@ For local development, `prisma:migrate` targets the configured development datab
 
 ## Architecture
 
-Complianx uses a domain-oriented monorepo and a modular-monolith API. Important domains may use application/domain/infrastructure/presentation layers; simple CRUD modules should remain simple. Domain code must not depend on framework or vendor implementations. See [the architecture documentation](docs/architecture/system-context.md) and [decision records](docs/decisions/ADR-001-modular-monolith.md).
+Neuraldocx uses a domain-oriented monorepo and a modular-monolith API. Important domains may use application/domain/infrastructure/presentation layers; simple CRUD modules should remain simple. Domain code must not depend on framework or vendor implementations. See [the architecture documentation](docs/architecture/system-context.md) and [decision records](docs/decisions/ADR-001-modular-monolith.md).
 
 ## Testing and deployment
 

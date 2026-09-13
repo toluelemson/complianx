@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Neuraldocx (Complianx) is a multi-tenant EU AI Act compliance workspace. It helps organizations register AI systems, perform applicability and risk classification, track requirements, collect evidence, generate compliance documents, conduct review and approval, and export audit-ready packages. Compliance conclusions require human verification and must not be presented as definitive legal advice.
+Neuraldocx is a multi-tenant EU AI Act compliance workspace. It helps organizations register AI systems, perform applicability and risk classification, track requirements, collect evidence, generate compliance documents, conduct review and approval, and export audit-ready packages. Compliance conclusions require human verification and must not be presented as definitive legal advice.
 
 ## Architecture
 

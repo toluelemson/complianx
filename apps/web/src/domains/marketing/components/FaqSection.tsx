@@ -3,9 +3,9 @@ import { ChevronDown } from 'lucide-react';
 
 const FAQ_ITEMS = [
   {
-    question: 'What is Complianx?',
+    question: 'What is Neuraldocx?',
     answer:
-      'Complianx is a documentation and approval workspace for AI systems.',
+      'Neuraldocx is a documentation and approval workspace for AI systems.',
   },
   {
     question: 'What exactly do you deliver?',
@@ -14,13 +14,12 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Who is this service for?',
-    answer:
-      'For SMEs, AI teams, and consultants managing client work.',
+    answer: 'For SMEs, AI teams, and consultants managing client work.',
   },
   {
     question: "Why shouldn't we do this ourselves?",
     answer:
-      'You can. Complianx keeps intake, evidence, review, approval, and versions together.',
+      'You can. Neuraldocx keeps intake, evidence, review, approval, and versions together.',
   },
   {
     question: 'How fast can we get our documentation?',
@@ -35,7 +34,7 @@ const FAQ_ITEMS = [
   {
     question: 'Is this compliant with the EU AI Act?',
     answer:
-      'Complianx supports documentation work. It does not replace legal or compliance review.',
+      'Neuraldocx supports documentation work. It does not replace legal or compliance review.',
   },
   {
     question: 'Will this help with investors or partnerships?',

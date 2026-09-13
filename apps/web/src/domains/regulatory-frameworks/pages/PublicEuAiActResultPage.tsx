@@ -93,7 +93,7 @@ export default function PublicEuAiActResultPage() {
   const showEvidenceSection = Boolean(
     result?.missing_evidence?.length && !compactResult,
   );
-  const showComplianxNextStep = Boolean(
+  const showNeuraldocxNextStep = Boolean(
     result &&
       !compactResult &&
       (result.next_required_documents?.length ||
@@ -112,7 +112,7 @@ export default function PublicEuAiActResultPage() {
 
   const handleEmailResult = () => {
     if (!result) return;
-    const subject = encodeURIComponent(`ComplianX audit check result`);
+    const subject = encodeURIComponent(`Neuraldocx audit check result`);
     const body = encodeURIComponent(
       buildEmailBody(result, resultQuery.data?.packVersion),
     );
@@ -143,7 +143,7 @@ export default function PublicEuAiActResultPage() {
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(15, 23, 42);
     pdf.setFontSize(11);
-    pdf.text('ComplianX', margin + 48, y + 12);
+    pdf.text('Neuraldocx', margin + 48, y + 12);
     pdf.setFontSize(24);
     pdf.text('Audit Check Result', margin + 48, y + 34);
 
@@ -427,7 +427,7 @@ export default function PublicEuAiActResultPage() {
     }
 
     drawSectionHeading(
-      'Continue with ComplianX',
+      'Continue with Neuraldocx',
       'If you want us to turn this result into actual documents, use the path below.',
     );
     drawInfoCard(
@@ -453,7 +453,7 @@ export default function PublicEuAiActResultPage() {
     pdf.setFontSize(10);
     pdf.setTextColor(100, 116, 139);
     const disclaimerLines = pdf.splitTextToSize(
-      'This summary is provided by ComplianX to support documentation and compliance preparation. It is not legal advice.',
+      'This summary is provided by Neuraldocx to support documentation and compliance preparation. It is not legal advice.',
       contentWidth,
     ) as string[];
     disclaimerLines.forEach((line) => {
@@ -463,7 +463,7 @@ export default function PublicEuAiActResultPage() {
     y += 12;
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(15, 23, 42);
-    pdf.text('Prepared by ComplianX', margin, y);
+    pdf.text('Prepared by Neuraldocx', margin, y);
     y += 16;
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(100, 116, 139);
@@ -617,7 +617,7 @@ export default function PublicEuAiActResultPage() {
                 </CardContent>
               </Card>
 
-              {showEvidenceSection || showComplianxNextStep ? (
+              {showEvidenceSection || showNeuraldocxNextStep ? (
                 <details className="border-t border-slate-200 pt-5">
                   <summary className="cursor-pointer text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4">
                     View recommended actions and evidence
@@ -650,7 +650,7 @@ export default function PublicEuAiActResultPage() {
                     </Card>
                   ) : null}
 
-                  {showComplianxNextStep ? (
+                  {showNeuraldocxNextStep ? (
                     <Card className="border-slate-200 bg-white">
                       <CardHeader>
                         <CardTitle className="text-2xl">
@@ -952,7 +952,7 @@ function buildEmailBody(
   packVersion?: string,
 ) {
   const lines = [
-    'ComplianX audit check result',
+    'Neuraldocx audit check result',
     '',
     `Verdict: ${buildVerdict(result).label}`,
     `Summary: ${buildClosingSummary(result).replace(/^Summary:\s*/, '')}`,
@@ -987,7 +987,7 @@ function buildEmailBody(
     '',
     `Pack: ${packVersion ?? 'current'}`,
     '',
-    'Prepared by ComplianX',
+    'Prepared by Neuraldocx',
     'https://neuraldocx.com',
   );
 

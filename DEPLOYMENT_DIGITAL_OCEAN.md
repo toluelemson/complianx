@@ -1,6 +1,6 @@
-# Deploying Complianx to DigitalOcean App Platform
+# Deploying Neuraldocx to DigitalOcean App Platform
 
-Complianx deploys as an API service and a web static site. The architecture refactor changes source paths only; routes and runtime behavior are unchanged.
+Neuraldocx deploys as an API service and a web static site. The architecture refactor changes source paths only; routes and runtime behavior are unchanged.
 
 ## API service
 
