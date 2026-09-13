@@ -48,6 +48,9 @@ jobs:
       - run: pnpm --filter api test:compliance
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+      - run: pnpm --filter api seed:eu-ai-act
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
       - run: pnpm --filter api exec ts-node -r ts-node/register test/e2e/prepare-fixtures.ts
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test

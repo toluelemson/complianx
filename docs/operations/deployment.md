@@ -86,8 +86,9 @@ Run migrations as part of the API release before accepting traffic:
 
 ```bash
 pnpm --filter api exec prisma migrate deploy
+pnpm --filter api seed:eu-ai-act
 ```
 
-Use `prisma migrate dev` only for local development. Never reset or edit applied migrations in production. Take a database backup before releases that include schema changes and verify the migration status in the deployment logs.
+Run the idempotent EU AI Act seed after migrations so onboarding has a published regulatory pack. The seed leaves an existing published or deprecated version immutable. Use `prisma migrate dev` only for local development. Never reset or edit applied migrations in production. Take a database backup before releases that include schema changes and verify the migration and seed status in the deployment logs.
 
 `DEPLOYMENT_DIGITAL_OCEAN.md` is retained as historical reference; it is not the active deployment procedure.
