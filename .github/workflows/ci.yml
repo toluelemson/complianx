@@ -43,6 +43,12 @@ jobs:
       - run: pnpm --filter api test:compliance
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+      - run: pnpm --filter api test:e2e -- --runInBand
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+          JWT_SECRET: ci-test-secret
+      - run: pnpm --filter api exec tsc -p tsconfig.json --noEmit --pretty false
+      - run: pnpm --filter web exec tsc -p tsconfig.app.json --noEmit --pretty false
       - run: pnpm build
       - run: pnpm test
       - run: pnpm lint
