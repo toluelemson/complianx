@@ -137,6 +137,7 @@ export default function ProjectRequirementsPage() {
             {items.map((item) => (
               <article
                 key={item.id}
+                id={`requirement-${item.id}`}
                 className="rounded-xl border border-slate-100 p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">

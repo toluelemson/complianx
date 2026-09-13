@@ -292,10 +292,13 @@ export type ObligationEvidenceLink = {
     citationKey: string;
     status: ArtifactStatus;
     version: number;
+    expiresAt?: string | null;
   } | null;
   document?: {
     id: string;
     type: string;
+    approvalState?: 'DRAFT' | 'APPROVED';
+    lifecycleStatus?: 'CURRENT' | 'SUPERSEDED' | 'FAILED';
     createdAt: string;
   } | null;
 };
