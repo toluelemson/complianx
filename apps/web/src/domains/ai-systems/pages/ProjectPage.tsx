@@ -2647,7 +2647,7 @@ export default function ProjectPage() {
                           )
                         ) : (
                           <p className="text-sm text-slate-500">
-                            No comments yet. Share context with reviewers below.
+                            No comments yet. Add the first review note.
                           </p>
                         )}
                       </div>
@@ -2680,7 +2680,7 @@ export default function ProjectPage() {
                           onChange={(event) =>
                             setCommentBody(event.target.value)
                           }
-                          placeholder="Add a note or question... (type /ai to request suggestions)"
+                          placeholder="Add a review note or question. Use /ai for help."
                           rows={3}
                           className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
                         />
@@ -2693,8 +2693,8 @@ export default function ProjectPage() {
                             className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                           >
                             {commentMutation.isPending
-                              ? 'Posting...'
-                              : 'Post Comment'}
+                              ? 'Posting…'
+                              : 'Post comment'}
                           </button>
                         </div>
                       </form>
