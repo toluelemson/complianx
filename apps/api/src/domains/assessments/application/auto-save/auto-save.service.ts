@@ -17,7 +17,11 @@ export class AutoSaveService {
     if (!section) {
       throw new NotFoundException('Section not found');
     }
-    await this.projectsService.assertOwnership(section.projectId, userId, companyId);
+    await this.projectsService.assertOwnership(
+      section.projectId,
+      userId,
+      companyId,
+    );
     const autosave = await (this.prisma as any).sectionAutosave.upsert({
       where: { sectionId: dto.sectionId },
       create: {
@@ -40,21 +44,45 @@ export class AutoSaveService {
     return autosave;
   }
 
-  async getSectionAutosave(sectionId: string, userId: string, companyId: string) {
-    const section = await this.prisma.section.findUnique({ where: { id: sectionId } });
-    if (!section) throw new NotFoundException('Section not found');
-    await this.projectsService.assertAccess(section.projectId, userId, companyId, {
-      allowOwner: true, allowReviewer: true, allowApprover: true, allowCompanyMember: true,
+  async getSectionAutosave(
+    sectionId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    const section = await this.prisma.section.findUnique({
+      where: { id: sectionId },
     });
+    if (!section) throw new NotFoundException('Section not found');
+    await this.projectsService.assertAccess(
+      section.projectId,
+      userId,
+      companyId,
+      {
+        allowOwner: true,
+        allowReviewer: true,
+        allowApprover: true,
+        allowCompanyMember: true,
+      },
+    );
     return (this.prisma as any).sectionAutosave.findUnique({
       where: { sectionId },
     });
   }
 
-  async deleteSectionAutosave(sectionId: string, userId: string, companyId: string) {
-    const section = await this.prisma.section.findUnique({ where: { id: sectionId } });
+  async deleteSectionAutosave(
+    sectionId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    const section = await this.prisma.section.findUnique({
+      where: { id: sectionId },
+    });
     if (!section) throw new NotFoundException('Section not found');
-    await this.projectsService.assertOwnership(section.projectId, userId, companyId);
+    await this.projectsService.assertOwnership(
+      section.projectId,
+      userId,
+      companyId,
+    );
     await (this.prisma as any).sectionAutosave.delete({
       where: { sectionId },
     });
