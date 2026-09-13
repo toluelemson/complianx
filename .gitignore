@@ -2,6 +2,7 @@ node_modules
 dist
 .env
 .env.*
+!apps/api/.env.example
 storage/
 storage/documents
 *.log

@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   StreamableFile,
 } from '@nestjs/common';
 import { PrismaService } from '../../../../platform/database/prisma.service';
@@ -20,7 +21,12 @@ import type {
   EvidenceUpload,
 } from './artifact.commands';
 import { AuditService } from '../../../audit/application/audit.service';
-import type { FileScanner } from './file-scanner';
+import {
+  FileScannerUnavailableError,
+  type FileScanner,
+  type ScanResult,
+} from './file-scanner';
+import { FILE_SCANNER } from '../../infrastructure/file-scanner.provider';
 
 @Injectable()
 export class ArtifactsService {
@@ -31,7 +37,7 @@ export class ArtifactsService {
     private readonly projectsService: ProjectsService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
     private readonly audit: AuditService,
-    @Inject('FILE_SCANNER') private readonly scanner: FileScanner,
+    @Inject(FILE_SCANNER) private readonly scanner: FileScanner,
   ) {}
 
   private async ensureSection(projectId: string, sectionId: string) {
@@ -44,7 +50,11 @@ export class ArtifactsService {
     return section;
   }
 
-  private buildCitationKey(projectId: string, sectionName: string, version: number) {
+  private buildCitationKey(
+    projectId: string,
+    sectionName: string,
+    version: number,
+  ) {
     const normalized = sectionName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
     const versionSegment = String(version).padStart(2, '0');
     return `${projectId.slice(0, 8).toUpperCase()}-${normalized}-A${versionSegment}`;
@@ -104,7 +114,9 @@ export class ArtifactsService {
     const allowed: Record<string, string[]> = {
       '.pdf': ['application/pdf'],
       '.doc': ['application/msword'],
-      '.docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      '.docx': [
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ],
       '.txt': ['text/plain'],
       '.csv': ['text/csv', 'application/vnd.ms-excel'],
       '.json': ['application/json', 'text/json'],
@@ -115,8 +127,21 @@ export class ArtifactsService {
     if (/[/\\]/.test(file.originalname) || file.originalname.includes('..')) {
       throw new BadRequestException('Invalid evidence filename');
     }
-    const scan = await this.scanner.scan(file);
-    if (!scan.safe) throw new BadRequestException(scan.reason ?? 'File rejected by malware scanner');
+    let scan: ScanResult;
+    try {
+      scan = await this.scanner.scan(file);
+    } catch (error) {
+      if (error instanceof FileScannerUnavailableError) {
+        throw new ServiceUnavailableException(
+          'Evidence upload is unavailable because malware scanning could not be completed',
+        );
+      }
+      throw error;
+    }
+    if (!scan.safe)
+      throw new BadRequestException(
+        scan.reason ?? 'File rejected by malware scanner',
+      );
     await this.projectsService.assertOwnership(projectId, userId, companyId);
     const section = await this.ensureSection(projectId, sectionId);
     const storedName = `${sectionId}-${Date.now()}-${randomBytes(8).toString('hex')}${extname(file.originalname)}`;
