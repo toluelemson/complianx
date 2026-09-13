@@ -51,7 +51,7 @@ jobs:
       - run: pnpm --filter api exec ts-node -r ts-node/register test/e2e/prepare-fixtures.ts
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
-      - run: pnpm --filter api test:e2e -- --runInBand
+      - run: pnpm --filter api exec jest --config test/jest-e2e.json --runInBand
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
           JWT_SECRET: ci-test-secret
