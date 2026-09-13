@@ -93,5 +93,11 @@ describe('API security (e2e)', () => {
       .set('Authorization', `Bearer ${login.body.token}`)
       .set('x-company-id', 'e2e-company')
       .expect(201);
+    const obligations = await request(app.getHttpServer())
+      .get(`/api/ai-systems/${system.body.id}/obligations`)
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .set('x-company-id', 'e2e-company')
+      .expect(200);
+    expect(obligations.body).toEqual(expect.any(Array));
   });
 });
