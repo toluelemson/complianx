@@ -114,6 +114,20 @@ describe('API security (e2e)', () => {
         .expect(201);
       expect(upload.body.checksum).toEqual(expect.any(String));
       expect(upload.body.version).toBe(1);
+      if (obligations.body[0]) {
+        await request(app.getHttpServer())
+          .post(`/api/ai-systems/${system.body.id}/obligations/${obligations.body[0].id}/evidence`)
+          .set('Authorization', `Bearer ${login.body.token}`)
+          .set('x-company-id', 'e2e-company')
+          .send({ artifactId: upload.body.id, linkType: 'SUPPORTING' })
+          .expect(201);
+        const traceability = await request(app.getHttpServer())
+          .get(`/api/ai-systems/${system.body.id}/obligations/${obligations.body[0].id}/traceability`)
+          .set('Authorization', `Bearer ${login.body.token}`)
+          .set('x-company-id', 'e2e-company')
+          .expect(200);
+        expect(traceability.body.evidence).toEqual(expect.any(Array));
+      }
     }
   });
 });
