@@ -20,6 +20,7 @@ import type {
   EvidenceUpload,
 } from './artifact.commands';
 import { AuditService } from '../../../audit/application/audit.service';
+import type { FileScanner } from './file-scanner';
 
 @Injectable()
 export class ArtifactsService {
@@ -30,6 +31,7 @@ export class ArtifactsService {
     private readonly projectsService: ProjectsService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
     private readonly audit: AuditService,
+    @Inject('FILE_SCANNER') private readonly scanner: FileScanner,
   ) {}
 
   private async ensureSection(projectId: string, sectionId: string) {
@@ -98,6 +100,23 @@ export class ArtifactsService {
     if (!file) {
       throw new BadRequestException('File is required');
     }
+    const extension = extname(file.originalname).toLowerCase();
+    const allowed: Record<string, string[]> = {
+      '.pdf': ['application/pdf'],
+      '.doc': ['application/msword'],
+      '.docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      '.txt': ['text/plain'],
+      '.csv': ['text/csv', 'application/vnd.ms-excel'],
+      '.json': ['application/json', 'text/json'],
+    };
+    if (!allowed[extension] || !allowed[extension].includes(file.mimetype)) {
+      throw new BadRequestException('Unsupported evidence file type');
+    }
+    if (/[/\\]/.test(file.originalname) || file.originalname.includes('..')) {
+      throw new BadRequestException('Invalid evidence filename');
+    }
+    const scan = await this.scanner.scan(file);
+    if (!scan.safe) throw new BadRequestException(scan.reason ?? 'File rejected by malware scanner');
     await this.projectsService.assertOwnership(projectId, userId, companyId);
     const section = await this.ensureSection(projectId, sectionId);
     const storedName = `${sectionId}-${Date.now()}-${randomBytes(8).toString('hex')}${extname(file.originalname)}`;

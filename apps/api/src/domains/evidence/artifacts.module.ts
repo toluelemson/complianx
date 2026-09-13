@@ -6,6 +6,7 @@ import { AiSystemsModule } from '../ai-systems/ai-systems.module';
 import { CompanyModule } from '../organizations/company.module';
 import { FilesModule } from '../../platform/files/files.module';
 import { AuditModule } from '../audit/audit.module';
+import { NoopFileScanner } from './application/artifacts/file-scanner';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { AuditModule } from '../audit/audit.module';
     FilesModule,
     AuditModule,
   ],
-  providers: [ArtifactsService],
+  providers: [ArtifactsService, { provide: 'FILE_SCANNER', useClass: NoopFileScanner }],
   controllers: [ArtifactsController],
   exports: [ArtifactsService],
 })
