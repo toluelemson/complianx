@@ -388,11 +388,14 @@ describe('API security (e2e)', () => {
         projectId: project.body.id,
         type: 'technical_documentation',
         url: documentName,
-        approvalState: 'APPROVED',
         lifecycleStatus: 'CURRENT',
         provenanceStatus: 'COMPLETE',
       },
     });
+    await request(app.getHttpServer())
+      .patch(`/api/documents/${document.id}/approve`)
+      .set(authenticated(adminToken))
+      .expect(200);
 
     await request(app.getHttpServer())
       .post(`/api/projects/${project.body.id}/workflow/submit`)

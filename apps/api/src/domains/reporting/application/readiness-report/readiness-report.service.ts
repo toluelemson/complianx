@@ -172,8 +172,19 @@ export class ReadinessReportService {
             const gaps: string[] = [];
             if (!classification || classification.reviewStatus === 'PENDING')
               gaps.push('Classification requires human review');
+            else if (!classification.reviewerId || !classification.reviewedAt)
+              gaps.push('Classification has no recorded human reviewer');
             if (project.workflowStatus !== 'APPROVED')
               gaps.push('Project approval is outstanding');
+            else if (
+              !project.statusEvents.some(
+                (event) =>
+                  event.status === 'APPROVED' &&
+                  Boolean(event.actorId) &&
+                  Boolean(event.signature?.trim()),
+              )
+            )
+              gaps.push('Project has no signed human approval');
             if (
               project.findings.some(
                 (finding) =>
@@ -205,14 +216,58 @@ export class ReadinessReportService {
             const currentDocuments = project.documents.filter(
               (document) => document.lifecycleStatus === 'CURRENT',
             );
+            const documentApprovalEvents = await tx.auditEvent.findMany({
+              where: {
+                projectId,
+                companyId,
+                entityType: 'Document',
+                entityId: { in: currentDocuments.map((item) => item.id) },
+                action: 'APPROVED',
+                actorId: { not: null },
+              },
+              select: { entityId: true },
+            });
+            const humanApprovedDocuments = new Set(
+              documentApprovalEvents.map((event) => event.entityId),
+            );
             if (
               !currentDocuments.length ||
               currentDocuments.some(
-                (document) => document.approvalState !== 'APPROVED',
+                (document) =>
+                  document.approvalState !== 'APPROVED' ||
+                  !humanApprovedDocuments.has(document.id),
               )
             )
-              gaps.push('Current approved documents are required');
+              gaps.push('Current documents require recorded human approval');
             const now = new Date();
+            const obligationApprovalEvents = await tx.auditEvent.findMany({
+              where: {
+                projectId,
+                companyId,
+                entityType: 'AiSystemObligation',
+                entityId: { in: project.obligations.map((item) => item.id) },
+                action: 'UPDATED',
+              },
+              select: {
+                entityId: true,
+                actorId: true,
+                afterSnapshot: true,
+              },
+            });
+            const humanApprovedObligations = new Set(
+              obligationApprovalEvents
+                .filter((event) => {
+                  const snapshot = event.afterSnapshot as Record<
+                    string,
+                    unknown
+                  > | null;
+                  return (
+                    Boolean(event.actorId) &&
+                    snapshot?.approvalState === 'APPROVED'
+                  );
+                })
+                .map((event) => event.entityId),
+            );
             for (const obligation of project.obligations) {
               if (
                 obligation.approvalState !== 'APPROVED' ||
@@ -221,6 +276,10 @@ export class ReadinessReportService {
                 gaps.push(
                   `Obligation ${obligation.id} is not approved and complete`,
                 );
+              else if (!humanApprovedObligations.has(obligation.id))
+                gaps.push(
+                  `Obligation ${obligation.id} has no recorded human approval`,
+                );
               if (
                 obligation.status !== 'NOT_APPLICABLE' &&
                 !obligation.evidence.some(
@@ -228,6 +287,8 @@ export class ReadinessReportService {
                     ['SUPPORTING', 'PRIMARY'].includes(link.linkType) &&
                     ((link.artifact?.projectId === projectId &&
                       link.artifact.status === 'APPROVED' &&
+                      Boolean(link.artifact.reviewedById) &&
+                      Boolean(link.artifact.reviewedAt) &&
                       (!link.artifact.expiresAt ||
                         link.artifact.expiresAt > now) &&
                       (!link.artifact.validFrom ||

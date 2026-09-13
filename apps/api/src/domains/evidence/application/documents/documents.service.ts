@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -17,6 +18,7 @@ import { LlmService } from '../../../../platform/ai/llm.service';
 import { PdfService } from '../../../../platform/pdf/pdf.service';
 import { ReadinessService } from '../../../reporting/application/readiness/readiness.service';
 import { ReportCompositionService } from '../../../reporting/application/report-generation/report-composition.service';
+import { AuditService } from '../../../audit/application/audit.service';
 import {
   FILE_STORAGE,
   type FileStorage,
@@ -62,6 +64,7 @@ export class DocumentsService {
     private readonly readinessService: ReadinessService,
     private readonly composition: ReportCompositionService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
+    private readonly audit: AuditService,
   ) {}
 
   async list(
@@ -103,6 +106,52 @@ export class DocumentsService {
         url: fileName,
         projectId,
       },
+    });
+  }
+
+  async approve(id: string, userId: string, companyId: string) {
+    const document = await this.prisma.document.findUnique({
+      where: { id },
+      include: { project: true },
+    });
+    if (!document) throw new NotFoundException('Document not found');
+    const access = await this.projectsService.assertAccess(
+      document.projectId,
+      userId,
+      companyId,
+      {
+        allowOwner: false,
+        allowReviewer: true,
+        allowApprover: true,
+        allowAdministrator: true,
+      },
+    );
+    if (
+      !['REVIEWER', 'APPROVER'].includes(access.accessRole) &&
+      access.membershipRole !== 'ADMIN'
+    )
+      throw new ForbiddenException(
+        'Only an assigned reviewer or approver may approve documents',
+      );
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.document.update({
+        where: { id },
+        data: { approvalState: 'APPROVED' },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          projectId: document.projectId,
+          actorId: userId,
+          entityType: 'Document',
+          entityId: id,
+          action: 'APPROVED',
+          beforeSnapshot: { approvalState: document.approvalState },
+          afterSnapshot: { approvalState: updated.approvalState },
+        },
+        tx,
+      );
+      return updated;
     });
   }
 

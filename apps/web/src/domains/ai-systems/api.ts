@@ -459,6 +459,13 @@ export async function getProjectDocuments(projectId: string) {
   return data;
 }
 
+export async function approveDocument(documentId: string) {
+  const { data } = await api.patch<DocumentItem>(
+    `/documents/${documentId}/approve`,
+  );
+  return data;
+}
+
 export async function getGenerationReadiness(projectId: string) {
   const { data } = await api.get<GenerationReadiness>(
     `/projects/${projectId}/generate/readiness`,

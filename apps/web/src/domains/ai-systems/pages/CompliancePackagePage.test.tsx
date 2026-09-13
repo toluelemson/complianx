@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CompliancePackagePage from './CompliancePackagePage';
+import { approveDocument } from '../api';
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({
     token: 'test-token',
@@ -17,8 +18,22 @@ vi.mock('@/app/layout/AppShell', () => ({
 vi.mock('../api', () => ({
   getProject: vi
     .fn()
-    .mockResolvedValue({ name: 'Project', sections: [], statusEvents: [] }),
-  getProjectDocuments: vi.fn().mockResolvedValue([]),
+    .mockResolvedValue({
+      name: 'Project',
+      sections: [],
+      statusEvents: [],
+      viewerRole: 'APPROVER',
+    }),
+  getProjectDocuments: vi.fn().mockResolvedValue([
+    {
+      id: 'draft-document',
+      type: 'technical_doc',
+      approvalState: 'DRAFT',
+      lifecycleStatus: 'CURRENT',
+      createdAt: '2026-09-01T00:00:00Z',
+    },
+  ]),
+  approveDocument: vi.fn().mockResolvedValue({ approvalState: 'APPROVED' }),
   listProjectObligations: vi.fn().mockResolvedValue([]),
   createCompliancePackage: vi.fn(),
   listCompliancePackages: vi.fn().mockResolvedValue([
@@ -87,5 +102,25 @@ describe('Saved package download', () => {
     expect(
       screen.getByRole('button', { name: 'Archive unavailable' }),
     ).toBeDisabled();
+  });
+  it('lets an assigned approver record the document decision', async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/projects/project/package']}>
+          <Routes>
+            <Route
+              path="/projects/:projectId/package"
+              element={<CompliancePackagePage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Approve document' }),
+    );
+    await waitFor(() =>
+      expect(approveDocument).toHaveBeenCalledWith('draft-document'),
+    );
   });
 });

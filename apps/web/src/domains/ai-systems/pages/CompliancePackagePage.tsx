@@ -10,6 +10,7 @@ import type {
   ProjectDetail,
 } from '@complianx/contracts/ai-systems';
 import {
+  approveDocument,
   getProject,
   getProjectDocuments,
   listProjectObligations,
@@ -62,9 +63,27 @@ export default function CompliancePackagePage() {
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => listProjectObligations(projectId),
   });
+  const approveDocumentMutation = useMutation({
+    mutationFn: (documentId: string) => approveDocument(documentId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['documents', projectId, activeCompanyId],
+      });
+      toast.success('Document approved by a human reviewer');
+    },
+    onError: () => toast.error('Unable to approve document'),
+  });
 
   const canCreate =
     ['OWNER', 'REVIEWER', 'APPROVER'].includes(
+      projectQuery.data?.viewerRole ?? '',
+    ) ||
+    user?.companies?.some(
+      (membership) =>
+        membership.companyId === activeCompanyId && membership.role === 'ADMIN',
+    );
+  const canApproveDocuments =
+    ['REVIEWER', 'APPROVER'].includes(
       projectQuery.data?.viewerRole ?? '',
     ) ||
     user?.companies?.some(
@@ -131,7 +150,8 @@ export default function CompliancePackagePage() {
               {projectQuery.data?.name ?? 'Compliance package'}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Audit-ready documents, evidence references, and workflow history.
+              Finalized proof of the evidence and human decisions recorded for
+              this AI system.
             </p>
           </div>
           <button
@@ -141,10 +161,18 @@ export default function CompliancePackagePage() {
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
           >
             {createPackageMutation.isPending
-              ? 'Saving…'
-              : 'Save package snapshot'}
+              ? 'Finalizing…'
+              : 'Create finalized package'}
           </button>
         </div>
+        <section className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+          <p className="font-semibold">Human approval is required</p>
+          <p className="mt-1 text-sky-800">
+            AI suggestions and draft documents cannot finalize a package. The
+            classification, evidence, requirements, documents, and project must
+            have their required human decisions recorded first.
+          </p>
+        </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">Documents</h2>
@@ -168,9 +196,22 @@ export default function CompliancePackagePage() {
                     {document.lifecycleStatus ?? 'CURRENT'}
                   </p>
                 </div>
-                <span className="text-xs text-slate-400">
-                  {new Date(document.createdAt).toLocaleDateString()}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-400">
+                    {new Date(document.createdAt).toLocaleDateString()}
+                  </span>
+                  {document.approvalState !== 'APPROVED' &&
+                  canApproveDocuments ? (
+                    <button
+                      type="button"
+                      onClick={() => approveDocumentMutation.mutate(document.id)}
+                      disabled={approveDocumentMutation.isPending}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                    >
+                      Approve document
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ))}
             {!documentsQuery.isLoading && !documentsQuery.data?.length ? (

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { DocumentsService } from '../../application/documents/documents.service';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../../../../platform/auth/authenticated-request.type';
@@ -35,6 +35,15 @@ export class DocumentsController {
       id,
       req.user.userId,
       companyId,
+    );
+  }
+
+  @Patch('documents/:id/approve')
+  approve(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.documentsService.approve(
+      id,
+      req.user.userId,
+      this.resolveCompanyId(req),
     );
   }
 

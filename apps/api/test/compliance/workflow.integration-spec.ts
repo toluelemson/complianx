@@ -114,6 +114,8 @@ async function fixture() {
         original: true,
       },
       reviewStatus: 'REVIEWED',
+      reviewerId: reviewer.id,
+      reviewedAt: new Date(),
     },
   });
   const definition = await prisma.obligation.create({
@@ -148,6 +150,8 @@ async function fixture() {
       checksum: 'fixture',
       citationKey: suffix,
       status: 'APPROVED',
+      reviewedById: reviewer.id,
+      reviewedAt: new Date(),
     },
   });
   const evidence = await prisma.obligationEvidence.create({
@@ -165,6 +169,38 @@ async function fixture() {
       url: `${suffix}.pdf`,
       approvalState: 'APPROVED',
       lifecycleStatus: 'CURRENT',
+    },
+  });
+  await prisma.projectStatusEvent.create({
+    data: {
+      projectId: project.id,
+      status: 'APPROVED',
+      actorId: reviewer.id,
+      signature: 'Test reviewer approval',
+    },
+  });
+  await prisma.auditEvent.create({
+    data: {
+      projectId: project.id,
+      companyId: company.id,
+      entityType: 'AiSystemObligation',
+      entityId: obligation.id,
+      action: 'UPDATED',
+      actorId: reviewer.id,
+      beforeSnapshot: { approvalState: 'READY_FOR_REVIEW' },
+      afterSnapshot: { approvalState: 'APPROVED' },
+    },
+  });
+  await prisma.auditEvent.create({
+    data: {
+      projectId: project.id,
+      companyId: company.id,
+      entityType: 'Document',
+      entityId: document.id,
+      action: 'APPROVED',
+      actorId: reviewer.id,
+      beforeSnapshot: { approvalState: 'DRAFT' },
+      afterSnapshot: { approvalState: 'APPROVED' },
     },
   });
   await storage.write(
@@ -464,6 +500,83 @@ describe('PostgreSQL compliance workflows', () => {
         f.otherCompany.id,
       ),
     ).rejects.toThrow('Package not found');
+  });
+  it('requires recorded human decisions before package generation', async () => {
+    const f = await fixture();
+    const expectGap = async (gap: string) => {
+      await expect(
+        reports.createPackage(f.project.id, f.owner.id, f.company.id),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          message: 'Compliance package generation is blocked',
+          gaps: expect.arrayContaining([expect.stringContaining(gap)]),
+        }),
+      });
+    };
+
+    await prisma.classificationResult.update({
+      where: { id: f.classification.id },
+      data: { reviewerId: null, reviewedAt: null },
+    });
+    await expectGap('no recorded human reviewer');
+    await prisma.classificationResult.update({
+      where: { id: f.classification.id },
+      data: { reviewerId: f.reviewer.id, reviewedAt: new Date() },
+    });
+
+    await prisma.projectStatusEvent.deleteMany({
+      where: { projectId: f.project.id, status: 'APPROVED' },
+    });
+    await expectGap('no signed human approval');
+    await prisma.projectStatusEvent.create({
+      data: {
+        projectId: f.project.id,
+        status: 'APPROVED',
+        actorId: f.reviewer.id,
+        signature: 'Reviewed and approved',
+      },
+    });
+
+    await prisma.auditEvent.deleteMany({
+      where: {
+        entityType: 'AiSystemObligation',
+        entityId: f.obligation.id,
+      },
+    });
+    await expectGap('no recorded human approval');
+    await prisma.auditEvent.create({
+      data: {
+        projectId: f.project.id,
+        companyId: f.company.id,
+        entityType: 'AiSystemObligation',
+        entityId: f.obligation.id,
+        action: 'UPDATED',
+        actorId: f.reviewer.id,
+        afterSnapshot: { approvalState: 'APPROVED' },
+      },
+    });
+
+    await prisma.auditEvent.deleteMany({
+      where: { entityType: 'Document', entityId: f.document.id },
+    });
+    await expectGap('documents require recorded human approval');
+    await prisma.auditEvent.create({
+      data: {
+        projectId: f.project.id,
+        companyId: f.company.id,
+        entityType: 'Document',
+        entityId: f.document.id,
+        action: 'APPROVED',
+        actorId: f.reviewer.id,
+        afterSnapshot: { approvalState: 'APPROVED' },
+      },
+    });
+
+    await prisma.sectionArtifact.update({
+      where: { id: f.artifact.id },
+      data: { status: 'REJECTED' },
+    });
+    await expectGap('lacks valid supporting evidence');
   });
   it('assigns distinct sequential versions under concurrent creation', async () => {
     const f = await fixture();
