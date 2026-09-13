@@ -151,7 +151,7 @@ export class ArtifactsService {
       actorId: userId,
       entityType: 'SectionArtifact',
       entityId: artifact.id,
-      action: 'CREATED',
+      action: latest ? 'REPLACED' : 'CREATED',
       afterSnapshot: {
         checksum: artifact.checksum,
         version: artifact.version,
@@ -182,6 +182,20 @@ export class ArtifactsService {
         'Cannot delete an artifact that has newer versions',
       );
     }
+    await this.audit.record({
+      companyId,
+      projectId: artifact.projectId,
+      actorId: userId,
+      entityType: 'SectionArtifact',
+      entityId: artifact.id,
+      action: 'DELETED',
+      beforeSnapshot: {
+        originalName: artifact.originalName,
+        version: artifact.version,
+        checksum: artifact.checksum,
+        citationKey: artifact.citationKey,
+      },
+    });
     await this.prisma.sectionArtifact.delete({
       where: { id: artifactId },
     });
