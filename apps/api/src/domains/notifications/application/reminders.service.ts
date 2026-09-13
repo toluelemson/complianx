@@ -16,7 +16,11 @@ export class RemindersService {
     private readonly projectsService: ProjectsService,
   ) {}
 
-  async list(projectId: string, userId: string, companyId: string): Promise<ReminderItem[]> {
+  async list(
+    projectId: string,
+    userId: string,
+    companyId: string,
+  ): Promise<ReminderItem[]> {
     const project = await this.projectsService.assertOwnership(
       projectId,
       userId,

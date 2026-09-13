@@ -28,7 +28,11 @@ export class RemindersController {
     @Param('projectId') projectId: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.remindersService.list(projectId, req.user.userId, this.companyId(req));
+    return this.remindersService.list(
+      projectId,
+      req.user.userId,
+      this.companyId(req),
+    );
   }
 
   @Post()
@@ -37,7 +41,12 @@ export class RemindersController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateReminderDto,
   ) {
-    return this.remindersService.create(projectId, req.user.userId, this.companyId(req), dto);
+    return this.remindersService.create(
+      projectId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
   }
 
   @Patch(':reminderId')

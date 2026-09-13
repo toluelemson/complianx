@@ -31,7 +31,9 @@ describe('AuditService', () => {
   });
 
   it('preserves before and after snapshots for lifecycle decisions', async () => {
-    const create = jest.fn(({ data }: { data: Record<string, unknown> }) => data);
+    const create = jest.fn(
+      ({ data }: { data: Record<string, unknown> }) => data,
+    );
     const service = new AuditService({ auditEvent: { create } } as never);
 
     await service.record({
