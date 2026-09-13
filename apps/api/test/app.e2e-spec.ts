@@ -76,4 +76,22 @@ describe('API security (e2e)', () => {
       .expect(201);
     expect(response.body.companyId).toBe('e2e-company');
   });
+
+  it('runs preliminary EU AI Act classification for the system', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'e2e-user@example.invalid', password: 'e2e-test-password' })
+      .expect(201);
+    const system = await request(app.getHttpServer())
+      .post('/api/ai-systems')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .set('x-company-id', 'e2e-company')
+      .send({ name: `E2E classified system ${Date.now()}` })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/ai-systems/${system.body.id}/assessments/preliminary`)
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .set('x-company-id', 'e2e-company')
+      .expect(201);
+  });
 });
