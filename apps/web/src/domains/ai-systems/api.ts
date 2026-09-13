@@ -217,6 +217,16 @@ export async function listProjectFindings(projectId: string) {
   return data;
 }
 
+export async function getObligationTraceability(
+  projectId: string,
+  obligationId: string,
+) {
+  const { data } = await api.get(
+    `/ai-systems/${projectId}/obligations/${obligationId}/traceability`,
+  );
+  return data;
+}
+
 export async function createProjectFinding(
   projectId: string,
   payload: {

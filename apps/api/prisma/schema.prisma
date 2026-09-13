@@ -592,6 +592,7 @@ model Obligation {
   systems        AiSystemObligation[]
 
   @@unique([packVersionId, key])
+  @@index([packVersionId, createdAt])
 }
 
 model AiSystemObligation {
@@ -617,6 +618,7 @@ model AiSystemObligation {
 
   @@unique([projectId, obligationId])
   @@index([projectId, status])
+  @@index([obligationId, status])
 }
 
 model ComplianceAction {
@@ -704,6 +706,7 @@ model ObligationEvidence {
   createdAt            DateTime           @default(now())
 
   @@index([aiSystemObligationId])
+  @@index([aiSystemObligationId, createdAt])
   @@index([artifactId])
   @@index([documentId])
 }

@@ -394,6 +394,8 @@ export class AssessmentsService {
             questionnaireVersion: true,
             evaluatedAt: true,
             evaluatedById: true,
+            reviewerId: true,
+            reviewedAt: true,
           },
         },
         evidence: {
@@ -413,7 +415,53 @@ export class AssessmentsService {
       select: { id: true, version: true, createdAt: true, manifest: true },
       orderBy: { version: 'desc' },
     });
+    const closureEvidenceIds = obligation.actions
+      .map((action) => action.closureEvidenceId)
+      .filter((id): id is string => Boolean(id));
+    const closureEvidence = closureEvidenceIds.length
+      ? await this.prisma.sectionArtifact.findMany({
+          where: { id: { in: closureEvidenceIds }, projectId },
+          select: {
+            id: true,
+            originalName: true,
+            version: true,
+            checksum: true,
+            createdAt: true,
+            uploadedById: true,
+            reviewedById: true,
+            reviewedAt: true,
+            status: true,
+          },
+        })
+      : [];
+    const evidence = obligation.evidence.map((link) => ({
+      ...link,
+      artifact: link.artifact
+        ? {
+            ...link.artifact,
+            evidenceVersion: link.artifact.version,
+            evidenceHash: link.artifact.checksum,
+            uploadedAt: link.artifact.createdAt,
+            uploaderId: link.artifact.uploadedById,
+            reviewerId: link.artifact.reviewedById,
+            reviewerStatus: link.artifact.status,
+          }
+        : link.document,
+    }));
+    const missingEvidence = obligation.actions
+      .filter((action) => action.status !== 'COMPLETED' && action.status !== 'DONE')
+      .filter((action) => !action.closureEvidenceId)
+      .map((action) => ({ id: action.id, title: action.title, status: action.status }));
     return {
+      requirement: {
+        id: obligation.obligation.id,
+        identifier: obligation.obligation.key,
+        title: obligation.obligation.title,
+        description: obligation.obligation.description,
+        legalReference: obligation.obligation.legalReference,
+        applicability: obligation.status,
+        ownerId: obligation.ownerId,
+      },
       legalReference: obligation.obligation.legalReference,
       packVersion: {
         id: obligation.obligation.packVersion.id,
@@ -421,6 +469,7 @@ export class AssessmentsService {
         version: obligation.obligation.packVersion.version,
         legalInstrument: obligation.obligation.packVersion.legalInstrument,
         sourceUrl: obligation.obligation.packVersion.sourceUrl,
+        regulatorySource: obligation.obligation.packVersion.legalInstrument,
       },
       applicability: {
         status: obligation.status,
@@ -433,9 +482,23 @@ export class AssessmentsService {
         dueAt: obligation.dueAt,
         approvalState: obligation.approvalState,
       },
-      evidence: obligation.evidence,
+      evidence,
+      missingEvidence,
       findings: obligation.findings,
-      actions: obligation.actions,
+      actions: obligation.actions.map((action) => ({
+        ...action,
+        closureEvidence: closureEvidence.find((item) => item.id === action.closureEvidenceId) ?? null,
+      })),
+      review: {
+        classification: obligation.classificationResult
+          ? {
+              status: obligation.classificationResult.reviewStatus,
+              reviewerId: obligation.classificationResult.reviewerId,
+              reviewedAt: obligation.classificationResult.reviewedAt,
+            }
+          : null,
+        approvalState: obligation.approvalState,
+      },
       packageInclusion: packages.map((pkg) => ({
         id: pkg.id,
         version: pkg.version,
