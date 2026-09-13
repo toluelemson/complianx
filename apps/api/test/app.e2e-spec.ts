@@ -46,4 +46,20 @@ describe('API security (e2e)', () => {
       .set('x-company-id', 'e2e-company')
       .expect(200);
   });
+
+  it('creates a tenant-scoped project with the authenticated fixture', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'e2e-user@example.invalid', password: 'e2e-test-password' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/projects')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .set('x-company-id', 'e2e-company')
+      .send({ name: `E2E project ${Date.now()}` })
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.companyId).toBe('e2e-company');
+      });
+  });
 });
