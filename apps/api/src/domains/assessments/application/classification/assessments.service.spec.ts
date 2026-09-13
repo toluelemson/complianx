@@ -92,6 +92,12 @@ describe('Compliance mutation boundaries', () => {
           Promise.resolve({ id: 'classification', ...data }),
         ),
       },
+      assessment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(({ data }) =>
+          Promise.resolve({ id: 'assessment', ...data }),
+        ),
+      },
       auditEvent: { create: jest.fn().mockResolvedValue({}) },
     };
     const prisma = { ...tx, $transaction: jest.fn((fn) => fn(tx)) };
@@ -113,6 +119,34 @@ describe('Compliance mutation boundaries', () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(tx.finding.create).not.toHaveBeenCalled();
+  });
+  it('reopens the latest draft assessment for the same regulatory pack', async () => {
+    const { tx, prisma } = setup();
+    const draft = {
+      id: 'saved-assessment',
+      projectId: 'project',
+      packVersionId: 'pack',
+      status: 'DRAFT',
+      answers: { is_ai_system: true },
+    };
+    tx.assessment.findFirst.mockImplementation(() =>
+      Promise.resolve(draft as never),
+    );
+    const classification = {
+      resolvePack: jest.fn().mockResolvedValue({ id: 'pack' }),
+    };
+    const service = new AssessmentsService(
+      prisma as never,
+      new ProjectsService(prisma as never),
+      classification as never,
+      new AuditService(prisma as never),
+    );
+
+    await expect(service.create('project', 'owner', 'company')).resolves.toBe(
+      draft,
+    );
+    expect(tx.assessment.create).not.toHaveBeenCalled();
+    expect(tx.auditEvent.create).not.toHaveBeenCalled();
   });
   it.each(['finding', 'obligation', 'createAction', 'updateAction'])(
     'rejects member mutation of %s',

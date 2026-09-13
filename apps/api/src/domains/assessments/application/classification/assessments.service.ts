@@ -40,6 +40,16 @@ export class AssessmentsService {
     await this.authorizeMutation(projectId, userId, companyId);
     const pack = await this.classification.resolvePack(packVersion);
     return this.mutate(async (tx) => {
+      const existingDraft = await tx.assessment.findFirst({
+        where: {
+          projectId,
+          packVersionId: pack.id,
+          status: AssessmentStatus.DRAFT,
+        },
+        orderBy: { updatedAt: 'desc' },
+        include: { packVersion: { select: { version: true } } },
+      });
+      if (existingDraft) return existingDraft;
       const assessment = await tx.assessment.create({
         data: {
           projectId,

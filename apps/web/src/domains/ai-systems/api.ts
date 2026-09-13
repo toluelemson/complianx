@@ -93,22 +93,29 @@ export async function classifyAssessment(
   return data;
 }
 
+export type PreliminaryClassification = {
+  id: string;
+  assessmentId: string;
+  category: string;
+  reviewStatus: string;
+  regulatoryContentVersion?: string;
+  ruleSetVersion?: string;
+  resultSnapshot?: {
+    in_scope?: boolean;
+    high_risk?: boolean;
+    prohibited?: boolean;
+    operator_roles?: string[];
+    summary_sentence?: string;
+    missing_information?: string[];
+    human_review_required?: boolean;
+  };
+};
+
 export async function getPreliminaryClassification(projectId: string) {
   const { data } = await api.get(
     `/ai-systems/${projectId}/assessments/preliminary`,
   );
-  return data as {
-    id: string;
-    assessmentId: string;
-    category: string;
-    reviewStatus: string;
-    regulatoryContentVersion?: string;
-    ruleSetVersion?: string;
-    resultSnapshot?: {
-      missing_information?: string[];
-      human_review_required?: boolean;
-    };
-  } | null;
+  return data as PreliminaryClassification | null;
 }
 
 export async function listAssessmentAnswers(

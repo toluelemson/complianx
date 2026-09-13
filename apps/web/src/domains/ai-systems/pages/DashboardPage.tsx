@@ -10,7 +10,6 @@ import { CloneProjectModal } from '../components/CloneProjectModal';
 import {
   cloneProject,
   createProject,
-  classifyProjectIntake,
   listProjects,
   getOrganizationProfile,
 } from '@/domains/ai-systems/api';
@@ -53,17 +52,7 @@ export default function DashboardPage() {
       setModalOpen(false);
       toast.success('Project created');
       trackMarketingEvent('ai_system_registered');
-      void classifyProjectIntake(project.id)
-        .then(() => {
-          trackMarketingEvent('classification_completed');
-          queryClient.invalidateQueries({
-            queryKey: ['projects', activeCompanyId],
-          });
-          navigate(`/projects/${project.id}`);
-        })
-        .catch(() =>
-          toast.error('Classification needs review before it can run'),
-        );
+      navigate(`/projects/${project.id}/classification`);
     },
     onError: () => {
       toast.error('Unable to create project');
