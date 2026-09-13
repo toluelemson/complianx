@@ -6,7 +6,12 @@ import type {
   ProjectDetail,
   SectionWithMeta,
 } from '@complianx/contracts/ai-systems';
-import { getProject, getProjectDocuments, getProjectSections } from '../api';
+import {
+  getProject,
+  getProjectDocuments,
+  getProjectSections,
+  listProjectObligations,
+} from '../api';
 
 export default function ProjectOverviewPage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
@@ -26,6 +31,11 @@ export default function ProjectOverviewPage() {
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getProjectDocuments(projectId),
   });
+  const obligationsQuery = useQuery({
+    queryKey: ['obligations', projectId, activeCompanyId],
+    enabled: Boolean(token && projectId && activeCompanyId),
+    queryFn: () => listProjectObligations(projectId),
+  });
   if (!initializing && !token) return <Navigate to="/login" replace />;
   const completed = (sectionsQuery.data ?? []).filter(
     (section) => Object.keys(section.content ?? {}).length > 0,
@@ -37,6 +47,16 @@ export default function ProjectOverviewPage() {
     ...(!documentsQuery.data?.length
       ? ['Generate the compliance package']
       : []),
+    ...(obligationsQuery.data ?? [])
+      .filter((item) => item.status !== 'SATISFIED' && item.status !== 'NOT_APPLICABLE')
+      .slice(0, 6)
+      .map((item) => {
+        const title = item.obligation.title;
+        if (item.approvalState === 'CHANGES_REQUESTED') return `Address review changes: ${title}`;
+        if (item.status === 'UNDER_REVIEW') return `Review requirement: ${title}`;
+        if (!item.actions?.length) return `Define an action: ${title}`;
+        return `Complete requirement: ${title}`;
+      }),
   ];
   return (
     <AppShell
