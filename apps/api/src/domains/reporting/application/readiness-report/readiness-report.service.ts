@@ -11,6 +11,7 @@ import { PrismaService } from '../../../../platform/database/prisma.service';
 import { createHash, randomUUID } from 'node:crypto';
 import archiver from 'archiver';
 import { basename } from 'node:path';
+import { promises as fs } from 'node:fs';
 import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
 import { PdfService } from '../../../../platform/pdf/pdf.service';
 import { ReadinessService } from '../readiness/readiness.service';
@@ -297,10 +298,15 @@ export class ReadinessReportService {
                     `evidence/${link.artifact.id}-${basename(link.artifact.originalName)}`,
                   );
                 }
-              }
+            }
             const status = gaps.length ? 'INCOMPLETE' : 'COMPLETE';
+            const latest = await tx.compliancePackage.aggregate({
+              where: { projectId },
+              _max: { version: true },
+            });
             const manifest = {
               manifestVersion: 'neuraldocx-package-1.1.0',
+              package: { version: (latest._max.version ?? 0) + 1 },
               completeness: { status, gaps },
               files,
               generatedAt: new Date().toISOString(),
@@ -384,10 +390,6 @@ export class ReadinessReportService {
             const archiveHash = createHash('sha256')
               .update(archiveBytes)
               .digest('hex');
-            const latest = await tx.compliancePackage.aggregate({
-              where: { projectId },
-              _max: { version: true },
-            });
             const packageRecord = await tx.compliancePackage.create({
               data: {
                 projectId,
@@ -479,6 +481,46 @@ export class ReadinessReportService {
         createdAt: true,
       },
     });
+  }
+
+  async verifyCompliancePackage(
+    projectId: string,
+    packageId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    await this.authorize(projectId, userId, companyId);
+    const record = await this.prisma.compliancePackage.findFirst({
+      where: { id: packageId, projectId, companyId },
+      include: { project: { select: { id: true, companyId: true } } },
+    });
+    if (!record) throw new NotFoundException('Package not found');
+    const errors: string[] = [];
+    const manifestHash = createHash('sha256')
+      .update(JSON.stringify(record.manifest))
+      .digest('hex');
+    const manifestValid = manifestHash === record.manifestHash;
+    if (!manifestValid) errors.push('Manifest hash does not match stored manifest');
+    const metadata = record.manifest as Record<string, any>;
+    if (metadata.project?.id !== projectId) errors.push('Manifest project does not match package project');
+    if (metadata.organization?.id !== companyId) errors.push('Manifest organization does not match package organization');
+    if (metadata.package?.version && metadata.package.version !== record.version) errors.push('Manifest package version does not match record');
+    let archiveValid = false;
+    if (!record.archiveFile || !record.archiveHash || !this.storage.exists('packages', record.archiveFile)) {
+      errors.push('Package archive is missing');
+    } else {
+      const archiveBytes = await fs.readFile(this.storage.resolve('packages', record.archiveFile));
+      const archiveHash = createHash('sha256').update(archiveBytes).digest('hex');
+      archiveValid = archiveHash === record.archiveHash;
+      if (!archiveValid) errors.push('Archive hash does not match stored archive');
+    }
+    return {
+      valid: manifestValid && archiveValid && errors.length === 0,
+      manifestValid,
+      archiveValid,
+      checkedAt: new Date().toISOString(),
+      errors,
+    };
   }
 
   async get(

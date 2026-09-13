@@ -15,6 +15,7 @@ import {
   listProjectObligations,
   createCompliancePackage,
   listCompliancePackages,
+  verifyCompliancePackage,
 } from '../api';
 import { DOCUMENT_LABELS } from '../constants/documents';
 
@@ -22,6 +23,7 @@ export default function CompliancePackagePage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { token, initializing, activeCompanyId, user } = useAuth();
   const [downloading, setDownloading] = useState(false);
+  const [verification, setVerification] = useState<Record<string, { valid: boolean; errors: string[] }>>({});
   const [now] = useState(() => Date.now());
   const queryClient = useQueryClient();
   const packagesQuery = useQuery({
@@ -71,6 +73,18 @@ export default function CompliancePackagePage() {
     );
 
   if (!initializing && !token) return <Navigate to="/login" replace />;
+
+  const verifyPackage = async (packageId: string) => {
+    try {
+      const result = await verifyCompliancePackage(projectId, packageId);
+      setVerification((current) => ({ ...current, [packageId]: result }));
+      toast[result.valid ? 'success' : 'error'](
+        result.valid ? 'Package integrity verified' : 'Package integrity check failed',
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to verify package');
+    }
+  };
 
   const downloadPackage = async (packageId: string) => {
     if (!token) return;
@@ -214,6 +228,18 @@ export default function CompliancePackagePage() {
                     ? `Download v${pkg.version}`
                     : 'Archive unavailable'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => void verifyPackage(pkg.id)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold"
+                >
+                  Verify integrity
+                </button>
+                {verification[pkg.id] ? (
+                  <span className={`w-full text-xs ${verification[pkg.id].valid ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {verification[pkg.id].valid ? 'Integrity verified' : verification[pkg.id].errors[0] ?? 'Verification failed'}
+                  </span>
+                ) : null}
               </div>
             ))}
             {!packagesQuery.data?.length ? (

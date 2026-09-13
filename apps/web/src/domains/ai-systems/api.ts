@@ -437,6 +437,11 @@ export async function listCompliancePackages(projectId: string) {
   return data;
 }
 
+export async function verifyCompliancePackage(projectId: string, packageId: string) {
+  const { data } = await api.get(`/ai-systems/${projectId}/reports/packages/${packageId}/verify`);
+  return data as { valid: boolean; manifestValid: boolean; archiveValid: boolean; checkedAt: string; errors: string[] };
+}
+
 export async function listTemplates(sectionName: string) {
   const { data } = await api.get<TemplateItem[]>('/templates', {
     params: { sectionName },

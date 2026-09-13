@@ -77,6 +77,20 @@ export class ReadinessReportController {
     );
   }
 
+  @Get('packages/:packageId/verify')
+  verifyPackage(
+    @Param('aiSystemId') projectId: string,
+    @Param('packageId') packageId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.reports.verifyCompliancePackage(
+      projectId,
+      packageId,
+      req.user.userId,
+      this.companyId(req),
+    );
+  }
+
   @Get(':reportId')
   get(
     @Param('aiSystemId') projectId: string,
