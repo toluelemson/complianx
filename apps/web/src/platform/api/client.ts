@@ -10,14 +10,14 @@ function normalizeApiBaseUrl(baseUrl?: string) {
 
   const sanitizedBaseUrl = baseUrl.replace(/\/$/, '');
 
-  if (
-    sanitizedBaseUrl === '/api' ||
-    sanitizedBaseUrl.endsWith('/api')
-  ) {
+  if (sanitizedBaseUrl === '/api' || sanitizedBaseUrl.endsWith('/api')) {
     return sanitizedBaseUrl;
   }
 
-  if (sanitizedBaseUrl.startsWith('http://') || sanitizedBaseUrl.startsWith('https://')) {
+  if (
+    sanitizedBaseUrl.startsWith('http://') ||
+    sanitizedBaseUrl.startsWith('https://')
+  ) {
     return `${sanitizedBaseUrl}/api`;
   }
 
@@ -27,6 +27,8 @@ function normalizeApiBaseUrl(baseUrl?: string) {
 const baseURL = normalizeApiBaseUrl(envBaseURL);
 const monetizationEnabled =
   import.meta.env.VITE_MONETIZATION_ENABLED !== 'false';
+export const AUTH_EXPIRED_EVENT = 'auth:expired';
+let authExpirationDispatched = false;
 
 console.log(
   `[api/client] Using API base URL (${envBaseURL ? 'VITE_API_URL' : 'fallback'}):`,
@@ -40,6 +42,7 @@ const api = axios.create({
 export function setAuthToken(token?: string) {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    authExpirationDispatched = false;
   } else {
     delete api.defaults.headers.common['Authorization'];
   }
@@ -59,6 +62,16 @@ export default api;
 api.interceptors.response.use(
   (res) => res,
   (error) => {
+    if (
+      error?.response?.status === 401 &&
+      api.defaults.headers.common['Authorization'] &&
+      !authExpirationDispatched
+    ) {
+      authExpirationDispatched = true;
+      setAuthToken(undefined);
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    }
+
     if (!monetizationEnabled) {
       return Promise.reject(error);
     }

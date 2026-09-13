@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { setAuthToken, setCompanyId } from '../../platform/api/client';
+import {
+  AUTH_EXPIRED_EVENT,
+  setAuthToken,
+  setCompanyId,
+} from '../../platform/api/client';
 import {
   readBrowserStorage,
   removeBrowserStorage,
@@ -107,6 +111,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setCompanyId(activeCompanyId);
   }, [activeCompanyId]);
+
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      setUser(undefined);
+      setToken(undefined);
+      setActiveCompanyId(undefined);
+      setAuthToken(undefined);
+      setCompanyId(undefined);
+      removeBrowserStorage('aicd_auth');
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleExpiredSession);
+    return () =>
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleExpiredSession);
+  }, []);
 
   const persistAuth = (
     nextUser?: User,
