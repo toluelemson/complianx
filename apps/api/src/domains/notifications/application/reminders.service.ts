@@ -16,10 +16,11 @@ export class RemindersService {
     private readonly projectsService: ProjectsService,
   ) {}
 
-  async list(projectId: string, userId: string): Promise<ReminderItem[]> {
+  async list(projectId: string, userId: string, companyId: string): Promise<ReminderItem[]> {
     const project = await this.projectsService.assertOwnership(
       projectId,
       userId,
+      companyId,
     );
     return this.prisma.reminder
       .findMany({
@@ -39,9 +40,10 @@ export class RemindersService {
   async create(
     projectId: string,
     userId: string,
+    companyId: string,
     dto: CreateReminderDto,
   ): Promise<ReminderItem> {
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     return this.prisma.reminder
       .create({
         data: {
@@ -63,9 +65,10 @@ export class RemindersService {
     projectId: string,
     reminderId: string,
     userId: string,
+    companyId: string,
     dto: UpdateReminderDto,
   ): Promise<ReminderItem> {
-    await this.projectsService.assertOwnership(projectId, userId);
+    await this.projectsService.assertOwnership(projectId, userId, companyId);
     const reminder = await this.prisma.reminder.findUnique({
       where: { id: reminderId },
     });

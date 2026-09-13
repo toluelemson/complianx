@@ -233,7 +233,7 @@ export class ArtifactsService {
     const access = await this.projectsService.assertAccess(
       artifact.projectId,
       reviewerId,
-      artifact.project.companyId ?? undefined,
+      companyId,
       { allowOwner: false, allowReviewer: true, allowApprover: true },
     );
     const membershipRole = access.membershipRole;

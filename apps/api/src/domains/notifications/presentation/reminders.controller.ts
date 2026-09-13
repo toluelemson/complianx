@@ -13,18 +13,22 @@ import { JwtAuthGuard } from '../../../platform/auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../../../platform/auth/authenticated-request.type';
 import { CreateReminderDto } from './dto/create-reminder.dto';
 import { UpdateReminderDto } from './dto/update-reminder.dto';
+import { CompanyContextService } from '../../organizations/application/membership/company-context.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('projects/:projectId/reminders')
 export class RemindersController {
-  constructor(private readonly remindersService: RemindersService) {}
+  constructor(
+    private readonly remindersService: RemindersService,
+    private readonly companyContext: CompanyContextService,
+  ) {}
 
   @Get()
   list(
     @Param('projectId') projectId: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.remindersService.list(projectId, req.user.userId);
+    return this.remindersService.list(projectId, req.user.userId, this.companyId(req));
   }
 
   @Post()
@@ -33,7 +37,7 @@ export class RemindersController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateReminderDto,
   ) {
-    return this.remindersService.create(projectId, req.user.userId, dto);
+    return this.remindersService.create(projectId, req.user.userId, this.companyId(req), dto);
   }
 
   @Patch(':reminderId')
@@ -47,7 +51,15 @@ export class RemindersController {
       projectId,
       reminderId,
       req.user.userId,
+      this.companyId(req),
       dto,
     );
+  }
+
+  private companyId(req: AuthenticatedRequest) {
+    return this.companyContext.resolveCompany(
+      req.user,
+      req.headers?.['x-company-id'] as string | undefined,
+    ).companyId;
   }
 }
