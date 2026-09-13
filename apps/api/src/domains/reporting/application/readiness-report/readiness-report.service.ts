@@ -21,6 +21,13 @@ import {
   type FileStorage,
 } from '../../../../platform/files/file-storage.port';
 import { AuditService } from '../../../audit/application/audit.service';
+import {
+  canonicalizeManifest,
+  LEGACY_MANIFEST_CANONICALIZATION,
+  MANIFEST_CANONICALIZATION,
+  MANIFEST_HASH_ALGORITHM,
+  manifestCanonicalization,
+} from './compliance-package-manifest';
 
 @Injectable()
 export class ReadinessReportService {
@@ -312,6 +319,10 @@ export class ReadinessReportService {
             });
             const manifest = {
               manifestVersion: 'neuraldocx-package-1.1.0',
+              integrity: {
+                hashAlgorithm: MANIFEST_HASH_ALGORITHM,
+                canonicalization: MANIFEST_CANONICALIZATION,
+              },
               package: { version: (latest._max.version ?? 0) + 1 },
               completeness: { status, gaps },
               files,
@@ -394,7 +405,7 @@ export class ReadinessReportService {
                 select: { manifest: true },
               })
             ).manifest;
-            const serializedManifest = JSON.stringify(persistedManifest);
+            const serializedManifest = canonicalizeManifest(persistedManifest);
             const manifestHash = createHash('sha256')
               .update(serializedManifest)
               .digest('hex');
@@ -515,13 +526,35 @@ export class ReadinessReportService {
     });
     if (!record) throw new NotFoundException('Package not found');
     const errors: string[] = [];
-    const manifestHash = createHash('sha256')
-      .update(JSON.stringify(record.manifest))
-      .digest('hex');
-    const manifestValid = manifestHash === record.manifestHash;
+    const metadata = record.manifest as Record<string, any>;
+    const integrity =
+      metadata.integrity &&
+      typeof metadata.integrity === 'object' &&
+      !Array.isArray(metadata.integrity)
+        ? (metadata.integrity as Record<string, unknown>)
+        : undefined;
+    const canonicalization = manifestCanonicalization(record.manifest);
+    let serializedManifest = '';
+    if (canonicalization === MANIFEST_CANONICALIZATION) {
+      if (integrity?.hashAlgorithm !== MANIFEST_HASH_ALGORITHM) {
+        errors.push(
+          `Unsupported manifest hash algorithm: ${String(integrity?.hashAlgorithm)}`,
+        );
+      } else {
+        serializedManifest = canonicalizeManifest(record.manifest);
+      }
+    } else if (canonicalization === LEGACY_MANIFEST_CANONICALIZATION) {
+      serializedManifest = JSON.stringify(record.manifest);
+    } else {
+      errors.push(`Unsupported manifest canonicalization: ${canonicalization}`);
+    }
+    const manifestHash = serializedManifest
+      ? createHash('sha256').update(serializedManifest).digest('hex')
+      : '';
+    const manifestValid =
+      Boolean(serializedManifest) && manifestHash === record.manifestHash;
     if (!manifestValid)
       errors.push('Manifest hash does not match stored manifest');
-    const metadata = record.manifest as Record<string, any>;
     if (metadata.project?.id !== projectId)
       errors.push('Manifest project does not match package project');
     if (metadata.organization?.id !== companyId)

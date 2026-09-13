@@ -380,6 +380,21 @@ describe('PostgreSQL compliance workflows', () => {
       f.company.id,
     );
     expect(first.status).toBe('COMPLETE');
+    expect(first.manifest).toMatchObject({
+      integrity: { hashAlgorithm: 'sha256', canonicalization: 'jcs-v1' },
+    });
+    await expect(
+      reports.verifyCompliancePackage(
+        f.project.id,
+        first.id,
+        f.owner.id,
+        f.company.id,
+      ),
+    ).resolves.toMatchObject({
+      valid: true,
+      manifestValid: true,
+      archiveValid: true,
+    });
     const bytes = await readFile(
       storage.resolve('packages', first.archiveFile!),
     );
@@ -564,6 +579,54 @@ describe('PostgreSQL compliance workflows', () => {
         f.company.id,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+  it('verifies legacy JSON manifest hashes without canonicalization metadata', async () => {
+    const f = await fixture();
+    const manifest = {
+      project: { id: f.project.id },
+      organization: { id: f.company.id },
+      package: { version: 1 },
+    };
+    const archiveFile = `${randomUUID()}.zip`;
+    const archiveBytes = Buffer.from('legacy archive fixture');
+    await storage.write('packages', archiveFile, archiveBytes);
+    const legacy = await prisma.compliancePackage.create({
+      data: {
+        projectId: f.project.id,
+        companyId: f.company.id,
+        generatedById: f.owner.id,
+        version: 1,
+        status: 'COMPLETE',
+        manifest,
+        manifestHash: '',
+        archiveFile,
+        archiveHash: createHash('sha256').update(archiveBytes).digest('hex'),
+      },
+    });
+    const persistedLegacy = await prisma.compliancePackage.findUniqueOrThrow({
+      where: { id: legacy.id },
+      select: { manifest: true },
+    });
+    await prisma.compliancePackage.update({
+      where: { id: legacy.id },
+      data: {
+        manifestHash: createHash('sha256')
+          .update(JSON.stringify(persistedLegacy.manifest))
+          .digest('hex'),
+      },
+    });
+    await expect(
+      reports.verifyCompliancePackage(
+        f.project.id,
+        legacy.id,
+        f.owner.id,
+        f.company.id,
+      ),
+    ).resolves.toMatchObject({
+      valid: true,
+      manifestValid: true,
+      archiveValid: true,
+    });
   });
   it('creates rejected-evidence findings and suppresses future-expiry findings', async () => {
     const f = await fixture();
