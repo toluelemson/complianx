@@ -4,6 +4,14 @@
 
 **Not ready for an “all features work” sign-off.** The verification found reproducible authorization, validation, storage, and runtime configuration defects. This is a verification report, not a claim of exhaustive coverage of every possible input or role combination. Application source was not changed during this audit; preceding profile fixes and unrelated work were preserved.
 
+## Remediation status — 13 September 2026
+
+- Existing-company signup now requires a valid invitation, with an HTTP regression test proving that a direct `companyId` signup returns `409` and creates no user.
+- Section autosave read, write, and delete operations now have cross-tenant E2E coverage.
+- Suggestion-feedback reads are tenant-authorized, and feedback creation rejects cross-tenant and mixed project/section identifiers.
+
+The remaining findings and completion criteria below retain the original verification results. Treat the remediated items above as resolved in the current source rather than as current open defects.
+
 ## Environments and evidence
 
 - Existing app: frontend `http://localhost:5173`, API `http://localhost:3010`. Used the existing signed-in browser for screen inspection and the earlier profile save/reload checks. A registration attempt failed; it did not create a project in this workspace.

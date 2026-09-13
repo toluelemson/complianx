@@ -99,6 +99,28 @@ describe('API security (e2e)', () => {
     expect(response.body.companyId).toBe('e2e-company');
   });
 
+  it('rejects signup into an existing company without an invitation', async () => {
+    const email = `uninvited-${Date.now()}@example.invalid`;
+    await request(app.getHttpServer())
+      .post('/api/auth/signup')
+      .send({
+        email,
+        password: 'e2e-test-password',
+        companyId: 'e2e-company',
+      })
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.message).toBe(
+          'A valid invitation is required to join an existing company',
+        );
+      });
+
+    const prisma = app.get(PrismaService);
+    await expect(
+      prisma.user.findUnique({ where: { email } }),
+    ).resolves.toBeNull();
+  });
+
   it('runs preliminary EU AI Act classification for the system', async () => {
     const login = await request(app.getHttpServer())
       .post('/api/auth/login')
