@@ -702,4 +702,23 @@ describe('API security (e2e)', () => {
       ]),
     );
   });
+
+  it('rate limits repeated authentication attempts', async () => {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: 'e2e-user@example.invalid',
+          password: 'incorrect-password',
+        })
+        .expect(401);
+    }
+    await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: 'e2e-user@example.invalid',
+        password: 'incorrect-password',
+      })
+      .expect(429);
+  });
 });

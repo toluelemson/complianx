@@ -53,7 +53,9 @@ export class ArtifactsController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multer.memoryStorage(),
-      limits: { fileSize: 25 * 1024 * 1024 },
+      limits: {
+        fileSize: Number(process.env.UPLOAD_MAX_BYTES ?? 25 * 1024 * 1024),
+      },
     }),
   )
   upload(

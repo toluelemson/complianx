@@ -2,34 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { PrismaService } from './platform/database/prisma.service';
-import { raw } from 'express';
+import { raw, type NextFunction, type Request, type Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 function normalizeOrigin(origin: string) {
   return origin.replace(/\/$/, '').toLowerCase();
-}
-
-function expandOriginVariants(origin: string) {
-  const normalized = normalizeOrigin(origin);
-  const variants = new Set([normalized]);
-
-  try {
-    const url = new URL(normalized);
-    const { protocol, host, pathname, search, hash } = url;
-
-    if (pathname || search || hash) {
-      variants.add(`${protocol}//${host}`);
-    }
-
-    if (host.startsWith('www.')) {
-      variants.add(`${protocol}//${host.slice(4)}`);
-    } else if (host.includes('.')) {
-      variants.add(`${protocol}//www.${host}`);
-    }
-  } catch {
-    // Ignore invalid URLs and keep the normalized origin as-is.
-  }
-
-  return [...variants];
 }
 
 function parseConfiguredOrigins(...values: Array<string | undefined>) {
@@ -39,32 +17,38 @@ function parseConfiguredOrigins(...values: Array<string | undefined>) {
         .flatMap((value) => (value ?? '').split(','))
         .map((value) => value.trim())
         .filter(Boolean)
-        .flatMap((value) => expandOriginVariants(value)),
+        .map((value) => normalizeOrigin(value)),
     ),
   ];
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
+    bodyParser: false,
   });
+  const config = app.get(ConfigService);
+  const bodyLimit = config.getOrThrow<number>('API_BODY_LIMIT_BYTES');
+  const trustProxyHops = config.getOrThrow<number>('TRUST_PROXY_HOPS');
+  if (trustProxyHops > 0) {
+    app.getHttpAdapter().getInstance().set('trust proxy', trustProxyHops);
+  }
 
-  app.use('/billing/webhook', raw({ type: '*/*' }));
+  app.use('/billing/webhook', raw({ type: '*/*', limit: bodyLimit }));
+  app.useBodyParser('json', { limit: bodyLimit });
+  app.useBodyParser('urlencoded', { limit: bodyLimit, extended: true });
   app.setGlobalPrefix('api', {
     exclude: [{ path: 'billing/webhook', method: RequestMethod.POST }],
   });
 
   const allowedOrigins = parseConfiguredOrigins(
-    process.env.CORS_ORIGINS,
-    process.env.FRONTEND_URL,
+    config.get<string>('CORS_ORIGINS'),
+    config.get<string>('FRONTEND_URL'),
   );
   const isAllowedOrigin = (origin?: string) =>
-    !origin ||
-    allowedOrigins.length === 0 ||
-    allowedOrigins.includes(normalizeOrigin(origin));
+    !origin || allowedOrigins.includes(normalizeOrigin(origin));
 
-  // 🔥 1) Handle all OPTIONS requests manually
-  app.use((req: any, res: any, next: () => void) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.method === 'OPTIONS') {
       const origin = req.headers.origin;
 
@@ -87,22 +71,15 @@ async function bootstrap() {
         'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Company-Id, x-company-id',
       );
 
-      res.header('X-Cors-Debug', 'from-nest');
-
       return res.sendStatus(204);
     }
 
     next();
   });
 
-  console.log('allowedOrigins:', allowedOrigins);
-
-  // 🔥 2) Keep enableCors, but it’s now “secondary”
   app.enableCors({
     origin: (origin: string, cb: (err: Error | null, ok: boolean) => void) => {
       if (!origin) return cb(null, true);
-      console.log('incoming origin:', origin);
-
       if (isAllowedOrigin(origin)) {
         return cb(null, true);
       }
@@ -111,7 +88,6 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    // you can keep or remove this; the middleware already covers OPTIONS
     allowedHeaders: [
       'Content-Type',
       'Authorization',
@@ -126,7 +102,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   const prismaService = app.get(PrismaService);
   await prismaService.enableShutdownHooks(app);
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(config.getOrThrow<number>('PORT'));
 }
 
-bootstrap();
+void bootstrap();
