@@ -8,6 +8,20 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: complianx_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d complianx_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,8 +34,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:validate
         env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_ci
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
       - run: pnpm db:generate
+      - run: bash test/compliance/migrate-populated.sh
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+      - run: pnpm --filter api test:compliance
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
       - run: pnpm build
       - run: pnpm test
       - run: pnpm lint

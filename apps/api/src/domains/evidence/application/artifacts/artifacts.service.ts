@@ -42,10 +42,10 @@ export class ArtifactsService {
     return section;
   }
 
-  private buildCitationKey(sectionName: string, version: number) {
+  private buildCitationKey(projectId: string, sectionName: string, version: number) {
     const normalized = sectionName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
     const versionSegment = String(version).padStart(2, '0');
-    return `${normalized}-A${versionSegment}`;
+    return `${projectId.slice(0, 8).toUpperCase()}-${normalized}-A${versionSegment}`;
   }
 
   async list(
@@ -107,7 +107,7 @@ export class ArtifactsService {
       orderBy: { version: 'desc' },
     });
     const version = (latest?.version ?? 0) + 1;
-    const citationKey = this.buildCitationKey(section.name, version);
+    const citationKey = this.buildCitationKey(projectId, section.name, version);
     await this.storage.write(this.storageBucket, storedName, file.buffer);
     const normalizedPurpose =
       purpose === 'DATASET' || purpose === 'MODEL' ? purpose : 'GENERIC';

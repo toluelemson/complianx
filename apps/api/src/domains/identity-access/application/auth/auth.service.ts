@@ -186,6 +186,9 @@ export class AuthService {
       };
     }
     if (dto.companyId) {
+      if (!dto.invitationToken) {
+        throw new ConflictException('A valid invitation is required to join an existing company');
+      }
       const existing = await (this.prisma as any).company.findUnique({
         where: { id: dto.companyId },
       });

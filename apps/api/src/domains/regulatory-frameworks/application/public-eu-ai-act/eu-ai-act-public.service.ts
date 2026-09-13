@@ -387,6 +387,9 @@ export class EuAiActPublicService {
   }
 
   private async requireSession(sessionId: string, sessionToken: string) {
+    if (!sessionToken?.trim()) {
+      throw new UnauthorizedException('Public session token is required');
+    }
     const session = await this.prisma.publicEuAiActSession.findUnique({
       where: { id: sessionId },
       include: {

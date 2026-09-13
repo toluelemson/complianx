@@ -824,6 +824,8 @@ model CompliancePackage {
   status        String                 @default("INCOMPLETE")
   manifest      Json
   manifestHash  String
+  archiveFile   String?
+  archiveHash   String?
   createdAt     DateTime               @default(now())
 
   @@unique([projectId, version])

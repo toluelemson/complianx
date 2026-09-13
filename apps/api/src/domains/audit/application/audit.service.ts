@@ -7,7 +7,7 @@ type AuditClient = PrismaService | Prisma.TransactionClient | PrismaClient;
 export type AuditRecord = {
   companyId: string;
   projectId?: string;
-  actorId: string;
+  actorId?: string;
   entityType: string;
   entityId: string;
   action: string;

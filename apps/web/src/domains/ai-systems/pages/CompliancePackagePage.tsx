@@ -20,7 +20,7 @@ import { DOCUMENT_LABELS } from '../constants/documents';
 
 export default function CompliancePackagePage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
-  const { token, initializing, activeCompanyId } = useAuth();
+  const { token, initializing, activeCompanyId, user } = useAuth();
   const [downloading, setDownloading] = useState(false);
   const [now] = useState(() => Date.now());
   const queryClient = useQueryClient();
@@ -61,14 +61,23 @@ export default function CompliancePackagePage() {
     queryFn: () => listProjectObligations(projectId),
   });
 
+  const canCreate =
+    ['OWNER', 'REVIEWER', 'APPROVER'].includes(
+      projectQuery.data?.viewerRole ?? '',
+    ) ||
+    user?.companies?.some(
+      (membership) =>
+        membership.companyId === activeCompanyId && membership.role === 'ADMIN',
+    );
+
   if (!initializing && !token) return <Navigate to="/login" replace />;
 
-  const downloadPackage = async () => {
+  const downloadPackage = async (packageId: string) => {
     if (!token) return;
     setDownloading(true);
     try {
       const response = await fetch(
-        `${api.defaults.baseURL}/projects/${projectId}/documents.zip`,
+        `${api.defaults.baseURL}/ai-systems/${projectId}/reports/packages/${packageId}/download`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -80,7 +89,7 @@ export default function CompliancePackagePage() {
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${projectQuery.data?.name ?? 'project'}-compliance-package.zip`;
+      link.download = `compliance-package-${packageId}.zip`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -113,21 +122,13 @@ export default function CompliancePackagePage() {
           </div>
           <button
             type="button"
-            onClick={downloadPackage}
-            disabled={downloading || !documentsQuery.data?.length}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            {downloading ? 'Preparing…' : 'Download package'}
-          </button>
-          <button
-            type="button"
             onClick={() => createPackageMutation.mutate()}
-            disabled={createPackageMutation.isPending}
+            disabled={!canCreate || createPackageMutation.isPending}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
           >
             {createPackageMutation.isPending
               ? 'Saving…'
-              : 'Save manifest snapshot'}
+              : 'Save package snapshot'}
           </button>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -174,6 +175,11 @@ export default function CompliancePackagePage() {
               {packagesQuery.data?.length ?? 0} snapshots
             </span>
           </div>
+          {packagesQuery.isError ? (
+            <button onClick={() => void packagesQuery.refetch()}>
+              Unable to load package history. Retry
+            </button>
+          ) : null}
           <div className="mt-4 divide-y divide-slate-100">
             {(packagesQuery.data ?? []).map((pkg) => (
               <div
@@ -187,10 +193,27 @@ export default function CompliancePackagePage() {
                   <p className="text-xs text-slate-500">
                     {pkg.status} · {pkg.manifestHash.slice(0, 12)}…
                   </p>
+                  {pkg.manifest?.completeness?.gaps.length ? (
+                    <ul className="mt-2 list-disc pl-4 text-xs text-slate-500">
+                      {pkg.manifest.completeness.gaps.map((gap) => (
+                        <li key={gap}>{gap}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
                 <span className="text-xs text-slate-400">
                   {new Date(pkg.createdAt).toLocaleString()}
                 </span>
+                <button
+                  type="button"
+                  disabled={downloading || !pkg.archiveHash}
+                  onClick={() => void downloadPackage(pkg.id)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                >
+                  {pkg.archiveHash
+                    ? `Download v${pkg.version}`
+                    : 'Archive unavailable'}
+                </button>
               </div>
             ))}
             {!packagesQuery.data?.length ? (

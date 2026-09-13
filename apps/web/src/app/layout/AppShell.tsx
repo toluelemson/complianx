@@ -196,34 +196,55 @@ export function AppShell({
     return sections;
   }, [activeProjectId, user]);
   const closeMobileMenu = () => setMobileMenuOpen(false);
+  const primaryNav = navSections.find(
+    (section) => section.title === 'Navigation',
+  );
   const renderSidebarNav = () =>
-    navSections.map((section) => (
-      <div key={section.title} className="hz-sidebar__section">
-        {section.collapsible ? (
-          <button
-            type="button"
-            className="hz-sidebar__label hz-sidebar__label--button"
-            aria-expanded={projectToolsExpanded}
-            onClick={() => setProjectToolsOpen((open) => !open)}
-          >
-            <span>{section.title}</span>
-            <span aria-hidden="true">{projectToolsExpanded ? '−' : '+'}</span>
-          </button>
-        ) : (
-          <p className="hz-sidebar__label">{section.title}</p>
-        )}
-        {(!section.collapsible || projectToolsExpanded) &&
-          section.links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className="hz-sidebar__link"
-              end={link.to.endsWith('/overview')}
+    navSections
+      .filter((section) => section.title !== 'Navigation')
+      .map((section) => (
+        <div key={section.title} className="hz-sidebar__section">
+          {section.collapsible ? (
+            <button
+              type="button"
+              className="hz-sidebar__label hz-sidebar__label--button"
+              aria-expanded={projectToolsExpanded}
+              onClick={() => setProjectToolsOpen((open) => !open)}
             >
-              {link.label}
-            </NavLink>
-          ))}
-      </div>
+              <span>{section.title}</span>
+              <span aria-hidden="true">{projectToolsExpanded ? '−' : '+'}</span>
+            </button>
+          ) : (
+            <p className="hz-sidebar__label">{section.title}</p>
+          )}
+          {(!section.collapsible || projectToolsExpanded) &&
+            section.links.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className="hz-sidebar__link"
+                end={link.to.endsWith('/overview')}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+        </div>
+      ));
+  const renderDesktopPrimaryNav = () =>
+    primaryNav?.links.map((link) => (
+      <NavLink
+        key={link.to}
+        to={link.to}
+        className={({ isActive }) =>
+          `whitespace-nowrap border-b-2 px-2 py-3 text-sm font-medium transition-colors ${
+            isActive
+              ? 'border-[#c8102e] text-slate-950'
+              : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-950'
+          }`
+        }
+      >
+        {link.label}
+      </NavLink>
     ));
   const renderMobileNav = () =>
     navSections.map((section) => (
@@ -369,12 +390,20 @@ export function AppShell({
       <header className="hz-top-header">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10 hz-top-header__inner">
           <div className="flex items-center justify-between gap-3">
-            <BrandLink
-              className="flex items-center gap-3"
-              brandClassName="whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-[#383838]"
-              iconClassName="flex h-8 w-8 items-center justify-center rounded-lg border border-[#383838]/10 bg-white"
-              imageClassName="h-8 w-8 rounded-lg p-1"
-            />
+            <div className="flex min-w-0 items-center gap-5">
+              <BrandLink
+                className="flex shrink-0 items-center gap-3"
+                brandClassName="whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-[#383838]"
+                iconClassName="flex h-8 w-8 items-center justify-center rounded-lg border border-[#383838]/10 bg-white"
+                imageClassName="h-8 w-8 rounded-lg p-1"
+              />
+              <nav
+                aria-label="Primary navigation"
+                className="hidden min-w-0 items-center gap-1 lg:flex"
+              >
+                {renderDesktopPrimaryNav()}
+              </nav>
+            </div>
             <div className="flex items-center gap-3 lg:hidden">
               <Button
                 onClick={() => setBillingOpen(true)}

@@ -244,7 +244,9 @@ export default function BillingModal({ isOpen, onClose }: Props) {
             )}
             {(checkoutMutation.isError || portalMutation.isError) && (
               <p className="mt-2 text-xs text-rose-500">
-                Unable to contact billing service. Please try again.
+                {getBillingErrorMessage(
+                  checkoutMutation.error ?? portalMutation.error,
+                )}
               </p>
             )}
           </div>
@@ -257,4 +259,13 @@ export default function BillingModal({ isOpen, onClose }: Props) {
 function formatLimit(value?: number) {
   if (value === Number.MAX_SAFE_INTEGER) return 'Unlimited';
   return value ?? '—';
+}
+
+function getBillingErrorMessage(error: unknown) {
+  const responseMessage = (error as { response?: { data?: { message?: unknown } } })
+    ?.response?.data?.message;
+  if (typeof responseMessage === 'string' && responseMessage.trim()) {
+    return responseMessage;
+  }
+  return 'Unable to contact billing service. Please try again.';
 }

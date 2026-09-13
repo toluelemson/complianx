@@ -1,4 +1,5 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
@@ -46,7 +47,7 @@ export default function ProjectProfilePage({
     queryFn: () => getProject(projectId),
   });
   const organizationQuery = useQuery({
-    queryKey: ['company', activeCompanyId],
+    queryKey: ['company', activeCompanyId, 'profile'],
     enabled: Boolean(token && activeCompanyId && organization),
     queryFn: getOrganizationProfile,
   });
@@ -67,6 +68,15 @@ export default function ProjectProfilePage({
   if (!initializing && !token) return <Navigate to="/login" replace />;
   const fields = organization ? organizationFields : systemFields;
   const profile = organization ? organizationQuery.data : query.data;
+  const profileQuery = organization ? organizationQuery : query;
+  const responseMessage = isAxiosError<{ message?: string | string[] }>(
+    save.error,
+  )
+    ? save.error.response?.data?.message
+    : undefined;
+  const saveError = Array.isArray(responseMessage)
+    ? responseMessage.join(' ')
+    : responseMessage;
   return (
     <AppShell
       title={organization ? 'Organization profile' : 'AI system profile'}
@@ -89,68 +99,95 @@ export default function ProjectProfilePage({
               : `System details for ${query.data?.name ?? 'this project'}.`}
           </p>
         </div>
-        <form
-          className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const values = Object.fromEntries(
-              Array.from(new FormData(event.currentTarget).entries()).map(
-                ([key, value]) => [key, String(value)],
-              ),
-            );
-            save.mutate(
-              organization
-                ? values
-                : { name: query.data?.name ?? '', ...values },
-            );
-          }}
-        >
-          {fields.map(([key, label]) => (
-            <label key={key} className="rounded-xl border border-slate-100 p-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">
-                {label}
-              </p>
-              {key === 'lifecycleStage' ? (
-                <select
-                  name={key}
-                  defaultValue={String(
-                    profile?.[key as keyof typeof profile] ?? 'UNKNOWN',
-                  )}
-                  className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                >
-                  <option value="UNKNOWN">Not set</option>
-                  <option value="DESIGN">Design</option>
-                  <option value="DEVELOPMENT">Development</option>
-                  <option value="PILOT">Pilot</option>
-                  <option value="PRODUCTION">Production</option>
-                  <option value="RETIRED">Retired</option>
-                </select>
-              ) : (
-                <textarea
-                  name={key}
-                  defaultValue={String(
-                    profile?.[key as keyof typeof profile] ?? '',
-                  )}
-                  rows={key === 'description' || key === 'intendedUse' ? 3 : 2}
-                  className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                />
-              )}
-            </label>
-          ))}
-          <div className="flex justify-end sm:col-span-2">
-            <button
-              type="submit"
-              disabled={
-                save.isPending ||
-                (!organization && !query.data) ||
-                (organization && !organizationQuery.data)
-              }
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {save.isPending ? 'Saving…' : 'Save profile'}
+        {profileQuery.isPending ? (
+          <p role="status">Loading profile…</p>
+        ) : profileQuery.isError ? (
+          <div role="alert">
+            <p>Unable to load profile.</p>
+            <button type="button" onClick={() => void profileQuery.refetch()}>
+              Retry
             </button>
           </div>
-        </form>
+        ) : (
+          <form
+            key={`${activeCompanyId}-${organization ? 'organization' : projectId}`}
+            className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const values = Object.fromEntries(
+                Array.from(new FormData(event.currentTarget).entries()).map(
+                  ([key, value]) => [key, String(value)],
+                ),
+              );
+              save.mutate(
+                organization
+                  ? values
+                  : { name: query.data?.name ?? '', ...values },
+              );
+            }}
+          >
+            {fields.map(([key, label]) => (
+              <label
+                key={key}
+                className="rounded-xl border border-slate-100 p-4"
+              >
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  {label}
+                </p>
+                {key === 'lifecycleStage' ? (
+                  <select
+                    name={key}
+                    defaultValue={String(
+                      profile?.[key as keyof typeof profile] ?? 'UNKNOWN',
+                    )}
+                    className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="UNKNOWN">Not set</option>
+                    <option value="DESIGN">Design</option>
+                    <option value="DEVELOPMENT">Development</option>
+                    <option value="PILOT">Pilot</option>
+                    <option value="PRODUCTION">Production</option>
+                    <option value="RETIRED">Retired</option>
+                  </select>
+                ) : (
+                  <textarea
+                    name={key}
+                    defaultValue={String(
+                      profile?.[key as keyof typeof profile] ?? '',
+                    )}
+                    rows={
+                      key === 'description' || key === 'intendedUse' ? 3 : 2
+                    }
+                    className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  />
+                )}
+              </label>
+            ))}
+            {save.isError && (
+              <p role="alert" className="sm:col-span-2">
+                {saveError || 'Unable to save profile. Please try again.'}
+              </p>
+            )}
+            {save.isSuccess && (
+              <p role="status" className="sm:col-span-2">
+                Profile saved.
+              </p>
+            )}
+            <div className="flex justify-end sm:col-span-2">
+              <button
+                type="submit"
+                disabled={
+                  save.isPending ||
+                  (!organization && !query.data) ||
+                  (organization && !organizationQuery.data)
+                }
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {save.isPending ? 'Saving…' : 'Save profile'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </AppShell>
   );

@@ -3,7 +3,6 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
-import { buildSubmitSystemHref } from '../lib/submit-system';
 
 export function CTASection() {
   return (
@@ -16,13 +15,13 @@ export function CTASection() {
           <CardContent className="flex flex-col gap-8 p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--cx-text-muted)]">
-                Start with one AI system
+                Start with the classification questionnaire
               </p>
               <h2 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--cx-text)] sm:text-5xl">
-                A reviewable package for every AI system.
+                Turn AI-system answers into reviewable documentation.
               </h2>
               <p className="mt-4 text-base leading-8 text-[var(--cx-text-secondary)]">
-                Capture facts. Map evidence. Review.
+                Start with classification. Continue in a workspace or with our team.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -32,14 +31,14 @@ export function CTASection() {
                 className="bg-[var(--cx-brand)] text-white hover:bg-[var(--cx-brand-hover)]"
               >
                 <Link
-                  to={buildSubmitSystemHref({ source: 'cta_section' })}
+                  to="/eu-ai-act-checker?source=cta_section"
                   onClick={() =>
                     trackMarketingEvent('marketing_submit_cta_clicked', {
                       source: 'cta_section',
                     })
                   }
                 >
-                  Assess an AI system
+                  Start the classification questionnaire
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

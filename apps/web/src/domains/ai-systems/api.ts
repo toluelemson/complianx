@@ -163,10 +163,7 @@ export async function listProjectObligations(projectId: string) {
       status: string;
       priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
       approvalState:
-        | 'DRAFT'
-        | 'READY_FOR_REVIEW'
-        | 'APPROVED'
-        | 'CHANGES_REQUESTED';
+        'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED';
       applicabilityReason?: string | null;
       owner?: { id: string; email: string } | null;
       dueAt?: string | null;
@@ -175,7 +172,13 @@ export async function listProjectObligations(projectId: string) {
         title: string;
         legalReference?: string | null;
       };
-      actions: Array<{ id: string; status: string }>;
+      actions: Array<{
+        id: string;
+        title: string;
+        status: string;
+        closureEvidenceId?: string | null;
+        closureNotes?: string | null;
+      }>;
     }>
   >(`/ai-systems/${projectId}/obligations`);
   return data.map((item) => ({
@@ -197,9 +200,18 @@ export async function listProjectFindings(projectId: string) {
       severity: string;
       status: string;
       description: string;
+      obligationId?: string | null;
+      resolutionSummary?: string | null;
+      reviewerDecision?: string | null;
       owner?: { id: string; email: string } | null;
       obligation?: { obligation?: { key?: string; title: string } } | null;
-      actions: Array<{ id: string; status: string }>;
+      actions: Array<{
+        id: string;
+        title: string;
+        status: string;
+        closureEvidenceId?: string | null;
+        closureNotes?: string | null;
+      }>;
     }>
   >(`/ai-systems/${projectId}/findings`);
   return data;
@@ -222,7 +234,11 @@ export async function createProjectFinding(
 export async function updateProjectFinding(
   projectId: string,
   findingId: string,
-  payload: { status?: string; resolutionSummary?: string },
+  payload: {
+    status?: string;
+    resolutionSummary?: string;
+    reviewerDecision?: string;
+  },
 ) {
   const { data } = await api.patch(
     `/ai-systems/${projectId}/findings/${findingId}`,
@@ -399,8 +415,11 @@ export type CompliancePackageRecord = {
   projectId: string;
   version: number;
   status: string;
-  manifest: Record<string, unknown>;
+  manifest: Record<string, unknown> & {
+    completeness?: { status: string; gaps: string[] };
+  };
   manifestHash: string;
+  archiveHash?: string | null;
   createdAt: string;
 };
 
@@ -646,5 +665,32 @@ export async function runProjectWorkflowAction(payload: {
   body?: Record<string, unknown>;
 }) {
   const { data } = await api.post(payload.endpoint, payload.body ?? {});
+  return data;
+}
+
+export async function createRemediationAction(
+  projectId: string,
+  obligationId: string,
+  payload: { title: string; findingId: string },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/obligations/${obligationId}/actions`,
+    payload,
+  );
+  return data;
+}
+export async function updateRemediationAction(
+  projectId: string,
+  actionId: string,
+  payload: {
+    status: string;
+    closureEvidenceId?: string;
+    closureNotes?: string;
+  },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/actions/${actionId}`,
+    payload,
+  );
   return data;
 }

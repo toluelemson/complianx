@@ -59,7 +59,7 @@ export function SiteHeader() {
             className="hidden sm:inline-flex bg-[#d40c2e] text-white hover:bg-[#e21236]"
           >
             <MarketingSubmitSystemLink source="site_header">
-              Assess an AI system
+              Start classification
             </MarketingSubmitSystemLink>
           </Button>
           <Button
@@ -133,7 +133,7 @@ export function SiteHeader() {
               className="rounded-lg bg-[#d40c2e] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e21236]"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Assess an AI system
+              Start classification
             </MarketingSubmitSystemLink>
           </div>
         </div>

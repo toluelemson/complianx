@@ -8,6 +8,8 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ContactFormValues {
   name: string;
@@ -17,6 +19,7 @@ interface ContactFormValues {
 }
 
 export default function ContactPage() {
+  const navigate = useNavigate();
   const { register, handleSubmit, reset } = useForm<ContactFormValues>({
     defaultValues: { name: '', email: '', company: '', message: '' },
   });
@@ -42,6 +45,16 @@ export default function ContactPage() {
       <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] px-4 py-12">
         <Card className="w-full max-w-2xl rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.35)]">
           <CardContent className="p-10">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mb-6 -ml-2 gap-2 text-slate-600 hover:text-slate-900"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              Back
+            </Button>
             <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
               Contact Sales
             </h1>

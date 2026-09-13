@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
-import { buildSubmitSystemHref } from '../lib/submit-system';
 
 export function Hero() {
   return (
@@ -16,7 +15,7 @@ export function Hero() {
             EU AI Act documentation, ready for review.
           </h1>
           <p className="animate-enter-up animation-delay-200 mt-5 max-w-xl text-base leading-7 text-[#5e5e5e] sm:text-lg sm:leading-8">
-            Intake, evidence, review, approval.
+            Classify your AI use case. Build reviewable documentation.
           </p>
 
           <div className="hz-marketing-actions animate-enter-up animation-delay-300 mt-7 flex flex-col justify-start gap-3 sm:flex-row sm:flex-wrap">
@@ -26,14 +25,14 @@ export function Hero() {
               className="w-full bg-[#d40c2e] px-7 text-white hover:bg-[#e21236] sm:w-auto"
             >
               <Link
-                to={buildSubmitSystemHref({ source: 'hero' })}
+                to="/eu-ai-act-checker?source=hero"
                 onClick={() =>
                   trackMarketingEvent('marketing_submit_cta_clicked', {
                     source: 'hero',
                   })
                 }
               >
-                Assess an AI system
+                Start the classification questionnaire
               </Link>
             </Button>
             <Link
@@ -49,7 +48,7 @@ export function Hero() {
               Workflow
             </p>
             <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
-              {['Register system', 'Map obligations', 'Attach evidence', 'Review'].map(
+              {['Classify use case', 'Register system', 'Map evidence', 'Review'].map(
                 (step, index, steps) => (
                   <div key={step} className="flex items-center gap-3 text-sm font-medium text-[#383838]">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#fdf3f4] text-xs text-[#d40c2e]">

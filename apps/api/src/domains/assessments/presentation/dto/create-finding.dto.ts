@@ -1,8 +1,8 @@
 import { FindingSeverity, FindingSource } from '@prisma/client';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, ValidateIf, IsString } from 'class-validator';
 
 export class CreateFindingDto {
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   obligationId?: string;
 
@@ -15,7 +15,7 @@ export class CreateFindingDto {
   @IsString()
   description!: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   ownerId?: string;
 }

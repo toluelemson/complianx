@@ -1,23 +1,27 @@
 import { ObligationPriority } from '@prisma/client';
-import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsEnum, ValidateIf, IsString } from 'class-validator';
 
 export class CreateComplianceActionDto {
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString()
+  findingId?: string;
+
   @IsString()
   title!: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   description?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   ownerId?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsDateString()
   dueAt?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsEnum(ObligationPriority)
   priority?: ObligationPriority;
 }

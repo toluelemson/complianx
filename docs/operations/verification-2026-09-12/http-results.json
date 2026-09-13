@@ -1,0 +1,1255 @@
+[
+  {
+    "name": "Unauthenticated project read rejected",
+    "method": "GET",
+    "path": "/projects",
+    "status": 401,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Invalid signup rejected",
+    "method": "POST",
+    "path": "/auth/signup",
+    "status": 400,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Sign up owner",
+    "method": "POST",
+    "path": "/auth/signup",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Unverified login rejected owner",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 401,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Verify email owner",
+    "method": "POST",
+    "path": "/auth/verify-email",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Login owner",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Sign up outsider",
+    "method": "POST",
+    "path": "/auth/signup",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Unverified login rejected outsider",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 401,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Verify email outsider",
+    "method": "POST",
+    "path": "/auth/verify-email",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Login outsider",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Wrong password rejected",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 401,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "User profile read",
+    "method": "GET",
+    "path": "/users/me",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "User profile update",
+    "method": "PATCH",
+    "path": "/users/me",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "User profile persists",
+    "method": "GET",
+    "path": "/users/me",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Company profile read",
+    "method": "GET",
+    "path": "/company",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Company rename",
+    "method": "PATCH",
+    "path": "/company",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Company blank optional values",
+    "method": "PATCH",
+    "path": "/company/profile",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Company invalid email rejected",
+    "method": "PATCH",
+    "path": "/company/profile",
+    "status": 400,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Company profile persists",
+    "method": "GET",
+    "path": "/company",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Foreign company context rejected",
+    "method": "GET",
+    "path": "/company",
+    "status": 403,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Create project with optional blank date",
+    "method": "POST",
+    "path": "/projects",
+    "status": 400,
+    "pass": false,
+    "detail": [
+      "dueDate must be a valid ISO 8601 date string"
+    ],
+    "suite": "http"
+  },
+  {
+    "name": "Create project with date omitted",
+    "method": "POST",
+    "path": "/projects",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Project listing",
+    "method": "GET",
+    "path": "/projects",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Project detail",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Cross-tenant project detail rejected",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4",
+    "status": 403,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Project update",
+    "method": "PATCH",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Project update persists",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Duplicate project",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/clone",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Create section",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Section save",
+    "method": "PUT",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Section reload",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Autosave",
+    "method": "POST",
+    "path": "/autosave/sections",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Autosave reload",
+    "method": "GET",
+    "path": "/autosave/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Cross-tenant autosave read rejected",
+    "method": "GET",
+    "path": "/autosave/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d",
+    "status": 200,
+    "pass": false,
+    "detail": [
+      "id",
+      "content",
+      "updatedAt",
+      "sectionId"
+    ],
+    "suite": "http"
+  },
+  {
+    "name": "Cross-tenant autosave write rejected",
+    "method": "POST",
+    "path": "/autosave/sections",
+    "status": 201,
+    "pass": false,
+    "detail": [
+      "id",
+      "content",
+      "updatedAt",
+      "sectionId",
+      "section"
+    ],
+    "suite": "http"
+  },
+  {
+    "name": "Restore QA section after isolation probe",
+    "method": "POST",
+    "path": "/autosave/sections",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Cross-tenant section read rejected",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections",
+    "status": 403,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Section comment",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d/comments",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Section comment read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d/comments",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Resolve section comment",
+    "method": "PATCH",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d/comments/f8af52f7-a519-4324-9a71-b9e391b9e16b/resolution",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Upload evidence",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d/artifacts",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Evidence list",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d/artifacts",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Evidence download",
+    "method": "GET",
+    "path": "/artifacts/a0b1295d-af44-4fc5-9118-50680651debb/download",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Cross-tenant evidence download rejected",
+    "method": "GET",
+    "path": "/artifacts/a0b1295d-af44-4fc5-9118-50680651debb/download",
+    "status": 403,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Start assessment",
+    "method": "POST",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/assessments",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Save classification answers",
+    "method": "PUT",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/assessments/c4b0b01c-a74f-4bbb-b694-4965d3e8eb01/answers",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Reload classification answers",
+    "method": "GET",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/assessments/c4b0b01c-a74f-4bbb-b694-4965d3e8eb01/answers",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Classify assessment",
+    "method": "POST",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/assessments/c4b0b01c-a74f-4bbb-b694-4965d3e8eb01/classify",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Foreign assessment rejected",
+    "method": "GET",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/assessments/c4b0b01c-a74f-4bbb-b694-4965d3e8eb01",
+    "status": 403,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Preliminary intake classification",
+    "method": "POST",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/assessments/preliminary",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Requirements read",
+    "method": "GET",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/obligations",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Findings read",
+    "method": "GET",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/findings",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Documents read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/documents",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Generation readiness read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/generate/readiness",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Workflow read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/workflow",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Workflow history read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/workflow/history",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Reviewers read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/reviewers",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Audit read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/audit-events",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Reminders read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/reminders",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Metrics read",
+    "method": "GET",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/metrics",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Packages read",
+    "method": "GET",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/reports/packages",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Reports read",
+    "method": "GET",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/reports",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Notifications read",
+    "method": "GET",
+    "path": "/notifications",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Notification count read",
+    "method": "GET",
+    "path": "/notifications/count",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Templates read",
+    "method": "GET",
+    "path": "/templates",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "User role list read",
+    "method": "GET",
+    "path": "/users",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Invitation list read",
+    "method": "GET",
+    "path": "/invitations",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Analytics read",
+    "method": "GET",
+    "path": "/analytics/summary",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Mark all notifications read",
+    "method": "POST",
+    "path": "/notifications/read-all",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Reject premature workflow approval",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/workflow/approve",
+    "status": 400,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Readiness report creation",
+    "method": "POST",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/reports/readiness",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Package creation",
+    "method": "POST",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/reports/package",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Package download",
+    "method": "GET",
+    "path": "/ai-systems/c02e0192-7110-42b2-9a7c-6d3413162dd4/reports/packages/090c3f4d-47b1-4111-8412-8ffd30ee6ddc/download",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Create metric",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/metrics",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Add metric sample",
+    "method": "POST",
+    "path": "/metrics/4d6c8c26-356e-4ae9-b0f7-e713502fe53c/samples",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Upload trust dataset",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d/artifacts",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Fairness analysis",
+    "method": "POST",
+    "path": "/trust/fairness/analyze",
+    "status": 500,
+    "pass": false,
+    "detail": "Internal server error",
+    "suite": "http"
+  },
+  {
+    "name": "Robustness analysis",
+    "method": "POST",
+    "path": "/trust/robustness/analyze",
+    "status": 500,
+    "pass": false,
+    "detail": "Internal server error",
+    "suite": "http"
+  },
+  {
+    "name": "Drift analysis",
+    "method": "POST",
+    "path": "/trust/drift/analyze",
+    "status": 500,
+    "pass": false,
+    "detail": "Internal server error",
+    "suite": "http"
+  },
+  {
+    "name": "Create template",
+    "method": "POST",
+    "path": "/templates",
+    "status": 500,
+    "pass": false,
+    "detail": "Internal server error",
+    "suite": "http"
+  },
+  {
+    "name": "Create future reminder",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/reminders",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Update reminder",
+    "method": "PATCH",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/reminders/3254590d-290e-485d-a499-96d03c2f7d83",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Billing plan",
+    "method": "GET",
+    "path": "/billing/plan",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Billing usage",
+    "method": "GET",
+    "path": "/billing/usage",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Unconfigured checkout handled",
+    "method": "POST",
+    "path": "/billing/checkout",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Unconfigured portal handled",
+    "method": "POST",
+    "path": "/billing/portal",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Quick public assessment",
+    "method": "POST",
+    "path": "/public/eu-ai-act/assess",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Create public checker session",
+    "method": "POST",
+    "path": "/public/eu-ai-act/sessions",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Public session requires token",
+    "method": "GET",
+    "path": "/public/eu-ai-act/sessions/ec838c35-4982-4cb1-8076-acaff92828c8",
+    "status": 500,
+    "pass": false,
+    "detail": "Internal server error",
+    "suite": "http"
+  },
+  {
+    "name": "Request password reset (mock email)",
+    "method": "POST",
+    "path": "/auth/request-password-reset",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Reset test account password",
+    "method": "POST",
+    "path": "/auth/reset-password",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Old password rejected after reset",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 401,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "New password works after reset",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Create invitation (mock email)",
+    "method": "POST",
+    "path": "/invitations",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Invitation details",
+    "method": "GET",
+    "path": "/invitations/8444951855b85bf4220f4d223ea76818cb8d49fa52002345",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Accept invitation during signup",
+    "method": "POST",
+    "path": "/auth/signup",
+    "status": 201,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Assign reviewer role",
+    "method": "PATCH",
+    "path": "/users/646027d9-4943-4244-8f7f-3564b6ad788e/role",
+    "status": 200,
+    "pass": true,
+    "suite": "http"
+  },
+  {
+    "name": "Uninvited company enrollment rejected",
+    "method": "POST",
+    "path": "/auth/signup",
+    "status": 201,
+    "pass": false,
+    "detail": [
+      "user",
+      "token"
+    ],
+    "suite": "http"
+  },
+  {
+    "name": "Login workflow owner",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Login assigned reviewer",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Create workflow fixture",
+    "method": "POST",
+    "path": "/projects",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Create complete workflow section",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/sections",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Complete section",
+    "method": "POST",
+    "path": "/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe/workflow/complete",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Submit project with reviewer and approver",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/submit",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Reviewer sees assigned project",
+    "method": "GET",
+    "path": "/reviews/assigned-to-me",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Start project review",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/start-review",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Request project changes",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/request-changes",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Resubmit project",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/resubmit",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Restart project review",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/start-review",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Start section review",
+    "method": "POST",
+    "path": "/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe/workflow/start-review",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Request section changes",
+    "method": "POST",
+    "path": "/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe/workflow/request-changes",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Complete revised section",
+    "method": "POST",
+    "path": "/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe/workflow/complete",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Restart section review",
+    "method": "POST",
+    "path": "/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe/workflow/start-review",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Require section approval signature",
+    "method": "POST",
+    "path": "/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe/workflow/approve",
+    "status": 400,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Approve section",
+    "method": "POST",
+    "path": "/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe/workflow/approve",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Resubmit after section changes",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/resubmit",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Review corrected project",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/start-review",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Require project approval signature",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/approve",
+    "status": 400,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Approve project",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/approve",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Approved workflow persisted",
+    "method": "GET",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Project transition history",
+    "method": "GET",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow/history",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Section transition history",
+    "method": "GET",
+    "path": "/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe/workflow/history",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Edit approved section reopens project",
+    "method": "PUT",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/sections/d611a404-ffe1-44c1-9c88-2ca94d202cfe",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Reopened workflow persisted",
+    "method": "GET",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/workflow",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Public checker session",
+    "method": "POST",
+    "path": "/public/eu-ai-act/sessions",
+    "status": 201,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Public session authenticated read",
+    "method": "GET",
+    "path": "/public/eu-ai-act/sessions/529a3177-f4ae-4f62-b3ef-19dc5cd64b17",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Public answer persisted",
+    "method": "PUT",
+    "path": "/public/eu-ai-act/sessions/529a3177-f4ae-4f62-b3ef-19dc5cd64b17/answers/is_ai_system",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Public answers reload",
+    "method": "GET",
+    "path": "/public/eu-ai-act/sessions/529a3177-f4ae-4f62-b3ef-19dc5cd64b17",
+    "status": 200,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Incomplete public questionnaire cannot finalize",
+    "method": "POST",
+    "path": "/public/eu-ai-act/sessions/529a3177-f4ae-4f62-b3ef-19dc5cd64b17/finalize",
+    "status": 400,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Generation rejects incomplete document input",
+    "method": "POST",
+    "path": "/projects/99d584e2-e6fd-4780-9a01-acb4511b67da/generate",
+    "status": 400,
+    "pass": true,
+    "suite": "workflow"
+  },
+  {
+    "name": "Login supplemental tests",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Fairness analysis using default storage path",
+    "method": "POST",
+    "path": "/trust/fairness/analyze",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Robustness analysis using default storage path",
+    "method": "POST",
+    "path": "/trust/robustness/analyze",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Drift analysis using default storage path",
+    "method": "POST",
+    "path": "/trust/drift/analyze",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Citation fixture project 0",
+    "method": "POST",
+    "path": "/projects",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Same-named section 0",
+    "method": "POST",
+    "path": "/projects/f40c9760-9d7a-4681-abc5-93d49a782b60/sections",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Independent project evidence upload 0",
+    "method": "POST",
+    "path": "/projects/f40c9760-9d7a-4681-abc5-93d49a782b60/sections/3a69312d-e8e9-4c2a-b222-8f4bda9d4b8b/artifacts",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Citation fixture project 1",
+    "method": "POST",
+    "path": "/projects",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Same-named section 1",
+    "method": "POST",
+    "path": "/projects/3ccd120b-0262-4d60-b216-2f8b7a43df3d/sections",
+    "status": 201,
+    "pass": true,
+    "suite": "extra"
+  },
+  {
+    "name": "Independent project evidence upload 1",
+    "method": "POST",
+    "path": "/projects/3ccd120b-0262-4d60-b216-2f8b7a43df3d/sections/dbbe178f-7ea8-4c83-999f-aa18e95a6b37/artifacts",
+    "status": 500,
+    "pass": false,
+    "detail": "Internal server error",
+    "suite": "extra"
+  },
+  {
+    "name": "Login supplemental tests",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "cohort"
+  },
+  {
+    "name": "Fairness analysis using default storage path",
+    "method": "POST",
+    "path": "/trust/fairness/analyze",
+    "status": 201,
+    "pass": true,
+    "suite": "cohort"
+  },
+  {
+    "name": "Robustness analysis using default storage path",
+    "method": "POST",
+    "path": "/trust/robustness/analyze",
+    "status": 201,
+    "pass": true,
+    "suite": "cohort"
+  },
+  {
+    "name": "Drift analysis using default storage path",
+    "method": "POST",
+    "path": "/trust/drift/analyze",
+    "status": 201,
+    "pass": true,
+    "suite": "cohort"
+  },
+  {
+    "name": "Cohort fairness analysis",
+    "method": "POST",
+    "path": "/trust/fairness/segments",
+    "status": 201,
+    "pass": true,
+    "suite": "cohort"
+  },
+  {
+    "name": "Login miscellaneous checks",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "misc"
+  },
+  {
+    "name": "Contact validation rejects invalid email",
+    "method": "POST",
+    "path": "/contact",
+    "status": 400,
+    "pass": true,
+    "suite": "misc"
+  },
+  {
+    "name": "Contact and intake submission with mock delivery",
+    "method": "POST",
+    "path": "/contact",
+    "status": 201,
+    "pass": true,
+    "suite": "misc"
+  },
+  {
+    "name": "AI section suggestion fallback",
+    "method": "POST",
+    "path": "/projects/c02e0192-7110-42b2-9a7c-6d3413162dd4/sections/4cd5de91-08a1-481a-bb6a-d0e630279d5d/suggest",
+    "status": 201,
+    "pass": true,
+    "suite": "misc"
+  },
+  {
+    "name": "Record suggestion feedback",
+    "method": "POST",
+    "path": "/suggestions/feedback",
+    "status": 201,
+    "pass": true,
+    "suite": "misc"
+  },
+  {
+    "name": "Read suggestion feedback",
+    "method": "GET",
+    "path": "/suggestions/feedback/4cd5de91-08a1-481a-bb6a-d0e630279d5d/summary",
+    "status": 200,
+    "pass": true,
+    "suite": "misc"
+  },
+  {
+    "name": "Login outsider for feedback check",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 201,
+    "pass": true,
+    "suite": "misc"
+  },
+  {
+    "name": "Cross-tenant suggestion feedback rejected",
+    "method": "GET",
+    "path": "/suggestions/feedback/4cd5de91-08a1-481a-bb6a-d0e630279d5d/summary",
+    "status": 200,
+    "pass": false,
+    "detail": [
+      "0"
+    ],
+    "suite": "misc"
+  }
+]

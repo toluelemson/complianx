@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type { TemplateItem } from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import {
@@ -76,7 +77,7 @@ export class TemplatesService {
       where: {
         ownerId: userId,
         sectionName: dto.sectionName,
-        content: dto.content,
+        content: { equals: dto.content as Prisma.InputJsonValue },
       },
     });
     if (duplicateContent) {

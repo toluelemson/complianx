@@ -7,12 +7,14 @@ import { useAuth } from '@/app/providers/AuthContext';
 import {
   createProjectFinding,
   listProjectFindings,
-  updateProjectFinding,
+  getProject,
+  listProjectObligations,
 } from '../api';
+import { FindingWorkflow } from '../components/FindingWorkflow';
 
 export default function ProjectFindingsPage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
-  const { token, initializing, activeCompanyId } = useAuth();
+  const { token, initializing, activeCompanyId, user } = useAuth();
   const client = useQueryClient();
   const [description, setDescription] = useState('');
   const findings = useQuery({
@@ -24,6 +26,7 @@ export default function ProjectFindingsPage() {
     mutationFn: () =>
       createProjectFinding(projectId, {
         source: 'MANUAL_REVIEW',
+        obligationId: obligationId || undefined,
         severity: 'MEDIUM',
         description: description.trim(),
       }),
@@ -36,17 +39,28 @@ export default function ProjectFindingsPage() {
     },
     onError: () => toast.error('Unable to create finding'),
   });
-  const update = useMutation({
-    mutationFn: (findingId: string) =>
-      updateProjectFinding(projectId, findingId, { status: 'RESOLVED' }),
-    onSuccess: () => {
-      void client.invalidateQueries({
-        queryKey: ['findings', projectId, activeCompanyId],
-      });
-      toast.success('Finding resolved');
-    },
-    onError: () => toast.error('Unable to update finding'),
+  const project = useQuery({
+    queryKey: ['project', projectId, activeCompanyId],
+    queryFn: () => getProject(projectId),
+    enabled: Boolean(token && projectId && activeCompanyId),
   });
+  const obligations = useQuery({
+    queryKey: ['obligations', projectId, activeCompanyId],
+    queryFn: () => listProjectObligations(projectId),
+    enabled: Boolean(token && projectId && activeCompanyId),
+  });
+  const [obligationId, setObligationId] = useState('');
+  const isAdmin =
+    user?.companies?.some(
+      (membership) =>
+        membership.companyId === activeCompanyId && membership.role === 'ADMIN',
+    ) ?? false;
+  const canEdit =
+    isAdmin ||
+    ['OWNER', 'REVIEWER', 'APPROVER'].includes(project.data?.viewerRole ?? '');
+  const canReview =
+    isAdmin ||
+    ['REVIEWER', 'APPROVER'].includes(project.data?.viewerRole ?? '');
   if (!initializing && !token) return <Navigate to="/login" replace />;
   return (
     <AppShell title="Findings & actions" projectId={projectId}>
@@ -71,6 +85,18 @@ export default function ProjectFindingsPage() {
             Add a finding
           </h2>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <select
+              aria-label="Related obligation"
+              value={obligationId}
+              onChange={(event) => setObligationId(event.target.value)}
+            >
+              <option value="">No obligation</option>
+              {(obligations.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.obligation.title}
+                </option>
+              ))}
+            </select>
             <label className="sr-only" htmlFor="finding-description">
               Finding description
             </label>
@@ -83,7 +109,7 @@ export default function ProjectFindingsPage() {
             />
             <button
               type="button"
-              disabled={!description.trim() || create.isPending}
+              disabled={!canEdit || !description.trim() || create.isPending}
               onClick={() => create.mutate()}
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
@@ -95,6 +121,12 @@ export default function ProjectFindingsPage() {
           <h2 className="text-lg font-semibold text-slate-900">
             Open findings
           </h2>
+          {findings.isLoading ? <p>Loading findings…</p> : null}
+          {findings.isError ? (
+            <button onClick={() => void findings.refetch()}>
+              Unable to load findings. Retry
+            </button>
+          ) : null}
           <div className="mt-4 divide-y divide-slate-100">
             {(findings.data ?? []).map((finding) => (
               <div
@@ -115,18 +147,17 @@ export default function ProjectFindingsPage() {
                     {finding.owner?.email ?? 'Unassigned'}
                   </p>
                 </div>
-                {!['RESOLVED', 'ACCEPTED_RISK'].includes(finding.status) ? (
-                  <button
-                    type="button"
-                    onClick={() => update.mutate(finding.id)}
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
-                  >
-                    Mark resolved
-                  </button>
-                ) : null}
+                <FindingWorkflow
+                  projectId={projectId}
+                  finding={finding}
+                  canEdit={canEdit}
+                  canReview={canReview}
+                />
               </div>
             ))}
-            {!findings.data?.length ? (
+            {!findings.isLoading &&
+            !findings.isError &&
+            !findings.data?.length ? (
               <p className="py-4 text-sm text-slate-500">
                 No findings recorded.
               </p>

@@ -21,7 +21,11 @@ interface SignupFormValues {
 
 export default function SignupPage() {
   const { token } = useAuth();
-  const signupsPaused = true;
+  const signupMode = (import.meta.env.VITE_SIGNUP_MODE ?? 'invite_only') as
+    | 'open'
+    | 'invite_only'
+    | 'assisted';
+  const signupsPaused = signupMode !== 'open';
   const [error, setError] = useState<string | undefined>();
   const [successMessage, setSuccessMessage] = useState<string | undefined>();
   const [showPassword, setShowPassword] = useState(false);
@@ -83,7 +87,7 @@ export default function SignupPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (signupsPaused) {
+  if (signupsPaused && !isCompanyFlow) {
     return (
       <>
         <SiteHeader />
@@ -97,8 +101,9 @@ export default function SignupPage() {
                 New accounts are closed for now
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                We&apos;re pausing new signups while we onboard current teams.
-                Please log in or reach out for access.
+                {signupMode === 'invite_only'
+                  ? 'Create an account with a workspace invitation, or ask our team to set up your workspace for you.'
+                  : 'Our team will set up your workspace and guide you through the first assessment.'}
               </p>
               <div className="mt-6 space-y-3">
                 <Button
@@ -108,7 +113,9 @@ export default function SignupPage() {
                   <Link to="/login">Go to login</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
-                  <Link to="/contact">Contact us</Link>
+                  <Link to="/contact?source=assisted_onboarding">
+                    Request assisted setup
+                  </Link>
                 </Button>
               </div>
             </CardContent>

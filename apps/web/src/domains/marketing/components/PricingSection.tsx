@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/shared/components/ui/card';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
 import {
   buildSubmitSystemHref,
+  buildPlanSignupHref,
   type SubmitSystemPackageInterest,
   type SubmitSystemSource,
 } from '../lib/submit-system';
@@ -32,30 +33,30 @@ type PricingPlan = {
 const PRICING_PLANS: PricingPlan[] = [
   {
     name: 'Trial',
-    tagline: 'Try the workflow',
+    tagline: 'Try the classification questionnaire',
     price: 'Free',
-    suffix: 'one assessment',
-    billing: 'Export restricted',
-    cta: 'Start an assessment',
+    suffix: 'one free classification',
+    billing: 'No account required',
+    cta: 'Start classification',
     packageInterest: 'starter',
     source: 'pricing_starter',
     sections: [
       {
         title: 'Included',
         items: [
-          'Guided AI-system intake',
-          'Preliminary classification',
-          'Evidence checklist and review workflow',
+          'EU AI Act classification questionnaire',
+          'Immediate indicative classification result',
+          'Clear next steps for workspace or assisted support',
         ],
       },
     ],
   },
   {
-    name: 'Solo',
-    tagline: 'For one person or SME',
-    price: 'Early access',
-    suffix: 'Solo workspace',
-    billing: 'Planned tier',
+    name: 'Pro workspace',
+    tagline: 'For teams managing AI systems',
+    price: '€149',
+    suffix: 'per workspace / month',
+    billing: '€1,490 billed annually',
     cta: 'Join early access',
     packageInterest: 'professional',
     source: 'pricing_professional',
@@ -71,47 +72,22 @@ const PRICING_PLANS: PricingPlan[] = [
     ],
   },
   {
-    name: 'Team',
-    tagline: 'For teams and several systems',
-    price: 'Early access',
-    suffix: 'Team workspace',
-    billing: 'Planned tier',
-    cta: 'Join early access',
-    packageInterest: 'professional',
-    source: 'pricing_professional',
-    featured: true,
-    sections: [
-      {
-        title: 'Included',
-        items: [
-          'Everything in Solo',
-          'Multiple reviewers and approvers',
-          'Client-ready handover packages',
-          'Cross-system workspace visibility',
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Consultancy',
-    tagline: 'For client-facing consultants',
-    price: 'Early access',
-    suffix: 'Client workspaces',
-    billing: 'Planned tier',
-    cta: 'Join early access',
-    packageInterest: 'not_sure',
+    name: 'Done-for-you',
+    tagline: 'We prepare the package with you',
+    price: 'From €2,500',
+    suffix: 'one-time service',
+    billing: 'Final scope confirmed after intake',
+    cta: 'Request assisted setup',
     source: 'pricing_saas',
-    sections: [
-      {
-        title: 'Planned',
-        items: [
-          'Everything in Team',
-          'Client isolation and invitations',
-          'Branded documentation handover',
-          'Consultant review workflow',
-        ],
-      },
-    ],
+    sections: [{
+      title: 'Included',
+      items: [
+        'Standard — from €2,500',
+        'High-risk — from €5,000',
+        'Portfolio — from €8,000',
+        'Monitoring — €199–€499/month',
+      ],
+    }],
   },
   {
     name: 'Enterprise',
@@ -141,6 +117,8 @@ export function PricingSection() {
   const [inView, setInView] = useState(false);
   const [openPlan, setOpenPlan] = useState<string | null>(null);
   const servicePlans = PRICING_PLANS.filter((plan) => !plan.comingSoon);
+  const signupMode = import.meta.env.VITE_SIGNUP_MODE ?? 'invite_only';
+  const restrictedSignup = signupMode !== 'open';
 
   useEffect(() => {
     const node = sectionRef.current;
@@ -177,7 +155,7 @@ export function PricingSection() {
             A workspace for each stage of documentation
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#5e5e5e]">
-            One workspace. Clear documentation.
+            One workspace. Clear documentation. Pro includes the full paid workspace.
           </p>
         </div>
 
@@ -249,10 +227,25 @@ export function PricingSection() {
                         </a>
                       ) : (
                         <Link
-                          to={buildSubmitSystemHref({
-                            packageInterest: plan.packageInterest,
-                            source: plan.source ?? 'pricing_starter',
-                          })}
+                          to={
+                            plan.name === 'Trial'
+                              ? '/eu-ai-act-checker?source=pricing_starter'
+                              : restrictedSignup
+                              ? plan.name === 'Done-for-you'
+                                ? buildSubmitSystemHref({
+                                    packageInterest: 'enterprise',
+                                    source: 'done_for_you',
+                                  })
+                                : `/login?plan=${plan.name.toLowerCase()}`
+                              : plan.packageInterest === 'enterprise'
+                                ? buildPlanSignupHref('enterprise')
+                                : plan.packageInterest
+                                  ? buildPlanSignupHref('pro')
+                                  : buildSubmitSystemHref({
+                                      packageInterest: plan.packageInterest,
+                                      source: plan.source ?? 'pricing_starter',
+                                    })
+                          }
                           onClick={() =>
                             trackMarketingEvent(
                               'marketing_submit_cta_clicked',
@@ -263,7 +256,19 @@ export function PricingSection() {
                             )
                           }
                         >
-                          {plan.cta}
+                          {restrictedSignup
+                            ? plan.name === 'Trial'
+                              ? 'Start classification'
+                              : plan.name === 'Done-for-you'
+                              ? 'Request assisted setup'
+                              : plan.name === 'Consultancy'
+                              ? 'Talk to us about consultancy'
+                              : plan.name === 'Enterprise'
+                                ? 'Contact sales'
+                                : `Request ${plan.name} access`
+                            : plan.name === 'Enterprise'
+                              ? 'Start Enterprise'
+                              : `Start ${plan.name}`}
                         </Link>
                       )}
                     </Button>
@@ -290,42 +295,34 @@ export function PricingSection() {
                       ⌄
                     </span>
                   </button>
-                  {openPlan === plan.name ? (
-                    <div className="mt-5 space-y-7">
-                      {plan.sections.map((section, sectionIndex) => (
-                        <div key={section.title}>
-                          <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--cx-text-muted)]">
-                            {section.title}
-                          </h4>
-                          <div className="mt-3 space-y-3">
-                            {section.items.map((item, itemIndex) => (
-                              <div
-                                key={item}
-                                className="flex items-start gap-3 animate-enter-fade"
-                                style={
-                                  inView
-                                    ? {
-                                        animationDelay: `${0.2 + index * 0.08 + sectionIndex * 0.06 + itemIndex * 0.04}s`,
-                                      }
-                                    : undefined
-                                }
-                              >
-                                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#17a64e]" />
-                                <span className="text-sm leading-6 text-[#5e5e5e]">
-                                  {item}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {openPlan ? (() => {
+          const selectedPlan = servicePlans.find((plan) => plan.name === openPlan);
+          if (!selectedPlan) return null;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpenPlan(null); }}>
+              <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--cx-border)] bg-[var(--cx-surface)] p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="pricing-features-title">
+              <div className="flex items-center justify-between gap-4">
+                <h3 id="pricing-features-title" className="text-lg font-semibold text-[var(--cx-text)]">{selectedPlan.name} features</h3>
+                <button type="button" className="text-sm font-semibold underline" onClick={() => setOpenPlan(null)}>Close</button>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {selectedPlan.sections.flatMap((section) => section.items).map((item) => (
+                  <div key={item} className="flex items-start gap-3 text-sm leading-6 text-[var(--cx-text-secondary)]">
+                    <Check className="mt-1 h-4 w-4 shrink-0 text-[#17a64e]" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+              </div>
+            </div>
+          );
+        })() : null}
 
         <div className="mx-auto mt-8 flex max-w-6xl flex-col gap-2 border-t border-[var(--cx-border)] pt-5 text-sm text-[var(--cx-text-secondary)] sm:flex-row sm:items-center sm:justify-between">
           <span>Self-serve workspace coming soon.</span>

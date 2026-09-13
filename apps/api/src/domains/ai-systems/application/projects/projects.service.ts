@@ -440,6 +440,13 @@ export class ProjectsService {
     if (!membership || (companyId && membership.companyId !== companyId)) {
       throw new ForbiddenException('Not a member of the workspace');
     }
+    if (opts?.allowAdministrator && membership.role === 'ADMIN') {
+      return {
+        project,
+        accessRole: accessRole ?? 'MEMBER',
+        membershipRole: membership.role,
+      };
+    }
     if (allowCompanyMember) {
       return {
         project,

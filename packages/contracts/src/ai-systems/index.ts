@@ -52,10 +52,8 @@ export type AuditEvent = {
   beforeSnapshot?: Record<string, unknown> | null;
   afterSnapshot?: Record<string, unknown> | null;
   metadata?: Record<string, unknown> | null;
-  eventHash: string;
-  previousHash?: string | null;
   createdAt: string;
-  actor?: UserRef;
+  actor?: UserRef | null;
 };
 
 export type SectionArtifactItem = {

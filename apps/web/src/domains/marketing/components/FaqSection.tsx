@@ -55,7 +55,7 @@ const FAQ_ITEMS = [
   {
     question: 'How much does it cost?',
     answer:
-      'Trial, Solo, Team, Consultancy, and Enterprise pricing are configurable hypotheses while the product and service model are validated.',
+      'The classification questionnaire is free. Plans start at €49/month. Done-for-you support starts at €2,500.',
   },
   {
     question: 'Is this a one-time service or ongoing?',
@@ -75,7 +75,7 @@ const FAQ_ITEMS = [
   {
     question: 'How do we get started?',
     answer:
-      "Send us your AI product description. We'll respond quickly and start immediately.",
+      'Start with the questionnaire. Request an invitation or submit your system for assisted support.',
   },
 ];
 

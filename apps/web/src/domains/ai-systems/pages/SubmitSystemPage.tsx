@@ -49,7 +49,7 @@ const SUBMIT_SYSTEM_CONTEXT: Partial<
     eyebrow: 'Direct intake',
     title: 'Skip the checker and send the system directly',
     description:
-      'Share the system details once and we will scope the right package, quote, and delivery path without requiring the self-assessment first.',
+      'Share your system details and we will recommend the right package and next step.',
     timelineLabel: 'Best first response: 48 hours',
   },
   pricing_enterprise: {
@@ -61,7 +61,7 @@ const SUBMIT_SYSTEM_CONTEXT: Partial<
   },
   pricing_professional: {
     eyebrow: 'Professional package intake',
-    title: 'Tell us about your AI system',
+    title: 'Start classification',
     description:
       'Share the details we need to scope your review and documentation package.',
     timelineLabel: 'We respond within 48 hours',

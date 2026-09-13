@@ -63,8 +63,31 @@ export class ReadinessReportController {
     );
   }
 
+  @Get('packages/:packageId/download')
+  downloadPackage(
+    @Param('aiSystemId') projectId: string,
+    @Param('packageId') packageId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.reports.downloadPackage(
+      projectId,
+      packageId,
+      req.user.userId,
+      this.companyId(req),
+    );
+  }
+
   @Get(':reportId')
-  get(@Param('reportId') reportId: string, @Req() req: AuthenticatedRequest) {
-    return this.reports.get(reportId, req.user.userId, this.companyId(req));
+  get(
+    @Param('aiSystemId') projectId: string,
+    @Param('reportId') reportId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.reports.get(
+      reportId,
+      req.user.userId,
+      this.companyId(req),
+      projectId,
+    );
   }
 }

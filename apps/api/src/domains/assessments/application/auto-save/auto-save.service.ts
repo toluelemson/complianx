@@ -1,18 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../platform/database/prisma.service';
+import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
 import { SaveSectionDto } from '../../presentation/dto/save-section.dto';
 
 @Injectable()
 export class AutoSaveService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly projectsService: ProjectsService,
+  ) {}
 
-  async saveSection(userId: string, dto: SaveSectionDto) {
+  async saveSection(userId: string, companyId: string, dto: SaveSectionDto) {
     const section = await (this.prisma as any).section.findUnique({
       where: { id: dto.sectionId },
     });
     if (!section) {
-      throw new Error('Section not found');
+      throw new NotFoundException('Section not found');
     }
+    await this.projectsService.assertOwnership(section.projectId, userId, companyId);
     const autosave = await (this.prisma as any).sectionAutosave.upsert({
       where: { sectionId: dto.sectionId },
       create: {
@@ -35,13 +40,21 @@ export class AutoSaveService {
     return autosave;
   }
 
-  async getSectionAutosave(sectionId: string) {
+  async getSectionAutosave(sectionId: string, userId: string, companyId: string) {
+    const section = await this.prisma.section.findUnique({ where: { id: sectionId } });
+    if (!section) throw new NotFoundException('Section not found');
+    await this.projectsService.assertAccess(section.projectId, userId, companyId, {
+      allowOwner: true, allowReviewer: true, allowApprover: true, allowCompanyMember: true,
+    });
     return (this.prisma as any).sectionAutosave.findUnique({
       where: { sectionId },
     });
   }
 
-  async deleteSectionAutosave(sectionId: string) {
+  async deleteSectionAutosave(sectionId: string, userId: string, companyId: string) {
+    const section = await this.prisma.section.findUnique({ where: { id: sectionId } });
+    if (!section) throw new NotFoundException('Section not found');
+    await this.projectsService.assertOwnership(section.projectId, userId, companyId);
     await (this.prisma as any).sectionAutosave.delete({
       where: { sectionId },
     });

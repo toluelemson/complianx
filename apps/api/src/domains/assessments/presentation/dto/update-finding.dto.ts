@@ -1,28 +1,28 @@
 import { FindingSeverity, FindingStatus } from '@prisma/client';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, ValidateIf, IsString } from 'class-validator';
 
 export class UpdateFindingDto {
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsEnum(FindingStatus)
   status?: FindingStatus;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsEnum(FindingSeverity)
   severity?: FindingSeverity;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   description?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   ownerId?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   resolutionSummary?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   reviewerDecision?: string;
 }

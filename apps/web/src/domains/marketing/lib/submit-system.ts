@@ -10,6 +10,7 @@ export type SubmitSystemSource =
   | 'pricing_professional'
   | 'pricing_enterprise'
   | 'pricing_saas'
+  | 'done_for_you'
   | 'checker_skip'
   | 'checker_result';
 
@@ -35,4 +36,8 @@ export function buildSubmitSystemHref({
   }
 
   return `/submit-system?${params.toString()}`;
+}
+
+export function buildPlanSignupHref(plan: 'pro' | 'enterprise') {
+  return `/signup?plan=${plan}`;
 }
