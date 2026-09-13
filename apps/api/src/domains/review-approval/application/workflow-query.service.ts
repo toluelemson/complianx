@@ -15,6 +15,17 @@ import {
 import { WorkflowContextService } from './workflow-context.service';
 import { ProjectReadinessService } from './project-readiness.service';
 
+type TenantReadContext = {
+  actor: { id: string };
+  membership: { companyId: string } | null;
+  project: {
+    companyId: string | null;
+    ownerId: string;
+    reviewerId: string | null;
+    approverId: string | null;
+  };
+};
+
 @Injectable()
 export class WorkflowQueryService {
   constructor(
@@ -27,7 +38,8 @@ export class WorkflowQueryService {
   ) {}
 
   async getProjectWorkflow(projectId: string, actorId: string) {
-    await this.context.loadProjectContext(projectId, actorId);
+    const context = await this.context.loadProjectContext(projectId, actorId);
+    this.assertProjectReadAccess(context);
     const project = await this.projects.getProject(projectId);
     if (!project) {
       throw new NotFoundException('Project not found');
@@ -36,17 +48,20 @@ export class WorkflowQueryService {
   }
 
   async getProjectHistory(projectId: string, actorId: string) {
-    await this.context.loadProjectContext(projectId, actorId);
+    const context = await this.context.loadProjectContext(projectId, actorId);
+    this.assertProjectReadAccess(context);
     return this.projects.listProjectHistory(projectId);
   }
 
   async getProjectReadiness(projectId: string, actorId: string) {
     const context = await this.context.loadProjectContext(projectId, actorId);
+    this.assertProjectReadAccess(context);
     return this.readiness.getApprovalReadiness(context.project);
   }
 
   async getSectionWorkflow(sectionId: string, actorId: string) {
-    await this.context.loadSectionContext(sectionId, actorId);
+    const context = await this.context.loadSectionContext(sectionId, actorId);
+    this.assertSectionReadAccess(context);
     const section = await this.sections.getSection(sectionId);
     if (!section) {
       throw new NotFoundException('Section not found');
@@ -55,7 +70,8 @@ export class WorkflowQueryService {
   }
 
   async getSectionHistory(sectionId: string, actorId: string) {
-    await this.context.loadSectionContext(sectionId, actorId);
+    const context = await this.context.loadSectionContext(sectionId, actorId);
+    this.assertSectionReadAccess(context);
     return this.sections.listSectionHistory(sectionId);
   }
 
@@ -65,6 +81,7 @@ export class WorkflowQueryService {
 
   async listProjectReviewers(projectId: string, actorId: string) {
     const context = await this.context.loadProjectContext(projectId, actorId);
+    this.assertProjectReadAccess(context);
     if (context.project.ownerId !== actorId) {
       throw new ForbiddenException();
     }
@@ -75,5 +92,31 @@ export class WorkflowQueryService {
       context.project.companyId,
       actorId,
     );
+  }
+
+  private assertProjectReadAccess(context: TenantReadContext) {
+    const assigned =
+      context.project.ownerId === context.actor.id ||
+      context.project.reviewerId === context.actor.id ||
+      context.project.approverId === context.actor.id;
+    const member =
+      context.project.companyId !== null &&
+      context.membership?.companyId === context.project.companyId;
+    if (!assigned && !member) {
+      throw new NotFoundException('Project not found');
+    }
+  }
+
+  private assertSectionReadAccess(context: {
+    actor: TenantReadContext['actor'];
+    membership: TenantReadContext['membership'];
+    section: { project: TenantReadContext['project'] };
+  }) {
+    const projectContext: TenantReadContext = {
+      actor: context.actor,
+      membership: context.membership,
+      project: context.section.project,
+    };
+    this.assertProjectReadAccess(projectContext);
   }
 }

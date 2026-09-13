@@ -358,14 +358,16 @@ describe('API security (e2e)', () => {
       .get(`/api/ai-systems/${project.body.id}/obligations`)
       .set(authenticated(adminToken))
       .expect(200);
+    const evidenceLinks: Array<{ id: string }> = [];
     for (const obligation of obligations.body) {
-      await request(app.getHttpServer())
+      const link = await request(app.getHttpServer())
         .post(
           `/api/ai-systems/${project.body.id}/obligations/${obligation.id}/evidence`,
         )
         .set(authenticated(adminToken))
         .send({ artifactId: evidence.body.id, linkType: 'SUPPORTING' })
         .expect(201);
+      evidenceLinks.push(link.body);
       await request(app.getHttpServer())
         .patch(
           `/api/ai-systems/${project.body.id}/obligations/${obligation.id}`,
@@ -381,7 +383,7 @@ describe('API security (e2e)', () => {
       documentName,
       Buffer.from('%PDF-1.7\nE2E'),
     );
-    await prisma.document.create({
+    const document = await prisma.document.create({
       data: {
         projectId: project.body.id,
         type: 'technical_documentation',
@@ -496,6 +498,157 @@ describe('API security (e2e)', () => {
         .set(authenticated(outsiderToken, otherCompanyId))
         .expect(403);
     }
+
+    const outsiderHeaders = authenticated(outsiderToken, otherCompanyId);
+    await request(app.getHttpServer())
+      .post('/api/projects')
+      .set({
+        Authorization: `Bearer ${outsiderToken}`,
+        'x-company-id': 'e2e-company',
+      })
+      .send({ name: 'Cross-tenant project' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/projects/${project.body.id}`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch(`/api/projects/${project.body.id}`)
+      .set(outsiderHeaders)
+      .send({ name: 'Cross-tenant overwrite' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/projects/${project.body.id}/sections`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .put(`/api/projects/${project.body.id}/sections/${sections[0].id}`)
+      .set(outsiderHeaders)
+      .send({ content: { stolen: true } })
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(
+        `/api/ai-systems/${project.body.id}/assessments/${classification.body.assessmentId}`,
+      )
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .put(
+        `/api/ai-systems/${project.body.id}/assessments/${classification.body.assessmentId}/answers`,
+      )
+      .set(outsiderHeaders)
+      .send({ answers: { used_in_eu: false } })
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/ai-systems/${project.body.id}/obligations`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(
+        `/api/ai-systems/${project.body.id}/obligations/${obligations.body[0].id}/traceability`,
+      )
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch(
+        `/api/ai-systems/${project.body.id}/obligations/${obligations.body[0].id}`,
+      )
+      .set(outsiderHeaders)
+      .send({ status: 'NOT_APPLICABLE' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(
+        `/api/ai-systems/${project.body.id}/obligations/${obligations.body[0].id}/evidence`,
+      )
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete(
+        `/api/ai-systems/${project.body.id}/obligations/${obligations.body[0].id}/evidence/${evidenceLinks[0].id}`,
+      )
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(
+        `/api/projects/${project.body.id}/sections/${sections[0].id}/artifacts`,
+      )
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/artifacts/${evidence.body.id}/download`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch(`/api/artifacts/${evidence.body.id}/review`)
+      .set(outsiderHeaders)
+      .send({ status: 'REJECTED', comment: 'Cross-tenant review' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete(`/api/artifacts/${evidence.body.id}`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/documents/${document.id}/download`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/projects/${project.body.id}/documents`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/projects/${project.body.id}/workflow`)
+      .set(outsiderHeaders)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/projects/${project.body.id}/workflow/history`)
+      .set(outsiderHeaders)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/sections/${sections[0].id}/workflow`)
+      .set(outsiderHeaders)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/projects/${project.body.id}/workflow/approve`)
+      .set(outsiderHeaders)
+      .send({ signature: 'Cross-tenant approver' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/projects/${project.body.id}/audit-events`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/ai-systems/${project.body.id}/reports`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/ai-systems/${project.body.id}/reports/packages`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .post(`/api/ai-systems/${project.body.id}/reports/package`)
+      .set(outsiderHeaders)
+      .expect(403);
+    const reminder = await request(app.getHttpServer())
+      .post(`/api/projects/${project.body.id}/reminders`)
+      .set(authenticated(adminToken))
+      .send({ message: 'Review package', dueAt: '2099-01-01T00:00:00.000Z' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .get(`/api/projects/${project.body.id}/reminders`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch(`/api/projects/${project.body.id}/reminders/${reminder.body.id}`)
+      .set(outsiderHeaders)
+      .send({ completed: true })
+      .expect(403);
+    await request(app.getHttpServer())
+      .get('/api/company')
+      .set({
+        Authorization: `Bearer ${outsiderToken}`,
+        'x-company-id': 'e2e-company',
+      })
+      .expect(403);
 
     const packageRecord = await prisma.compliancePackage.findUniqueOrThrow({
       where: { id: compliancePackage.body.id },
