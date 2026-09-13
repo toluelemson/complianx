@@ -503,6 +503,50 @@ describe('API security (e2e)', () => {
     }
 
     const outsiderHeaders = authenticated(outsiderToken, otherCompanyId);
+    const feedbackPayload = {
+      projectId: project.body.id,
+      sectionId: sections[0].id,
+      fieldName: 'purpose',
+      suggestion: 'Reviewed purpose statement',
+      liked: true,
+    };
+    await request(app.getHttpServer())
+      .post('/api/suggestions/feedback')
+      .set(authenticated(adminToken))
+      .send(feedbackPayload)
+      .expect(201);
+    await request(app.getHttpServer())
+      .get(`/api/suggestions/feedback/${sections[0].id}/purpose`)
+      .set(authenticated(adminToken))
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              suggestion: 'Reviewed purpose statement',
+            }),
+          ]),
+        );
+      });
+    await request(app.getHttpServer())
+      .get(`/api/suggestions/feedback/${sections[0].id}/purpose`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .post('/api/suggestions/feedback')
+      .set(outsiderHeaders)
+      .send(feedbackPayload)
+      .expect(403);
+    const outsiderProject = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(outsiderHeaders)
+      .send({ name: `Outside project ${Date.now()}` })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/suggestions/feedback')
+      .set(outsiderHeaders)
+      .send({ ...feedbackPayload, projectId: outsiderProject.body.id })
+      .expect(404);
     await request(app.getHttpServer())
       .post('/api/autosave/sections')
       .set(authenticated(adminToken))

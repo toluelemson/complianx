@@ -16,11 +16,25 @@ import { CompanyContextService } from '../../../organizations/application/member
 @UseGuards(JwtAuthGuard)
 @Controller('suggestions')
 export class SuggestionsController {
-  constructor(private readonly suggestionsService: SuggestionsService, private readonly companyContext: CompanyContextService) {}
+  constructor(
+    private readonly suggestionsService: SuggestionsService,
+    private readonly companyContext: CompanyContextService,
+  ) {}
+
+  private companyId(req: AuthenticatedRequest) {
+    return this.companyContext.resolveCompany(
+      req.user,
+      req.headers?.['x-company-id'] as string | undefined,
+    ).companyId;
+  }
 
   @Post('feedback')
   record(@Req() req: AuthenticatedRequest, @Body() dto: CreateFeedbackDto) {
-    return this.suggestionsService.recordFeedback(req.user.userId, dto);
+    return this.suggestionsService.recordFeedback(
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
   }
 
   @Get('feedback/:sectionId/:fieldName')
@@ -29,7 +43,11 @@ export class SuggestionsController {
     @Param('fieldName') fieldName: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    const companyId = this.companyContext.resolveCompany(req.user, req.headers?.['x-company-id'] as string | undefined).companyId;
-    return this.suggestionsService.listForField(sectionId, fieldName, req.user.userId, companyId);
+    return this.suggestionsService.listForField(
+      sectionId,
+      fieldName,
+      req.user.userId,
+      this.companyId(req),
+    );
   }
 }

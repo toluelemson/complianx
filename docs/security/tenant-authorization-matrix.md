@@ -32,7 +32,7 @@ This inventory records automated cross-tenant coverage as of 2026-09-13. It dist
 | Organization membership/profile | tested | indirect | missing | missing | n/a | n/a | `test/app.e2e-spec.ts`; `company-context.service.spec.ts` |
 | Notification | missing | n/a | missing | n/a | n/a | n/a | User-scoped implementation; no cross-user automated test |
 | Trust metric and sample | missing | missing | n/a | missing | n/a | n/a | No cross-tenant automated test |
-| Suggestion feedback | missing | missing | n/a | n/a | n/a | n/a | No cross-tenant automated test |
+| Suggestion feedback | tested | tested | n/a | n/a | n/a | n/a | `test/app.e2e-spec.ts` |
 | Invitation | missing | missing | n/a | n/a | n/a | n/a | Token and company scoped; no cross-tenant automated test |
 | Section template | missing | missing | missing | missing | n/a | n/a | Company templates lack a cross-tenant automated test |
 
