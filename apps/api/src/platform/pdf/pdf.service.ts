@@ -13,7 +13,8 @@ export class PdfService {
     });
     try {
       const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      await page.setContent(html, { waitUntil: 'domcontentloaded' });
+      await page.waitForNetworkIdle();
       const buffer = await page.pdf({
         format: 'A4',
         margin: {
