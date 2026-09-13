@@ -193,6 +193,21 @@ export class ArtifactsService {
       userId,
       companyId,
     );
+    const finalizedPackage = await this.prisma.compliancePackage.findFirst({
+      where: {
+        projectId: artifact.projectId,
+        companyId,
+        status: { not: 'INCOMPLETE' },
+        // Finalized package manifests are immutable provenance snapshots.
+        manifest: { string_contains: artifact.id },
+      },
+      select: { id: true, version: true },
+    });
+    if (finalizedPackage) {
+      throw new BadRequestException(
+        `Evidence is retained because it is referenced by finalized package v${finalizedPackage.version}`,
+      );
+    }
     const newerCount = await this.prisma.sectionArtifact.count({
       where: { previousArtifactId: artifactId },
     });
