@@ -135,19 +135,19 @@ export default function ProjectOverviewPage() {
       projectId={projectId}
     >
       <div className="hz-console-content space-y-5">
-        <section className="overflow-hidden rounded-2xl bg-slate-950 p-6 text-white shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 EU AI Act readiness
               </p>
-              <h1 className="mt-2 text-2xl font-semibold">
+              <h1 className="mt-2 text-2xl font-semibold text-slate-950">
                 {loading
                   ? 'Checking what needs attention…'
                   : (attention.primary?.title ??
                     'Ready for the next review stage')}
               </h1>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
+              <p className="mt-2 text-sm leading-6 text-slate-600">
                 {loading
                   ? 'Reviewing classification, requirements, evidence, and approvals.'
                   : (attention.primary?.detail ??
@@ -156,15 +156,15 @@ export default function ProjectOverviewPage() {
               {!loading && attention.primary ? (
                 <Link
                   to={attention.primary.href}
-                  className="mt-5 inline-flex rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-50"
+                  className="mt-5 inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                 >
                   {attention.primary.actionLabel} →
                 </Link>
               ) : null}
             </div>
-            <div className="min-w-40 rounded-xl border border-white/15 bg-white/10 p-4">
+            <div className="min-w-40 rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-950">
               <p className="text-4xl font-semibold">{attention.score}%</p>
-              <p className="mt-1 text-xs text-slate-300">
+              <p className="mt-1 text-xs text-slate-500">
                 requirements approved
               </p>
             </div>
@@ -234,8 +234,8 @@ export default function ProjectOverviewPage() {
 
 function Metric({ value, label }: { value: number; label: string }) {
   return (
-    <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
-      <strong>{value}</strong> {label}
+    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600">
+      <strong className="text-slate-950">{value}</strong> {label}
     </span>
   );
 }
