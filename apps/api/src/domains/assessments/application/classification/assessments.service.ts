@@ -410,7 +410,12 @@ export class AssessmentsService {
         },
         evidence: {
           include: {
-            artifact: true,
+            artifact: {
+              include: {
+                uploadedBy: { select: { id: true, email: true } },
+                reviewedBy: { select: { id: true, email: true } },
+              },
+            },
             document: true,
           },
           orderBy: { createdAt: 'asc' },
@@ -424,6 +429,21 @@ export class AssessmentsService {
       where: { projectId, companyId },
       select: { id: true, version: true, createdAt: true, manifest: true },
       orderBy: { version: 'desc' },
+    });
+    const approvalEvents = await this.prisma.auditEvent.findMany({
+      where: {
+        projectId,
+        companyId,
+        entityType: 'AiSystemObligation',
+        entityId: obligationId,
+        action: 'UPDATED',
+      },
+      include: { actor: { select: { id: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const approvalEvent = approvalEvents.find((event) => {
+      const snapshot = event.afterSnapshot as Record<string, unknown> | null;
+      return snapshot?.approvalState === 'APPROVED';
     });
     const closureEvidenceIds = obligation.actions
       .map((action) => action.closureEvidenceId)
@@ -454,14 +474,22 @@ export class AssessmentsService {
             uploadedAt: link.artifact.createdAt,
             uploaderId: link.artifact.uploadedById,
             reviewerId: link.artifact.reviewedById,
+            reviewer: link.artifact.reviewedBy,
+            uploader: link.artifact.uploadedBy,
             reviewerStatus: link.artifact.status,
           }
-        : link.document,
+        : null,
     }));
     const missingEvidence = obligation.actions
-      .filter((action) => action.status !== 'COMPLETED' && action.status !== 'DONE')
+      .filter(
+        (action) => action.status !== 'COMPLETED' && action.status !== 'DONE',
+      )
       .filter((action) => !action.closureEvidenceId)
-      .map((action) => ({ id: action.id, title: action.title, status: action.status }));
+      .map((action) => ({
+        id: action.id,
+        title: action.title,
+        status: action.status,
+      }));
     return {
       requirement: {
         id: obligation.obligation.id,
@@ -497,7 +525,10 @@ export class AssessmentsService {
       findings: obligation.findings,
       actions: obligation.actions.map((action) => ({
         ...action,
-        closureEvidence: closureEvidence.find((item) => item.id === action.closureEvidenceId) ?? null,
+        closureEvidence:
+          closureEvidence.find(
+            (item) => item.id === action.closureEvidenceId,
+          ) ?? null,
       })),
       review: {
         classification: obligation.classificationResult
@@ -508,6 +539,13 @@ export class AssessmentsService {
             }
           : null,
         approvalState: obligation.approvalState,
+        approval:
+          obligation.approvalState === 'APPROVED' && approvalEvent
+            ? {
+                actor: approvalEvent.actor,
+                decidedAt: approvalEvent.createdAt,
+              }
+            : null,
       },
       packageInclusion: packages.map((pkg) => ({
         id: pkg.id,

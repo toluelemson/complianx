@@ -72,7 +72,7 @@ export function buildProjectAttention(input: ProjectAttentionInput) {
       title: 'Project review changes were requested',
       detail: 'Address the reviewer’s feedback before resubmitting.',
       actionLabel: 'Open review',
-      href: `/projects/${input.projectId}/review`,
+      href: `/projects/${input.projectId}/review-approval`,
       entityType: 'review',
       entityId: input.projectId,
     });
@@ -87,7 +87,7 @@ export function buildProjectAttention(input: ProjectAttentionInput) {
       detail:
         'The assigned reviewer or approver must record the next decision.',
       actionLabel: 'View review status',
-      href: `/projects/${input.projectId}/review`,
+      href: `/projects/${input.projectId}/review-approval`,
       entityType: 'review',
       entityId: input.projectId,
     });

@@ -228,11 +228,58 @@ export async function getObligationTraceability(
   projectId: string,
   obligationId: string,
 ) {
-  const { data } = await api.get(
+  const { data } = await api.get<ObligationTraceability>(
     `/ai-systems/${projectId}/obligations/${obligationId}/traceability`,
   );
   return data;
 }
+
+export type ObligationTraceability = {
+  requirement: {
+    id: string;
+    identifier: string;
+    title: string;
+    description?: string | null;
+    legalReference?: string | null;
+    applicability: string;
+    ownerId?: string | null;
+  };
+  applicability: { status: string; reason?: string | null };
+  implementation: { approvalState: string };
+  evidence: Array<{
+    id: string;
+    linkType: 'PRIMARY' | 'SUPPORTING' | 'REFERENCE';
+    artifact?: {
+      id: string;
+      originalName: string;
+      evidenceVersion: number;
+      uploadedAt: string;
+      reviewerStatus: ArtifactStatus;
+      reviewer?: { id: string; email: string } | null;
+      reviewedAt?: string | null;
+    } | null;
+    document?: {
+      id: string;
+      type: string;
+      version?: number;
+      approvalState?: string;
+    } | null;
+  }>;
+  missingEvidence: Array<{ id: string; title: string; status: string }>;
+  review: {
+    approvalState: string;
+    approval?: {
+      actor?: { id: string; email: string } | null;
+      decidedAt: string;
+    } | null;
+  };
+  packageInclusion: Array<{
+    id: string;
+    version: number;
+    createdAt: string;
+    included: boolean;
+  }>;
+};
 
 export async function createProjectFinding(
   projectId: string,

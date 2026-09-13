@@ -1,9 +1,19 @@
 import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
-import { listProjectObligations, updateProjectObligation } from '../api';
+import {
+  listObligationEvidence,
+  listProjectObligations,
+  updateProjectObligation,
+} from '../api';
+import { RequirementTraceability } from '../components/RequirementTraceability';
 
 export default function ProjectRequirementsPage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
@@ -27,6 +37,20 @@ export default function ProjectRequirementsPage() {
     onSuccess: () =>
       void client.invalidateQueries({ queryKey: ['obligations', projectId] }),
   });
+  const allItems = query.data ?? [];
+  const evidenceQueries = useQueries({
+    queries: allItems.map((item) => ({
+      queryKey: ['obligationEvidence', projectId, item.id, activeCompanyId],
+      enabled: Boolean(token && projectId && activeCompanyId),
+      queryFn: () => listObligationEvidence(projectId, item.id),
+    })),
+  });
+  const evidenceByRequirement = new Map(
+    allItems.map((item, index) => [
+      item.id,
+      evidenceQueries[index]?.data ?? [],
+    ]),
+  );
   if (!initializing && !token) return <Navigate to="/login" replace />;
   const items = (query.data ?? []).filter(
     (item) =>
@@ -37,7 +61,6 @@ export default function ProjectRequirementsPage() {
       (categoryFilter === 'ALL' ||
         (item.obligation.key ?? '').split('-')[0] === categoryFilter),
   );
-  const allItems = query.data ?? [];
   const categories = Array.from(
     new Set(
       allItems
@@ -174,6 +197,11 @@ export default function ProjectRequirementsPage() {
                     ? ` · Due ${new Date(item.dueAt).toLocaleDateString()}`
                     : ''}
                 </p>
+                <RequirementTraceability
+                  projectId={projectId}
+                  requirement={item}
+                  evidence={evidenceByRequirement.get(item.id) ?? []}
+                />
               </article>
             ))}
             {!items.length ? (
