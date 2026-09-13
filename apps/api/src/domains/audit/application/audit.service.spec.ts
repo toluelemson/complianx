@@ -29,4 +29,31 @@ describe('AuditService', () => {
     });
     expect(events).toHaveLength(1);
   });
+
+  it('preserves before and after snapshots for lifecycle decisions', async () => {
+    const create = jest.fn(({ data }: { data: Record<string, unknown> }) => data);
+    const service = new AuditService({ auditEvent: { create } } as never);
+
+    await service.record({
+      companyId: 'company-1',
+      projectId: 'project-1',
+      actorId: 'reviewer-1',
+      entityType: 'SectionArtifact',
+      entityId: 'artifact-1',
+      action: 'REVIEWED',
+      beforeSnapshot: { status: 'PENDING' },
+      afterSnapshot: { status: 'APPROVED' },
+    });
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'REVIEWED',
+          beforeSnapshot: { status: 'PENDING' },
+          afterSnapshot: { status: 'APPROVED' },
+          createdAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
 });
