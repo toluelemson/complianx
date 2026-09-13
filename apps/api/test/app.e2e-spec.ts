@@ -504,6 +504,35 @@ describe('API security (e2e)', () => {
 
     const outsiderHeaders = authenticated(outsiderToken, otherCompanyId);
     await request(app.getHttpServer())
+      .post('/api/autosave/sections')
+      .set(authenticated(adminToken))
+      .send({ sectionId: sections[0].id, content: completeContent })
+      .expect(201);
+    await request(app.getHttpServer())
+      .get(`/api/autosave/sections/${sections[0].id}`)
+      .set(authenticated(adminToken))
+      .expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/autosave/sections/${sections[0].id}`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .post('/api/autosave/sections')
+      .set(outsiderHeaders)
+      .send({
+        sectionId: sections[0].id,
+        content: { stolen: true },
+      })
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete(`/api/autosave/sections/${sections[0].id}`)
+      .set(outsiderHeaders)
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete(`/api/autosave/sections/${sections[0].id}`)
+      .set(authenticated(adminToken))
+      .expect(200);
+    await request(app.getHttpServer())
       .post('/api/projects')
       .set({
         Authorization: `Bearer ${outsiderToken}`,

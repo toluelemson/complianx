@@ -14,7 +14,7 @@ This inventory records automated cross-tenant coverage as of 2026-09-13. It dist
 | Project / AI system | tested | tested | tested | n/a | n/a | tested | `test/app.e2e-spec.ts`; `projects.service.spec.ts` |
 | Section | tested | indirect | tested | n/a | n/a | tested | `test/app.e2e-spec.ts` |
 | Section comment | indirect | indirect | missing | n/a | n/a | n/a | Parent project checks only |
-| Section autosave | missing | missing | missing | missing | n/a | n/a | No cross-tenant automated test |
+| Section autosave | tested | tested | tested | tested | n/a | n/a | `test/app.e2e-spec.ts` |
 | Assessment and answers | tested | indirect | tested | n/a | n/a | tested | `test/app.e2e-spec.ts`; `assessments.service.spec.ts` |
 | Classification result | tested | indirect | n/a | n/a | n/a | tested | `test/app.e2e-spec.ts`; `assessments.service.spec.ts` |
 | Regulatory requirement definition | n/a | n/a | n/a | n/a | n/a | n/a | Shared published regulatory data, not tenant-owned |
@@ -36,6 +36,6 @@ This inventory records automated cross-tenant coverage as of 2026-09-13. It dist
 | Invitation | missing | missing | n/a | n/a | n/a | n/a | Token and company scoped; no cross-tenant automated test |
 | Section template | missing | missing | missing | missing | n/a | n/a | Company templates lack a cross-tenant automated test |
 
-The E2E suite exercises direct IDs belonging to company A while authenticated as an administrator of company B. It covers project reads and updates; assessment reads and answer updates; section reads and updates; obligation reads, traceability, updates, and evidence links; artifact reads, reviews, deletion, and download; generated-document reads and download; workflow, report, package, reminder, and audit reads; and package verification/download. Package tests also assert unauthenticated access is rejected.
+The E2E suite exercises direct IDs belonging to company A while authenticated as an administrator of company B. It covers project reads and updates; assessment reads and answer updates; section reads, updates, and autosave operations; obligation reads, traceability, updates, and evidence links; artifact reads, reviews, deletion, and download; generated-document reads and download; workflow, report, package, reminder, and audit reads; and package verification/download. Package tests also assert unauthenticated access is rejected.
 
 The remaining `missing` cells are the next authorization-test backlog. They must not be treated as evidence that the routes are unprotected; they mean the repository does not currently prove the boundary with an automated cross-tenant attempt.
