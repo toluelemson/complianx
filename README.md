@@ -73,4 +73,4 @@ Complianx uses a domain-oriented monorepo and a modular-monolith API. Important 
 
 ## Testing and deployment
 
-App-specific tests can be run with `pnpm test:api` and `pnpm test:web`. Deployment paths changed from `/backend` and `/frontend` to `/apps/api` and `/apps/web`; see [deployment operations](docs/operations/deployment.md) and [DigitalOcean guidance](DEPLOYMENT_DIGITAL_OCEAN.md).
+App-specific tests can be run with `pnpm test:api` and `pnpm test:web`. Deployment paths use `/apps/api` and `/apps/web`; see the active [deployment operations](docs/operations/deployment.md). The legacy DigitalOcean guide is retained for historical reference only.
