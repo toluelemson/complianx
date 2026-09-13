@@ -33,4 +33,17 @@ describe('API security (e2e)', () => {
       .get('/api/artifacts/artifact-1/download')
       .expect(401);
   });
+
+  it('authenticates the deterministic E2E fixture', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'e2e-user@example.invalid', password: 'e2e-test-password' })
+      .expect(201);
+    expect(response.body.token).toEqual(expect.any(String));
+    await request(app.getHttpServer())
+      .get('/api/billing/plan')
+      .set('Authorization', `Bearer ${response.body.token}`)
+      .set('x-company-id', 'e2e-company')
+      .expect(200);
+  });
 });
