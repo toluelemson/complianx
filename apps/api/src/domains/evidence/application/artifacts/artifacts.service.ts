@@ -27,6 +27,7 @@ import {
   type ScanResult,
 } from './file-scanner';
 import { FILE_SCANNER } from '../../infrastructure/file-scanner.provider';
+import { validateEvidenceFileType } from './evidence-file-type';
 
 @Injectable()
 export class ArtifactsService {
@@ -110,22 +111,12 @@ export class ArtifactsService {
     if (!file) {
       throw new BadRequestException('File is required');
     }
-    const extension = extname(file.originalname).toLowerCase();
-    const allowed: Record<string, string[]> = {
-      '.pdf': ['application/pdf'],
-      '.doc': ['application/msword'],
-      '.docx': [
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      ],
-      '.txt': ['text/plain'],
-      '.csv': ['text/csv', 'application/vnd.ms-excel'],
-      '.json': ['application/json', 'text/json'],
-    };
-    if (!allowed[extension] || !allowed[extension].includes(file.mimetype)) {
-      throw new BadRequestException('Unsupported evidence file type');
-    }
     if (/[/\\]/.test(file.originalname) || file.originalname.includes('..')) {
       throw new BadRequestException('Invalid evidence filename');
+    }
+    const fileType = validateEvidenceFileType(file);
+    if (!fileType.valid) {
+      throw new BadRequestException(fileType.reason);
     }
     let scan: ScanResult;
     try {
