@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CompliancePackagePage from './CompliancePackagePage';
-import { approveDocument } from '../api';
+import { approveDocument, createCompliancePackage } from '../api';
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({
     token: 'test-token',
@@ -16,14 +16,12 @@ vi.mock('@/app/layout/AppShell', () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock('../api', () => ({
-  getProject: vi
-    .fn()
-    .mockResolvedValue({
-      name: 'Project',
-      sections: [],
-      statusEvents: [],
-      viewerRole: 'APPROVER',
-    }),
+  getProject: vi.fn().mockResolvedValue({
+    name: 'Project',
+    sections: [],
+    statusEvents: [],
+    viewerRole: 'APPROVER',
+  }),
   getProjectDocuments: vi.fn().mockResolvedValue([
     {
       id: 'draft-document',
@@ -64,6 +62,7 @@ vi.mock('../api', () => ({
   ]),
 }));
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.stubGlobal(
     'fetch',
     vi
@@ -121,6 +120,68 @@ describe('Saved package download', () => {
     );
     await waitFor(() =>
       expect(approveDocument).toHaveBeenCalledWith('draft-document'),
+    );
+  });
+  it('shows server readiness gaps with links to the relevant workflows', async () => {
+    vi.mocked(createCompliancePackage).mockRejectedValueOnce({
+      isAxiosError: true,
+      message: 'Request failed with status code 400',
+      response: {
+        data: {
+          message: 'Compliance package generation is blocked',
+          gaps: [
+            'Classification requires human review',
+            'Project approval is outstanding',
+            'Obligation obligation-1 is not approved',
+            'Current documents require recorded human approval',
+          ],
+        },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/projects/project/package']}>
+          <Routes>
+            <Route
+              path="/projects/:projectId/package"
+              element={<CompliancePackagePage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const createButton = await screen.findByRole('button', {
+      name: 'Create finalized package',
+    });
+    await waitFor(() => expect(createButton).toBeEnabled());
+    fireEvent.click(createButton);
+    await waitFor(() => expect(createCompliancePackage).toHaveBeenCalled());
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Package cannot be finalized yet',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Classification requires human review'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Review classification' }),
+    ).toHaveAttribute('href', '/projects/project/classification');
+    expect(screen.getByRole('link', { name: 'Open approval' })).toHaveAttribute(
+      'href',
+      '/projects/project/review-approval',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Open requirements' }),
+    ).toHaveAttribute('href', '/projects/project/requirements');
+    expect(
+      screen.getByRole('link', { name: 'Review documents' }),
+    ).toHaveAttribute(
+      'href',
+      '/projects/project/compliance-package#package-documents',
     );
   });
 });

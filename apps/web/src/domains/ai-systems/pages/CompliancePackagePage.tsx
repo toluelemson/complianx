@@ -19,12 +19,19 @@ import {
   verifyCompliancePackage,
 } from '../api';
 import { DOCUMENT_LABELS } from '../constants/documents';
+import {
+  getPackageGapAction,
+  getPackageReadinessFailure,
+} from '../lib/package-readiness-errors';
 
 export default function CompliancePackagePage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { token, initializing, activeCompanyId, user } = useAuth();
   const [downloading, setDownloading] = useState(false);
-  const [verification, setVerification] = useState<Record<string, { valid: boolean; errors: string[] }>>({});
+  const [packageGaps, setPackageGaps] = useState<string[]>([]);
+  const [verification, setVerification] = useState<
+    Record<string, { valid: boolean; errors: string[] }>
+  >({});
   const [now] = useState(() => Date.now());
   const queryClient = useQueryClient();
   const packagesQuery = useQuery({
@@ -34,6 +41,7 @@ export default function CompliancePackagePage() {
   });
   const createPackageMutation = useMutation({
     mutationFn: () => createCompliancePackage(projectId),
+    onMutate: () => setPackageGaps([]),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ['compliance-packages', projectId, activeCompanyId],
@@ -41,11 +49,9 @@ export default function CompliancePackagePage() {
       toast.success('Compliance package snapshot created');
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Unable to create package snapshot',
-      );
+      const failure = getPackageReadinessFailure(error);
+      setPackageGaps(failure.gaps);
+      toast.error(failure.message);
     },
   });
   const projectQuery = useQuery<ProjectDetail>({
@@ -83,9 +89,7 @@ export default function CompliancePackagePage() {
         membership.companyId === activeCompanyId && membership.role === 'ADMIN',
     );
   const canApproveDocuments =
-    ['REVIEWER', 'APPROVER'].includes(
-      projectQuery.data?.viewerRole ?? '',
-    ) ||
+    ['REVIEWER', 'APPROVER'].includes(projectQuery.data?.viewerRole ?? '') ||
     user?.companies?.some(
       (membership) =>
         membership.companyId === activeCompanyId && membership.role === 'ADMIN',
@@ -98,10 +102,14 @@ export default function CompliancePackagePage() {
       const result = await verifyCompliancePackage(projectId, packageId);
       setVerification((current) => ({ ...current, [packageId]: result }));
       toast[result.valid ? 'success' : 'error'](
-        result.valid ? 'Package integrity verified' : 'Package integrity check failed',
+        result.valid
+          ? 'Package integrity verified'
+          : 'Package integrity check failed',
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to verify package');
+      toast.error(
+        error instanceof Error ? error.message : 'Unable to verify package',
+      );
     }
   };
 
@@ -173,7 +181,43 @@ export default function CompliancePackagePage() {
             have their required human decisions recorded first.
           </p>
         </section>
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        {packageGaps.length ? (
+          <section
+            aria-labelledby="package-readiness-heading"
+            className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950"
+          >
+            <h2 id="package-readiness-heading" className="font-semibold">
+              Package cannot be finalized yet
+            </h2>
+            <p className="mt-1 text-amber-900">
+              Complete these recorded human decisions, then create the package
+              again.
+            </p>
+            <ul className="mt-4 space-y-3">
+              {packageGaps.map((gap, index) => {
+                const action = getPackageGapAction(projectId, gap);
+                return (
+                  <li
+                    key={`${gap}-${index}`}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white px-4 py-3"
+                  >
+                    <span>{gap}</span>
+                    <Link
+                      to={action.to}
+                      className="font-semibold text-amber-900 underline underline-offset-2"
+                    >
+                      {action.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
+        <section
+          id="package-documents"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        >
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">Documents</h2>
             <span className="text-sm text-slate-500">
@@ -204,7 +248,9 @@ export default function CompliancePackagePage() {
                   canApproveDocuments ? (
                     <button
                       type="button"
-                      onClick={() => approveDocumentMutation.mutate(document.id)}
+                      onClick={() =>
+                        approveDocumentMutation.mutate(document.id)
+                      }
                       disabled={approveDocumentMutation.isPending}
                       className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50"
                     >
@@ -277,8 +323,13 @@ export default function CompliancePackagePage() {
                   Verify integrity
                 </button>
                 {verification[pkg.id] ? (
-                  <span className={`w-full text-xs ${verification[pkg.id].valid ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {verification[pkg.id].valid ? 'Integrity verified' : verification[pkg.id].errors[0] ?? 'Verification failed'}
+                  <span
+                    className={`w-full text-xs ${verification[pkg.id].valid ? 'text-emerald-600' : 'text-rose-600'}`}
+                  >
+                    {verification[pkg.id].valid
+                      ? 'Integrity verified'
+                      : (verification[pkg.id].errors[0] ??
+                        'Verification failed')}
                   </span>
                 ) : null}
               </div>
