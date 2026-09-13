@@ -21,4 +21,16 @@ describe('API security (e2e)', () => {
       .get('/api/billing/plan')
       .expect(401);
   });
+
+  it('rejects unauthenticated package verification', () => {
+    return request(app.getHttpServer())
+      .get('/api/ai-systems/project-1/reports/packages/package-1/verify')
+      .expect(401);
+  });
+
+  it('rejects unauthenticated evidence downloads', () => {
+    return request(app.getHttpServer())
+      .get('/api/artifacts/artifact-1/download')
+      .expect(401);
+  });
 });
