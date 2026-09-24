@@ -17,8 +17,8 @@ const ROLE_OPTIONS = [
 const ROLE_DESCRIPTIONS: Record<string, string> = {
   USER: 'Works on assigned tasks.',
   REVIEWER: 'Can review work and request changes.',
-  ADMIN: 'Can manage the workspace and team access.',
-  COMPANY_ADMIN: 'Can manage the workspace and team access.',
+  ADMIN: 'Can manage the company and team access.',
+  COMPANY_ADMIN: 'Can manage the company and team access.',
 };
 
 export default function RoleManagerPage() {
@@ -52,7 +52,7 @@ export default function RoleManagerPage() {
   return (
     <AppShell title="Team roles">
       <p className="text-sm text-slate-600">
-        Choose who can work on tasks, review work, or manage this workspace.
+        Choose who can edit work, review it, or manage your company.
       </p>
       <Card className="mt-6 rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
         <CardContent className="p-0">
@@ -86,7 +86,7 @@ export default function RoleManagerPage() {
                       ))}
                     </Select>
                     <p className="mt-1 text-xs text-slate-500">
-                      {ROLE_DESCRIPTIONS[member.role] ?? 'Workspace access.'}
+                      {ROLE_DESCRIPTIONS[member.role] ?? 'Company access.'}
                     </p>
                   </td>
                 </tr>

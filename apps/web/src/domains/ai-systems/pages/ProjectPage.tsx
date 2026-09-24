@@ -2489,9 +2489,9 @@ export default function ProjectPage() {
                           {currentSection.statusEvents?.length ? (
                             currentSection.statusEvents
                               .slice(0, 3)
-                              .map((event: StatusEvent) => (
+                              .map((event: StatusEvent, index: number) => (
                                 <p
-                                  key={event.id}
+                                  key={`${event.id}-${index}`}
                                   className="text-[11px] text-slate-500"
                                 >
                                   <span className="font-semibold text-slate-700">
@@ -2677,9 +2677,9 @@ export default function ProjectPage() {
                     </summary>
                     <div className="mt-3 space-y-2">
                       {projectQuery.data?.statusEvents?.length ? (
-                        projectQuery.data.statusEvents.map((event) => (
+                        projectQuery.data.statusEvents.map((event, index) => (
                           <div
-                            key={event.id}
+                            key={`${event.id}-${index}`}
                             className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600"
                           >
                             <span>

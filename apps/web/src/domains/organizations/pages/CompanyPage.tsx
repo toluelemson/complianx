@@ -345,7 +345,17 @@ export default function CompanyPage() {
           </Card>
           <Card className="mt-6 rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
             <CardContent className="p-6">
-              <p className="text-sm font-semibold text-slate-900">Members</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-900">Team</p>
+                {user?.role === 'ADMIN' ? (
+                  <Link
+                    to="/admin/roles"
+                    className="text-sm font-semibold text-sky-700 hover:text-sky-600"
+                  >
+                    Manage team roles →
+                  </Link>
+                ) : null}
+              </div>
               <div className="mt-4">
                 <div className="hidden lg:block">
                   <div className="overflow-x-auto">

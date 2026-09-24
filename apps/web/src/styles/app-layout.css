@@ -28,6 +28,9 @@
   grid-template-columns: var(--hz-layout-sidebar-width) minmax(0, 1fr);
   min-height: calc(100vh - var(--hz-layout-header-height));
 }
+.hz-shell__body--no-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+}
 .hz-sidebar {
   position: sticky;
   top: var(--hz-layout-header-height);

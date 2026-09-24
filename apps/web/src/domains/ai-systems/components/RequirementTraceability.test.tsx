@@ -103,6 +103,6 @@ describe('Requirement traceability', () => {
     expect(await screen.findByText('human-oversight-policy.pdf')).toBeVisible();
     expect(screen.getByText(/Reviewed by jane@example.com/)).toBeVisible();
     expect(screen.getByText(/john@example.com/)).toBeVisible();
-    expect(screen.getAllByText(/package v4/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/export 4/i).length).toBeGreaterThan(0);
   });
 });

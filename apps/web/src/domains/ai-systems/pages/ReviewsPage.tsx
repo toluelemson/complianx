@@ -27,7 +27,7 @@ export default function ReviewsPage() {
     <AppShell title="Reviews">
       <div className="hz-console-content space-y-6">
         <div>
-          <p className="text-sm text-slate-500">Packages assigned to you.</p>
+          <p className="text-sm text-slate-500">Projects waiting for your review.</p>
         </div>
         <div className="space-y-3">
           {reviews.map((project) => (

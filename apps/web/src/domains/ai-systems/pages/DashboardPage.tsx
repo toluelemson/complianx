@@ -159,7 +159,7 @@ export default function DashboardPage() {
               Assess an AI system
             </button>
             <Link to="/company" className="hz-button hz-button--outline">
-              Settings
+              Organization settings
             </Link>
           </div>
         </div>

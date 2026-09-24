@@ -87,7 +87,9 @@ describe('Saved package download', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Download v1' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Download export 1' }),
+    );
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining(
@@ -99,7 +101,7 @@ describe('Saved package download', () => {
       ),
     );
     expect(
-      screen.getByRole('button', { name: 'Archive unavailable' }),
+      screen.getByRole('button', { name: 'Download export 0 unavailable' }),
     ).toBeDisabled();
   });
   it('lets an assigned approver record the document decision', async () => {
@@ -153,7 +155,7 @@ describe('Saved package download', () => {
     );
 
     const createButton = await screen.findByRole('button', {
-      name: 'Create package',
+      name: 'Create export',
     });
     await waitFor(() => expect(createButton).toBeEnabled());
     fireEvent.click(createButton);
@@ -161,7 +163,7 @@ describe('Saved package download', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'This package is not ready yet',
+        name: 'This export is not ready yet',
       }),
     ).toBeInTheDocument();
     expect(

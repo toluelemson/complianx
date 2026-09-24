@@ -53,13 +53,13 @@ export function RequirementTraceability({
         <Stage label="Evidence" value={summary.evidenceLabel} />
         <Stage label="Review" value={summary.reviewLabel} />
         <Stage
-          label="Package"
+          label="Export"
           value={
             includedPackages.length
-              ? `Included in v${includedPackages[0].version}`
+              ? `Included in export ${includedPackages[0].version}`
               : open && trace.data
                 ? 'Not included'
-                : 'Check inclusion'
+                : 'Check export'
           }
         />
       </div>
@@ -101,7 +101,7 @@ export function RequirementTraceability({
                 <p className="mt-1 text-slate-600">
                   {trace.data.requirement.description ??
                     trace.data.applicability.reason ??
-                    'Mapped from the current EU AI Act compliance pack.'}
+                    'Based on the EU AI Act guidance for this project.'}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   {trace.data.requirement.legalReference ??
@@ -126,8 +126,8 @@ export function RequirementTraceability({
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
                           {link.artifact
-                            ? `Version ${link.artifact.evidenceVersion} · ${link.artifact.reviewerStatus}`
-                            : `Version ${link.document?.version ?? 1} · ${link.document?.approvalState ?? 'DRAFT'}`}
+                            ? link.artifact.reviewerStatus
+                            : (link.document?.approvalState ?? 'DRAFT')}
                           {link.artifact?.reviewer
                             ? ` · Reviewed by ${link.artifact.reviewer.email}`
                             : ''}
@@ -152,11 +152,11 @@ export function RequirementTraceability({
                   }
                 />
                 <Stage
-                  label="Review package"
+                  label="Export"
                   value={
                     includedPackages.length
-                      ? `Included in package v${includedPackages[0].version}`
-                      : 'Not included in a finalized package'
+                      ? `Included in export ${includedPackages[0].version}`
+                      : 'Not included in an export'
                   }
                 />
               </div>

@@ -199,8 +199,8 @@ export function ReviewApprovalPanel({
               </ul>
               {reviewerId && incompleteSteps.length === 0 ? (
                 <p className="mt-3 text-sm text-amber-950">
-                  The project is blocked by its current workflow state. Check
-                  the review history for the next required decision.
+                  This project needs another step before review can begin. Check
+                  the activity history to see what to do next.
                 </p>
               ) : null}
             </section>
@@ -266,7 +266,7 @@ export function ReviewApprovalPanel({
               Assign owners
             </p>
             <p className="mt-1 text-sm text-slate-600">
-              Put one reviewer on the record before handing this off.
+              Choose one reviewer before sending this for review.
             </p>
           </div>
 
@@ -346,7 +346,7 @@ export function ReviewApprovalPanel({
                   ? 'Every section is approved. You can now approve the project or request changes.'
                   : `${sectionsAwaitingApproval} section${sectionsAwaitingApproval === 1 ? '' : 's'} still need approval before the project can be approved.`
                 : projectApproved
-                  ? 'This project is approved. You can use its package and history when you need the record.'
+                  ? 'This project is approved. Its documents and activity history are ready when you need them.'
                   : reviewBlocked
                 ? !reviewerId
                     ? 'Choose a reviewer before you can send this.'
@@ -357,7 +357,7 @@ export function ReviewApprovalPanel({
                   : totalMissing > 0
                     ? 'Resolve open section issues before sending this project forward.'
                     : 'This project cannot move into review in its current state.'
-                : 'This project is ready to move into formal review.'}
+                : 'This project is ready for review.'}
             </p>
           </Card>
         </Card>

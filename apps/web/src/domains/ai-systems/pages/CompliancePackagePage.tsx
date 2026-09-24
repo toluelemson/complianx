@@ -144,7 +144,7 @@ export default function CompliancePackagePage() {
   };
 
   return (
-    <AppShell title="Audit package" projectId={projectId}>
+    <AppShell title="Audit export" projectId={projectId}>
       <div className="hz-console-content space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -155,11 +155,10 @@ export default function CompliancePackagePage() {
               ← Back to project
             </Link>
             <h1 className="mt-3 text-2xl font-semibold text-slate-900">
-              {projectQuery.data?.name ?? 'Audit package'}
+              {projectQuery.data?.name ?? 'Audit export'}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              The export-ready record of approved evidence and human decisions
-              for this AI system.
+              Download the approved files and decisions for this AI system.
             </p>
           </div>
           <button
@@ -169,8 +168,8 @@ export default function CompliancePackagePage() {
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
           >
             {createPackageMutation.isPending
-              ? 'Creating package…'
-              : 'Create package'}
+              ? 'Preparing export…'
+              : 'Create export'}
           </button>
         </div>
         <section className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
@@ -178,8 +177,8 @@ export default function CompliancePackagePage() {
           <p className="mt-1 text-sky-800">
             AI suggestions and draft documents are not enough on their own.
             Someone must record the required decisions for the classification,
-            evidence, requirements, documents, and this project before a
-            package can be created.
+            evidence, requirements, documents, and this project before an
+            export can be created.
           </p>
         </section>
         {packageGaps.length ? (
@@ -188,7 +187,7 @@ export default function CompliancePackagePage() {
             className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950"
           >
             <h2 id="package-readiness-heading" className="font-semibold">
-              This package is not ready yet
+              This export is not ready yet
             </h2>
             <p className="mt-1 text-amber-900">
               Complete these decisions, then try again.
@@ -262,7 +261,7 @@ export default function CompliancePackagePage() {
             ))}
             {!documentsQuery.isLoading && !documentsQuery.data?.length ? (
               <p className="py-6 text-sm text-slate-500">
-                No package documents yet.
+                No documents ready yet.
               </p>
             ) : null}
           </div>
@@ -270,15 +269,15 @@ export default function CompliancePackagePage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">
-              Package history
+              Saved exports
             </h2>
             <span className="text-sm text-slate-500">
-              {packagesQuery.data?.length ?? 0} saved packages
+              {packagesQuery.data?.length ?? 0} saved exports
             </span>
           </div>
           {packagesQuery.isError ? (
             <button onClick={() => void packagesQuery.refetch()}>
-              Could not load package history. Try again
+              Could not load saved exports. Try again
             </button>
           ) : null}
           <div className="mt-4 divide-y divide-slate-100">
@@ -289,10 +288,10 @@ export default function CompliancePackagePage() {
               >
                 <div>
                   <p className="font-medium text-slate-900">
-                    Package v{pkg.version}
+                    Export {pkg.version}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {pkg.status} · {pkg.manifestHash.slice(0, 12)}…
+                    {pkg.status.replaceAll('_', ' ')}
                   </p>
                   {pkg.manifest?.completeness?.gaps.length ? (
                     <ul className="mt-2 list-disc pl-4 text-xs text-slate-500">
@@ -309,34 +308,39 @@ export default function CompliancePackagePage() {
                   type="button"
                   disabled={downloading || !pkg.archiveHash}
                   onClick={() => void downloadPackage(pkg.id)}
+                  aria-label={
+                    pkg.archiveHash
+                      ? `Download export ${pkg.version}`
+                      : `Download export ${pkg.version} unavailable`
+                  }
                   className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50"
                 >
                   {pkg.archiveHash
-                    ? `Download v${pkg.version}`
-                    : 'Archive unavailable'}
+                    ? 'Download'
+                    : 'Download unavailable'}
                 </button>
                 <button
                   type="button"
                   onClick={() => void verifyPackage(pkg.id)}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold"
                 >
-                  Verify integrity
+                  Check file
                 </button>
                 {verification[pkg.id] ? (
                   <span
                     className={`w-full text-xs ${verification[pkg.id].valid ? 'text-emerald-600' : 'text-rose-600'}`}
                   >
                     {verification[pkg.id].valid
-                      ? 'Integrity verified'
+                      ? 'File check passed'
                       : (verification[pkg.id].errors[0] ??
-                        'Verification failed')}
+                        'File check failed')}
                   </span>
                 ) : null}
               </div>
             ))}
             {!packagesQuery.data?.length ? (
               <p className="py-4 text-sm text-slate-500">
-                No packages created yet.
+                No exports created yet.
               </p>
             ) : null}
           </div>
@@ -344,7 +348,7 @@ export default function CompliancePackagePage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">
-              Ready to package
+              Export readiness
             </h2>
             <span className="text-sm text-slate-500">
               {obligationsQuery.data?.filter(
@@ -375,7 +379,7 @@ export default function CompliancePackagePage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">
-              Evidence index
+              Files
             </h2>
             <span className="text-sm text-slate-500">
               {(projectQuery.data?.sections ?? []).reduce(
@@ -397,7 +401,7 @@ export default function CompliancePackagePage() {
                       {artifact.originalName}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {section.name} · {artifact.citationKey}
+                      {section.name}
                     </p>
                   </div>
                   <span
@@ -408,7 +412,7 @@ export default function CompliancePackagePage() {
                       ? `Expired ${new Date(artifact.expiresAt).toLocaleDateString()}`
                       : artifact.expiresAt
                         ? `Expires ${new Date(artifact.expiresAt).toLocaleDateString()}`
-                        : 'No expiry recorded'}
+                        : 'No expiry date'}
                   </span>
                 </div>
               )),

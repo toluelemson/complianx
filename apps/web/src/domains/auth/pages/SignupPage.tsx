@@ -72,7 +72,7 @@ export default function SignupPage() {
     onSuccess: () => {
       setSuccessMessage(
         isCompanyFlow
-          ? 'Check your inbox to verify your email. Then sign in to open My work in the invited workspace.'
+          ? 'Check your inbox to verify your email. Then sign in to see the work your team shared with you.'
           : 'Check your inbox for a verification link before you can log in.',
       );
       setError(undefined);
@@ -104,8 +104,8 @@ export default function SignupPage() {
               </h1>
               <p className="mt-2 text-sm text-slate-600">
                 {signupMode === 'invite_only'
-                  ? 'Create an account with a workspace invitation, or ask our team to set up your workspace for you.'
-                  : 'Our team will set up your workspace and guide you through the first assessment.'}
+                  ? 'Use your team invitation to create an account, or ask our team for help.'
+                  : 'Our team can help you get started with your first assessment.'}
               </p>
               <div className="mt-6 space-y-3">
                 <Button
@@ -137,7 +137,7 @@ export default function SignupPage() {
               Create an account
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              Start generating AI compliance documentation.
+              Keep your AI system information, files, and approvals together.
             </p>
             <form
               className="mt-8 space-y-5"
@@ -218,8 +218,8 @@ export default function SignupPage() {
               )}
               {!isCompanyFlow && (
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                  Personal workspaces spin up instantly. To join a company
-                  workspace, accept an invitation after signup.
+                  Your personal account is ready right away. To join a company,
+                  accept an invitation after signing up.
                 </div>
               )}
               <Button

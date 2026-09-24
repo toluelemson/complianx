@@ -298,12 +298,21 @@ export class ArtifactsService {
       artifact.projectId,
       reviewerId,
       companyId,
-      { allowOwner: false, allowReviewer: true, allowApprover: true },
+      {
+        allowOwner: false,
+        allowReviewer: true,
+        allowApprover: true,
+        allowAdministrator: true,
+      },
     );
     const membershipRole = access.membershipRole;
-    if (membershipRole !== 'REVIEWER' && membershipRole !== 'ADMIN') {
+    if (
+      access.accessRole !== 'REVIEWER' &&
+      access.accessRole !== 'APPROVER' &&
+      membershipRole !== 'ADMIN'
+    ) {
       throw new ForbiddenException(
-        'Only workspace reviewers may approve evidence',
+        'Only the assigned reviewer, approver, or an admin can review files',
       );
     }
     const updated = await this.prisma.sectionArtifact.update({

@@ -239,13 +239,12 @@ export default function ProjectEvidencePage() {
                       {artifact.originalName}
                     </h2>
                     <p className="mt-1 text-xs text-slate-500">
-                      {artifact.section} · {artifact.citationKey} ·{' '}
-                      {evidenceStatusLabel(artifact.status)}
+                      {artifact.section} · {evidenceStatusLabel(artifact.status)}
                       {artifact.status === 'REJECTED' ? ' · Replace required' : ''}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {artifact.source ?? 'Source not recorded'}
-                      {artifact.externalUrl ? ' · External link recorded' : ''}
+                      {artifact.source ?? 'No source added'}
+                      {artifact.externalUrl ? ' · Link added' : ''}
                     </p>
                   </div>
                   <span
@@ -277,7 +276,7 @@ export default function ProjectEvidencePage() {
               Use one file for more than one requirement
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Connect this file to the jobs it truly helps prove. The app keeps a record of every connection.
+              Link a file to every requirement it supports.
             </p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <label className="text-sm font-medium text-slate-700">
@@ -310,7 +309,7 @@ export default function ProjectEvidencePage() {
             </div>
             <fieldset className="mt-4 grid gap-2 md:grid-cols-2">
               <legend className="text-sm font-medium text-slate-700">
-                Jobs this file helps prove
+                Requirements this file supports
               </legend>
               {(requirementsQuery.data ?? []).map((requirement) => (
                 <label key={requirement.id} className="flex gap-2 rounded-lg border border-slate-100 p-3 text-sm text-slate-700">

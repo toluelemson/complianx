@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/platform/api/client';
@@ -74,17 +74,7 @@ export function AppShell({
   const unread = countQuery.data?.count ?? 0;
   const [billingOpen, setBillingOpen] = useState(initialBillingOpen);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [projectToolsOpen, setProjectToolsOpen] = useState(true);
-  const location = useLocation();
   const activeProjectId = projectId;
-  const projectToolRoute = [
-    '/organization-profile',
-    '/ai-system-profile',
-    '/compliance-workspace',
-    '/messages',
-    '/compliance-package',
-  ].some((suffix) => location.pathname.endsWith(suffix));
-  const projectToolsExpanded = projectToolsOpen || projectToolRoute;
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -97,19 +87,19 @@ export function AppShell({
   }, []);
   const navSections = useMemo(() => {
     const primary = [
-      { label: 'Dashboard', to: '/dashboard', show: true },
+      {
+        label: activeProjectId ? '← Back to dashboard' : 'Dashboard',
+        to: '/dashboard',
+        show: true,
+      },
       { label: 'Reviews', to: '/reviews', show: true },
       { label: 'Document library', to: '/documents', show: true },
       { label: 'Organization', to: '/company', show: Boolean(user) },
       { label: 'Settings', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
-    const admin = [
-      { label: 'Roles', to: '/admin/roles', show: user?.role === 'ADMIN' },
-    ].filter((link) => link.show);
     const sections: Array<{
       title: string;
       links: typeof primary;
-      collapsible?: boolean;
     }> = primary.length ? [{ title: 'Navigation', links: primary }] : [];
     if (activeProjectId) {
       sections.push({
@@ -118,6 +108,16 @@ export function AppShell({
           {
             label: 'Overview',
             to: `/projects/${activeProjectId}/overview`,
+            show: true,
+          },
+          {
+            label: 'AI system profile',
+            to: `/projects/${activeProjectId}/ai-system-profile`,
+            show: true,
+          },
+          {
+            label: 'Project details',
+            to: `/projects/${activeProjectId}/compliance-workspace`,
             show: true,
           },
           {
@@ -150,32 +150,13 @@ export function AppShell({
             to: `/projects/${activeProjectId}/compliance-package`,
             show: true,
           },
-        ],
-      });
-      sections.push({
-        title: 'Project tools',
-        links: [
-          {
-            label: 'AI system profile',
-            to: `/projects/${activeProjectId}/ai-system-profile`,
-            show: true,
-          },
-          {
-            label: 'Project details',
-            to: `/projects/${activeProjectId}/compliance-workspace`,
-            show: true,
-          },
           {
             label: 'Messages',
             to: `/projects/${activeProjectId}/messages`,
             show: true,
           },
         ],
-        collapsible: true,
       });
-    }
-    if (admin.length) {
-      sections.push({ title: 'Admin', links: admin });
     }
     return sections;
   }, [activeProjectId, user]);
@@ -183,26 +164,14 @@ export function AppShell({
   const primaryNav = navSections.find(
     (section) => section.title === 'Navigation',
   );
+  const sidebarSections = navSections.filter(
+    (section) => section.title !== 'Navigation',
+  );
   const renderSidebarNav = () =>
-    navSections
-      .filter((section) => section.title !== 'Navigation')
-      .map((section) => (
+    sidebarSections.map((section) => (
         <div key={section.title} className="hz-sidebar__section">
-          {section.collapsible ? (
-            <button
-              type="button"
-              className="hz-sidebar__label hz-sidebar__label--button"
-              aria-expanded={projectToolsExpanded}
-              onClick={() => setProjectToolsOpen((open) => !open)}
-            >
-              <span>{section.title}</span>
-              <span aria-hidden="true">{projectToolsExpanded ? '−' : '+'}</span>
-            </button>
-          ) : (
-            <p className="hz-sidebar__label">{section.title}</p>
-          )}
-          {(!section.collapsible || projectToolsExpanded) &&
-            section.links.map((link) => (
+          <p className="hz-sidebar__label">{section.title}</p>
+          {section.links.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
@@ -233,23 +202,10 @@ export function AppShell({
   const renderMobileNav = () =>
     navSections.map((section) => (
       <div key={section.title} className="space-y-2">
-        {section.collapsible ? (
-          <button
-            type="button"
-            className="flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide text-slate-400"
-            aria-expanded={projectToolsExpanded}
-            onClick={() => setProjectToolsOpen((open) => !open)}
-          >
-            <span>{section.title}</span>
-            <span aria-hidden="true">{projectToolsExpanded ? '−' : '+'}</span>
-          </button>
-        ) : (
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {section.title}
-          </p>
-        )}
-        {(!section.collapsible || projectToolsExpanded) && (
-          <div className="flex flex-col gap-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          {section.title}
+        </p>
+        <div className="flex flex-col gap-1">
             {section.links.map((link) => (
               <NavLink
                 key={link.to}
@@ -266,8 +222,7 @@ export function AppShell({
                 {link.label}
               </NavLink>
             ))}
-          </div>
-        )}
+        </div>
       </div>
     ));
   const renderNotificationsTrigger = () => (
@@ -538,10 +493,14 @@ export function AppShell({
           </div>
         )}
       </header>
-      <div className="hz-shell__body">
-        <aside className="hz-sidebar">
-          <nav aria-label="Workspace navigation">{renderSidebarNav()}</nav>
-        </aside>
+      <div
+        className={`hz-shell__body${sidebarSections.length ? '' : ' hz-shell__body--no-sidebar'}`}
+      >
+        {sidebarSections.length ? (
+          <aside className="hz-sidebar">
+            <nav aria-label="Workspace navigation">{renderSidebarNav()}</nav>
+          </aside>
+        ) : null}
         <main className={`hz-main${projectId ? ' hz-main--project' : ''}`}>
           <BillingModal
             isOpen={billingOpen}
