@@ -69,7 +69,7 @@ export function RequirementTraceability({
           onClick={() => setOpen((value) => !value)}
           className="text-sm font-semibold text-slate-600 hover:text-sky-700"
         >
-          {open ? 'Hide traceability' : 'Show why and proof'}
+          {open ? 'Hide details' : 'See why this matters and the proof'}
         </button>
         <Link
           to={actionHref}
@@ -78,19 +78,25 @@ export function RequirementTraceability({
           {summary.action} →
         </Link>
       </div>
+      {evidence.length === 0 ? (
+        <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50 p-3 text-sm text-sky-950">
+          <p className="font-semibold">Suggested evidence</p>
+          <p className="mt-1">{getEvidenceSuggestion(requirement.obligation.title)}</p>
+        </div>
+      ) : null}
       {open ? (
         <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
           {trace.isLoading ? (
             <p className="text-slate-500">Loading requirement proof…</p>
           ) : null}
           {trace.isError ? (
-            <p className="text-rose-600">Unable to load traceability.</p>
+            <p className="text-rose-600">We could not load the details.</p>
           ) : null}
           {trace.data ? (
             <div className="space-y-4">
               <div>
                 <p className="font-semibold text-slate-800">
-                  What is required and why
+                  What you need to do and why
                 </p>
                 <p className="mt-1 text-slate-600">
                   {trace.data.requirement.description ??
@@ -104,7 +110,7 @@ export function RequirementTraceability({
               </div>
               <div>
                 <p className="font-semibold text-slate-800">
-                  Evidence and review
+                  Files and review
                 </p>
                 {trace.data.evidence.length ? (
                   <ul className="mt-2 space-y-2">
@@ -146,7 +152,7 @@ export function RequirementTraceability({
                   }
                 />
                 <Stage
-                  label="Compliance package"
+                  label="Review package"
                   value={
                     includedPackages.length
                       ? `Included in package v${includedPackages[0].version}`
@@ -160,6 +166,21 @@ export function RequirementTraceability({
       ) : null}
     </>
   );
+}
+
+function getEvidenceSuggestion(title: string) {
+  const normalized = title.toLowerCase();
+  if (normalized.includes('human oversight'))
+    return 'Upload a human-oversight procedure, escalation path, or operator training record.';
+  if (normalized.includes('risk'))
+    return 'Upload the latest risk assessment, mitigation register, or approval record.';
+  if (normalized.includes('data'))
+    return 'Upload a data governance policy, dataset assessment, or data-quality report.';
+  if (normalized.includes('accuracy') || normalized.includes('testing'))
+    return 'Upload a validation plan, evaluation report, or test results.';
+  if (normalized.includes('technical documentation'))
+    return 'Upload a model card, architecture note, or system design document.';
+  return 'Upload a policy, process record, test result, or approval that demonstrates this requirement in practice.';
 }
 
 function Stage({ label, value }: { label: string; value: string }) {

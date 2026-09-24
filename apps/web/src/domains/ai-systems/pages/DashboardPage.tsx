@@ -18,7 +18,11 @@ import { TRACKABLE_STEP_COUNT } from '@/domains/ai-systems/constants/steps';
 import { DOCUMENT_LABELS } from '@/domains/ai-systems/constants/documents';
 import { useAuth } from '@/app/providers/AuthContext';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
-import { getProjectAttentionReasons } from '../lib/project-page-logic';
+import {
+  getProjectAttentionReasons,
+  getProjectNextAction,
+  type ProjectNextAction,
+} from '../lib/project-page-logic';
 
 export default function DashboardPage() {
   const { token, initializing, activeCompanyId } = useAuth();
@@ -89,8 +93,11 @@ export default function DashboardPage() {
   const { readinessByProject, recentDocuments, attentionProjects } =
     useMemo(() => {
       const readinessMap = new Map<string, number>();
-      const attention: Array<{ project: ProjectListItem; reasons: string[] }> =
-        [];
+      const attention: Array<{
+        project: ProjectListItem;
+        reasons: string[];
+        nextAction: ProjectNextAction;
+      }> = [];
       const docs: Array<{
         id: string;
         type: string;
@@ -107,7 +114,10 @@ export default function DashboardPage() {
         );
         readinessMap.set(project.id, readiness);
         const reasons = getProjectAttentionReasons(project);
-        if (reasons.length) attention.push({ project, reasons });
+        const nextAction = getProjectNextAction(project);
+        if (reasons.length && nextAction) {
+          attention.push({ project, reasons, nextAction });
+        }
         (project.documents ?? []).forEach((doc) => {
           docs.push({
             id: doc.id,
@@ -178,7 +188,7 @@ export default function DashboardPage() {
             className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm"
           >
             <p className="text-sm font-semibold text-slate-700">
-              Packages generated
+              Documents generated
             </p>
             <p className="mt-3 text-3xl font-semibold text-slate-900">
               {ownedProjects.reduce(
@@ -225,6 +235,52 @@ export default function DashboardPage() {
             </div>
           ) : null}
         </div>
+        {!projectsQuery.isLoading && ownedProjects.length === 0 ? (
+          <section className="mt-6 rounded-2xl border border-sky-200 bg-sky-50/70 p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-sky-900">
+                  Your first 30 minutes
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-900">
+                  Start with one system, then let the workspace guide you.
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                  You do not need every policy or document upfront. Start with
+                  the system name and intended use; we will identify likely
+                  requirements and the next evidence to collect.
+                </p>
+              </div>
+              <button
+                onClick={() => setModalOpen(true)}
+                className="hz-button hz-button--primary"
+              >
+                Add your first AI system
+              </button>
+              <Link to="/demo/loan-approval-ai" className="hz-button hz-button--outline">
+                Explore a fictional example
+              </Link>
+            </div>
+            <ol className="mt-5 grid gap-3 md:grid-cols-3">
+              {[
+                ['1', 'Register', 'System name and intended use.'],
+                ['2', 'Classify', 'Answer the essential EU AI Act questions.'],
+                ['3', 'Act', 'Work through the highest-priority requirements.'],
+              ].map(([number, title, description]) => (
+                <li
+                  key={number}
+                  className="rounded-xl border border-sky-100 bg-white p-4"
+                >
+                  <span className="text-xs font-bold text-sky-700">
+                    STEP {number}
+                  </span>
+                  <p className="mt-1 font-semibold text-slate-900">{title}</p>
+                  <p className="mt-1 text-sm text-slate-600">{description}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
         {attentionProjects.length ? (
           <section className="mt-6 rounded-2xl border border-amber-200 border-l-4 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -242,18 +298,27 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="mt-4 grid max-w-2xl gap-2">
-              {attentionProjects.map(({ project, reasons }) => (
+              {attentionProjects.map(({ project, reasons, nextAction }) => (
                 <Link
                   key={project.id}
-                  to={`/projects/${project.id}${workspaceSuffix}`}
+                  to={`/projects/${project.id}${nextAction.path === 'overview' ? '' : `/${nextAction.path}`}${workspaceSuffix}`}
                   className="rounded-xl border border-slate-200 p-3 hover:border-amber-400"
                 >
-                  <p className="font-semibold text-slate-900">{project.name}</p>
-                  <ul className="mt-2 space-y-1 text-sm text-slate-600">
-                    {reasons.map((reason) => (
-                      <li key={reason}>• {reason}</li>
-                    ))}
-                  </ul>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-slate-900">
+                      {project.name}
+                    </p>
+                    <span className="shrink-0 text-sm font-semibold text-sky-700">
+                      {nextAction.label} →
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">{reasons[0]}</p>
+                  {reasons.length > 1 ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      +{reasons.length - 1} additional item
+                      {reasons.length === 2 ? '' : 's'}
+                    </p>
+                  ) : null}
                 </Link>
               ))}
             </div>
@@ -263,7 +328,7 @@ export default function DashboardPage() {
           <div className="hz-dashboard__assigned mt-6 rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-700">
-                Assigned reviews
+                My work
               </p>
               <span className="text-xs text-slate-400">
                 {assignedProjects.length} active
@@ -281,7 +346,7 @@ export default function DashboardPage() {
                       {project.name}
                     </p>
                     <p className="text-xs text-slate-500">
-                      Role: {project.viewerRole?.toLowerCase() ?? 'reviewer'}
+                      Assigned as {project.viewerRole?.toLowerCase() ?? 'reviewer'}
                     </p>
                   </div>
                   <span className="text-xs font-semibold text-slate-500">

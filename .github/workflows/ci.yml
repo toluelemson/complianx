@@ -58,6 +58,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
           JWT_SECRET: ci-test-secret
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e:ui
+        env:
+          E2E_DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+          JWT_SECRET: ci-test-secret
       - run: pnpm --filter @complianx/contracts build
       - run: pnpm --filter api exec tsc -p tsconfig.json --noEmit --pretty false
       - run: pnpm --filter web exec tsc -p tsconfig.app.json --noEmit --pretty false

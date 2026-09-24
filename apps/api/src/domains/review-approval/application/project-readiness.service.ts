@@ -7,23 +7,24 @@ import {
 } from '../domain/workflow.types';
 import { SectionWorkflowStatus } from '../domain/workflow-status';
 
+const REQUIRED_FIELDS_BY_SECTION: Record<string, string[]> = {
+  system_overview: ['purpose', 'intendedUsers', 'deploymentContext'],
+  model_info: ['modelType', 'trainingData', 'metrics'],
+  data_governance: ['dataSources', 'qualityChecks', 'privacy'],
+  risk_assessment: ['risks', 'likelihood', 'impact'],
+  human_oversight: ['roles', 'escalations'],
+  monitoring: ['monitoringPlan', 'maintenance'],
+};
+
 export function sectionFieldsComplete(
   section: ProjectWorkflowAggregate['sections'][number],
 ) {
-  const requiredBySection: Record<string, string[]> = {
-    system_overview: ['purpose', 'intendedUsers', 'deploymentContext'],
-    model_info: ['modelType', 'trainingData', 'metrics'],
-    data_governance: ['dataSources', 'qualityChecks', 'privacy'],
-    risk_assessment: ['risks', 'likelihood', 'impact'],
-    human_oversight: ['roles', 'escalations'],
-    monitoring: ['monitoringPlan', 'maintenance'],
-  };
   const content = section.content;
   if (!content || typeof content !== 'object' || Array.isArray(content)) {
     return false;
   }
   const values = content as Record<string, unknown>;
-  const required = requiredBySection[section.name];
+  const required = REQUIRED_FIELDS_BY_SECTION[section.name];
   return (
     (required ?? Object.keys(values)).length > 0 &&
     (required ?? Object.keys(values)).every((key) => {
@@ -42,6 +43,15 @@ export class ProjectReadinessService {
   async getSubmissionReadiness(
     project: ProjectWorkflowAggregate,
   ): Promise<WorkflowReadinessResult> {
+    const sectionsByName = new Map(
+      project.sections.map((section) => [section.name, section]),
+    );
+    const requiredSectionsComplete = Object.keys(
+      REQUIRED_FIELDS_BY_SECTION,
+    ).every((sectionName) => {
+      const section = sectionsByName.get(sectionName);
+      return Boolean(section && sectionFieldsComplete(section));
+    });
     const checks = [
       {
         key: 'reviewer_assigned',
@@ -53,11 +63,9 @@ export class ProjectReadinessService {
       {
         key: 'required_fields_complete',
         passed:
-          project.sections.length > 0 &&
-          project.sections.every((section) => sectionFieldsComplete(section)),
+          requiredSectionsComplete,
         message:
-          project.sections.length > 0 &&
-          project.sections.every((section) => sectionFieldsComplete(section))
+          requiredSectionsComplete
             ? 'All required fields are complete'
             : 'Every required field must be complete before submission',
       },
@@ -71,13 +79,6 @@ export class ProjectReadinessService {
     project: ProjectWorkflowAggregate,
   ): Promise<WorkflowReadinessResult> {
     const checks = [
-      {
-        key: 'approver_assigned',
-        passed: Boolean(project.approverId),
-        message: project.approverId
-          ? 'Approver is assigned'
-          : 'Approver must be assigned',
-      },
       {
         key: 'required_sections_approved',
         passed:

@@ -6,6 +6,7 @@ import {
   Req,
   UseGuards,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import type {
   BillingPlan,
@@ -35,6 +36,19 @@ export class BillingController {
     ).companyId;
   }
 
+  private requireBillingAdministrator(req: AuthenticatedRequest): string {
+    const context = this.companyContext.resolveCompany(
+      req.user,
+      (req.headers?.['x-company-id'] as string | undefined) ?? undefined,
+    );
+    if (context.membership?.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Only a company administrator can manage billing.',
+      );
+    }
+    return context.companyId;
+  }
+
   @Get('plan')
   async getPlan(@Req() req: AuthenticatedRequest): Promise<BillingPlan> {
     const companyId = this.resolveCompanyId(req);
@@ -61,13 +75,13 @@ export class BillingController {
     if (!body?.plan) {
       throw new BadRequestException('Select a plan to upgrade');
     }
+    const companyId = this.requireBillingAdministrator(req);
     if (!this.billing.isEnabled()) {
       return {
         url: null,
         message: 'Stripe not configured. Contact support to upgrade.',
       };
     }
-    const companyId = this.resolveCompanyId(req);
     const url = await this.billing.createCheckoutSession(
       req.user.userId,
       companyId,
@@ -78,10 +92,10 @@ export class BillingController {
 
   @Post('portal')
   async portal(@Req() req: AuthenticatedRequest) {
+    const companyId = this.requireBillingAdministrator(req);
     if (!this.billing.isEnabled()) {
       return { url: null, message: 'Stripe not configured.' };
     }
-    const companyId = this.resolveCompanyId(req);
     const url = await this.billing.createPortalSession(
       req.user.userId,
       companyId,

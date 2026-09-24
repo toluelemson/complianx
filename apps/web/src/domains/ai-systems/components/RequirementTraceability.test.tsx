@@ -97,7 +97,9 @@ describe('Requirement traceability', () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show why and proof' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'See why this matters and the proof' }),
+    );
     expect(await screen.findByText('human-oversight-policy.pdf')).toBeVisible();
     expect(screen.getByText(/Reviewed by jane@example.com/)).toBeVisible();
     expect(screen.getByText(/john@example.com/)).toBeVisible();

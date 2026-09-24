@@ -363,7 +363,11 @@ export async function listObligationEvidence(
 export async function linkObligationEvidence(
   projectId: string,
   obligationId: string,
-  payload: { artifactId?: string; documentId?: string },
+  payload: {
+    artifactId?: string;
+    documentId?: string;
+    linkType?: 'PRIMARY' | 'SUPPORTING' | 'REFERENCE';
+  },
 ) {
   const { data } = await api.post<ObligationEvidenceLink>(
     `/ai-systems/${projectId}/obligations/${obligationId}/evidence`,

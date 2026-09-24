@@ -114,10 +114,10 @@ export default function SubmitSystemPage() {
       email: '',
       company: '',
       aiSystemName: '',
-      packageInterest: packageFromQuery ?? 'starter',
+      packageInterest: packageFromQuery ?? 'not_sure',
       useCase: '',
       dataUsed: '',
-      timeline: '48_hours',
+      timeline: 'flexible',
     },
   });
 
@@ -232,34 +232,6 @@ export default function SubmitSystemPage() {
                   </label>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Package interest
-                    <Select
-                      {...register('packageInterest', { required: true })}
-                      className="mt-2"
-                    >
-                      <option value="starter">Starter</option>
-                      <option value="professional">Professional</option>
-                      <option value="enterprise">Enterprise</option>
-                      <option value="not_sure">Not sure yet</option>
-                    </Select>
-                  </label>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Delivery target
-                    <Select
-                      {...register('timeline', { required: true })}
-                      className="mt-2"
-                    >
-                      <option value="24_hours">24 hours</option>
-                      <option value="48_hours">48 hours</option>
-                      <option value="72_hours">72 hours</option>
-                      <option value="this_week">This week</option>
-                      <option value="flexible">Flexible</option>
-                    </Select>
-                  </label>
-                </div>
-
                 <label className="block text-sm font-medium text-slate-700">
                   Use case / product flow
                   <Textarea
@@ -279,6 +251,39 @@ export default function SubmitSystemPage() {
                     placeholder="What data sources or inputs does the system rely on?"
                   />
                 </label>
+
+                <details className="rounded-xl border border-slate-200 px-4 py-3">
+                  <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                    Add package or delivery preferences (optional)
+                  </summary>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Package interest
+                      <Select
+                        {...register('packageInterest', { required: true })}
+                        className="mt-2"
+                      >
+                        <option value="not_sure">Not sure yet</option>
+                        <option value="starter">Starter</option>
+                        <option value="professional">Professional</option>
+                        <option value="enterprise">Enterprise</option>
+                      </Select>
+                    </label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Delivery target
+                      <Select
+                        {...register('timeline', { required: true })}
+                        className="mt-2"
+                      >
+                        <option value="flexible">Flexible</option>
+                        <option value="24_hours">24 hours</option>
+                        <option value="48_hours">48 hours</option>
+                        <option value="72_hours">72 hours</option>
+                        <option value="this_week">This week</option>
+                      </Select>
+                    </label>
+                  </div>
+                </details>
 
                 <Button
                   type="submit"

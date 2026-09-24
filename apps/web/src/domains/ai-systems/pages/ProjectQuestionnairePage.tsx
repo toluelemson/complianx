@@ -11,6 +11,7 @@ import type {
 } from '@/domains/regulatory-frameworks/types';
 import {
   createProjectAssessment,
+  getProject,
   getPreliminaryClassification,
   listAssessmentAnswers,
   saveAssessmentAnswers,
@@ -18,6 +19,7 @@ import {
   listProjectObligations,
   type PreliminaryClassification,
 } from '../api';
+import type { ProjectDetail } from '@complianx/contracts/ai-systems';
 import { summarizeOnboarding } from '../lib/onboarding-summary';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
 
@@ -70,6 +72,36 @@ export default function ProjectQuestionnairePage() {
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getPreliminaryClassification(projectId),
   });
+  const project = useQuery<ProjectDetail>({
+    queryKey: ['project', projectId, activeCompanyId],
+    enabled: Boolean(token && projectId && activeCompanyId),
+    queryFn: () => getProject(projectId),
+  });
+  const profileAnswers = useMemo(() => {
+    const deployment = project.data?.deploymentGeography?.trim() ?? '';
+    const operatorRoles = project.data?.operatorRoles ?? [];
+    const answers: Record<string, unknown> = {};
+    if (/\b(EU|EEA|European Union)\b/i.test(deployment)) {
+      answers.used_in_eu = true;
+    }
+    if (
+      operatorRoles.length === 1 &&
+      ['provider', 'deployer', 'importer', 'distributor'].includes(
+        operatorRoles[0],
+      )
+    ) {
+      answers.company_role = operatorRoles[0];
+    }
+    return answers;
+  }, [project.data?.deploymentGeography, project.data?.operatorRoles]);
+  const effectiveAnswers = useMemo(
+    () => ({ ...profileAnswers, ...answers }),
+    [answers, profileAnswers],
+  );
+  const profileDerivedQuestionKeys = useMemo(
+    () => new Set(Object.keys(profileAnswers)),
+    [profileAnswers],
+  );
   const assessmentId =
     createdAssessmentId ?? classification.data?.assessmentId ?? null;
   useQuery({
@@ -126,7 +158,7 @@ export default function ProjectQuestionnairePage() {
   ]);
   const save = useMutation({
     mutationFn: () =>
-      saveAssessmentAnswers(projectId, assessmentId ?? '', answers),
+      saveAssessmentAnswers(projectId, assessmentId ?? '', effectiveAnswers),
     onError: () =>
       setError('Answers could not be saved. Retry before continuing.'),
   });
@@ -151,15 +183,18 @@ export default function ProjectQuestionnairePage() {
   const steps = useMemo(
     () =>
       (pack?.steps ?? [])
+        .filter((step) => step.key !== 'readiness')
         .map((step) => ({
           ...step,
           title: STEP_TITLES[step.key] ?? step.title,
-          questions: step.questions.filter((question) =>
-            visible(question, answers),
+          questions: step.questions.filter(
+            (question) =>
+              visible(question, effectiveAnswers) &&
+              !profileDerivedQuestionKeys.has(question.key),
           ),
         }))
         .filter((step) => step.questions.length),
-    [pack, answers],
+    [pack, effectiveAnswers, profileDerivedQuestionKeys],
   );
   const step = steps[stepIndex];
   const result = completedClassification ?? classification.data;
@@ -174,7 +209,8 @@ export default function ProjectQuestionnairePage() {
   const missing =
     step?.questions.filter(
       (question) =>
-        question.required && !answered(question, answers[question.key]),
+        question.required &&
+        !answered(question, effectiveAnswers[question.key]),
     ) ?? [];
   if (!initializing && !token) return <Navigate to="/login" replace />;
   return (
@@ -192,8 +228,8 @@ export default function ProjectQuestionnairePage() {
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             Answer a short set of questions about your system and how your
-            organization uses it. Neuraldocx will map your answers to the
-            current EU AI Act rules in this workspace.
+            organization uses it. Neuraldocx uses your answers to suggest which
+            current EU AI Act rules may apply in this workspace.
           </p>
         </div>
         {error ? (
@@ -269,9 +305,45 @@ export default function ProjectQuestionnairePage() {
               </div>
             ) : null}
 
+            <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-sky-950">
+                    Top 3 actions to take next
+                  </p>
+                  <p className="mt-1 text-sm text-sky-900">
+                    Start here—everything else can follow as the system matures.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-sky-800">
+                  First 30 minutes
+                </span>
+              </div>
+              <ol className="mt-4 grid gap-3 md:grid-cols-3">
+                <NextAction
+                  number="1"
+                  title="Prioritize requirements"
+                  text="Focus on the requirements that need attention first."
+                  to={`/projects/${projectId}/requirements`}
+                />
+                <NextAction
+                  number="2"
+                  title="Add supporting evidence"
+                  text="Upload the policy, test result, or process record that shows how the control works."
+                  to={`/projects/${projectId}/evidence`}
+                />
+                <NextAction
+                  number="3"
+                  title="Complete system context"
+                  text="Add ownership, oversight, and deployment details as they become available."
+                  to={`/projects/${projectId}/ai-system-profile`}
+                />
+              </ol>
+            </div>
+
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                to={`/projects/${projectId}#requirements`}
+                to={`/projects/${projectId}/requirements`}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
               >
                 Continue compliance setup
@@ -316,7 +388,7 @@ export default function ProjectQuestionnairePage() {
                 <Question
                   key={question.key}
                   question={question}
-                  value={answers[question.key]}
+                  value={effectiveAnswers[question.key]}
                   onChange={(value) =>
                     setAnswers((current) => ({
                       ...current,
@@ -379,9 +451,8 @@ export default function ProjectQuestionnairePage() {
               </div>
             </div>
             <p className="mt-5 text-xs text-amber-700">
-              Neuraldocx interprets the regulatory rules using your saved
-              answers. The result remains preliminary until an authorized person
-              reviews it.
+              Neuraldocx uses your saved answers to suggest a preliminary
+              result. An authorized person must review it before relying on it.
             </p>
           </section>
         ) : (
@@ -389,6 +460,29 @@ export default function ProjectQuestionnairePage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function NextAction({
+  number,
+  title,
+  text,
+  to,
+}: {
+  number: string;
+  title: string;
+  text: string;
+  to: string;
+}) {
+  return (
+    <li className="rounded-lg border border-sky-100 bg-white p-3">
+      <p className="text-xs font-bold text-sky-700">STEP {number}</p>
+      <p className="mt-1 font-semibold text-slate-900">{title}</p>
+      <p className="mt-1 text-sm text-slate-600">{text}</p>
+      <Link to={to} className="mt-3 inline-block text-sm font-semibold text-sky-700">
+        Open →
+      </Link>
+    </li>
   );
 }
 
@@ -429,8 +523,13 @@ function Question({
           checked={value === true}
           onChange={(event) => onChange(event.target.checked)}
         />
-        <span>
+          <span>
           <span className="font-medium">{question.label}</span>
+          {question.required ? (
+            <span aria-hidden="true" className="ml-2 text-xs text-slate-400">
+              Required
+            </span>
+          ) : null}
           {question.helperText ? (
             <span className="block text-xs text-slate-500">
               {question.helperText}

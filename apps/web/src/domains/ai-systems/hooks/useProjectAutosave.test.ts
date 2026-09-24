@@ -128,4 +128,45 @@ describe('useProjectAutosave', () => {
       content: { purpose: 'Changed' },
     });
   });
+
+  it('does not save the previous form values into a newly selected section', () => {
+    const { rerender } = renderHook(
+      ({ id, values }) =>
+        useProjectAutosave(
+          section(id, { purpose: id === 'one' ? 'First section' : 'Second section' }),
+          values,
+          true,
+        ),
+      { initialProps: { id: 'one', values: { purpose: 'First section' } } },
+    );
+
+    // The first render after a section switch still contains the prior form.
+    rerender({ id: 'two', values: { purpose: 'First section' } });
+    act(() => vi.advanceTimersByTime(1500));
+
+    expect(mockedSave).not.toHaveBeenCalled();
+
+    // The new section then finishes loading. This is still not a user edit.
+    rerender({ id: 'two', values: { purpose: 'Second section' } });
+    act(() => vi.advanceTimersByTime(1500));
+
+    expect(mockedSave).not.toHaveBeenCalled();
+  });
+
+  it('does not flush stale values while a new section is still loading', () => {
+    const { rerender, unmount } = renderHook(
+      ({ id, values }) =>
+        useProjectAutosave(
+          section(id, { purpose: id === 'one' ? 'First section' : 'Second section' }),
+          values,
+          true,
+        ),
+      { initialProps: { id: 'one', values: { purpose: 'First section' } } },
+    );
+
+    rerender({ id: 'two', values: { purpose: 'First section' } });
+    unmount();
+
+    expect(mockedSave).not.toHaveBeenCalled();
+  });
 });

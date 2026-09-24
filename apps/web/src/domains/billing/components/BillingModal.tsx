@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import api from '@/platform/api/client';
+import { useAuth } from '@/app/providers/AuthContext';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export default function BillingModal({ isOpen, onClose }: Props) {
+  const { activeCompanyId, user } = useAuth();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const planQuery = useQuery({
     queryKey: ['billing', 'plan'],
@@ -59,6 +61,10 @@ export default function BillingModal({ isOpen, onClose }: Props) {
     reviewsLogged: 0,
   };
   const isPaidPlan = plan !== 'FREE';
+  const canManageBilling = user?.companies?.some(
+    (membership) =>
+      membership.companyId === activeCompanyId && membership.role === 'ADMIN',
+  );
 
   return (
     <div
@@ -203,7 +209,7 @@ export default function BillingModal({ isOpen, onClose }: Props) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {isPaidPlan ? (
+              {canManageBilling && isPaidPlan ? (
                 <Button
                   onClick={() => portalMutation.mutate()}
                   disabled={portalMutation.isPending}
@@ -214,7 +220,7 @@ export default function BillingModal({ isOpen, onClose }: Props) {
                     ? 'Opening portal…'
                     : 'Manage subscription'}
                 </Button>
-              ) : (
+              ) : canManageBilling ? (
                 <>
                   <Button
                     onClick={() => checkoutMutation.mutate({ plan: 'PRO' })}
@@ -237,6 +243,11 @@ export default function BillingModal({ isOpen, onClose }: Props) {
                     Talk to sales
                   </Button>
                 </>
+              ) : (
+                <p className="max-w-xs text-right text-xs text-slate-500">
+                  Only a company administrator can change the plan or payment
+                  settings.
+                </p>
               )}
             </div>
             {statusMessage && (

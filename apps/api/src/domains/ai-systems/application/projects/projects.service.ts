@@ -411,7 +411,7 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
     if (companyId && project.companyId && project.companyId !== companyId) {
-      throw new ForbiddenException('Project belongs to a different workspace');
+      throw new ForbiddenException('Access denied');
     }
     const membership = project.companyId
       ? await this.prisma.userCompany.findUnique({
@@ -559,9 +559,16 @@ export class ProjectsService {
           dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
           ownerId: userId,
           companyId,
+          sections: {
+            create: {
+              name: 'Evidence',
+              content: {},
+            },
+          },
         },
+        include: projectDetailInclude,
       })
-      .then((project) => mapProjectDetail(project));
+      .then((project) => mapProjectDetail(project, 'OWNER'));
   }
 
   async getOwnedProject(

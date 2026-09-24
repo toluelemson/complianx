@@ -79,6 +79,9 @@ describe('API security (e2e)', () => {
       .expect(201)
       .expect(({ body }) => {
         expect(body.companyId).toBe('e2e-company');
+        expect(body.sections).toEqual([
+          expect.objectContaining({ name: 'Evidence' }),
+        ]);
       });
   });
 

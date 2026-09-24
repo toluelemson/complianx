@@ -16,10 +16,8 @@ import {
 } from '../domain/workflow.types';
 import { WorkflowVersionConflictError } from '../domain/workflow-errors';
 import {
-  IncompleteAssessmentError,
   ReviewerNotAssignedError,
 } from '../domain/workflow-errors';
-import { sectionFieldsComplete } from '../application/project-readiness.service';
 import { ProjectWorkflowRepository } from './project-workflow.repository';
 import { SectionWorkflowRepository } from './section-workflow.repository';
 
@@ -258,18 +256,6 @@ export class PrismaWorkflowRepository
         throw new WorkflowVersionConflictError();
       const reviewerId = request.reviewerId ?? current.reviewerId;
       if (!reviewerId) throw new ReviewerNotAssignedError();
-      if (
-        current.sections.length === 0 ||
-        !current.sections.every((section) =>
-          sectionFieldsComplete({
-            ...section,
-            workflowStatus: toSectionWorkflowStatus(section.workflowStatus),
-          }),
-        )
-      )
-        throw new IncompleteAssessmentError(
-          'Every required field must be complete before submission',
-        );
 
       const updateResult = await tx.project.updateMany({
         where: {

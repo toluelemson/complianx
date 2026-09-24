@@ -9,6 +9,11 @@ type AttentionProject = {
   }>;
 };
 
+export type ProjectNextAction = {
+  label: string;
+  path: 'compliance-workspace' | 'review-approval' | 'overview';
+};
+
 export function getProjectAttentionReasons(project: AttentionProject) {
   const reasons: string[] = [];
   const sections = project.sections?.length ?? 0;
@@ -36,6 +41,33 @@ export function getProjectAttentionReasons(project: AttentionProject) {
   if (!documents.length)
     reasons.push('Generate the EU AI Act Documentation Package');
   return reasons;
+}
+
+export function getProjectNextAction(
+  project: AttentionProject,
+): ProjectNextAction | null {
+  const sections = project.sections?.length ?? 0;
+  const status = project.workflowStatus ?? 'DRAFT';
+  const hasFailedDocument = project.documents?.some(
+    (document) => document.lifecycleStatus === 'FAILED',
+  );
+
+  if (status === 'CHANGES_REQUESTED') {
+    return { label: 'Address review changes', path: 'review-approval' };
+  }
+  if (hasFailedDocument) {
+    return { label: 'Retry package generation', path: 'compliance-workspace' };
+  }
+  if (status === 'DRAFT' && sections < 8) {
+    return { label: 'Continue documentation', path: 'compliance-workspace' };
+  }
+  if (status === 'DRAFT') {
+    return { label: 'Submit for review', path: 'review-approval' };
+  }
+
+  return getProjectAttentionReasons(project).length
+    ? { label: 'Open system overview', path: 'overview' }
+    : null;
 }
 
 export function selectDocumentTypesForCredits(

@@ -71,7 +71,9 @@ export default function SignupPage() {
       api.post('/auth/signup', values).then((res) => res.data),
     onSuccess: () => {
       setSuccessMessage(
-        'Check your inbox for a verification link before you can log in.',
+        isCompanyFlow
+          ? 'Check your inbox to verify your email. Then sign in to open My work in the invited workspace.'
+          : 'Check your inbox for a verification link before you can log in.',
       );
       setError(undefined);
     },
@@ -204,9 +206,14 @@ export default function SignupPage() {
                 <p className="text-sm text-emerald-600">{successMessage}</p>
               )}
               {isCompanyFlow && inviteInfo && (
-                <div className="rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                  Joining <strong>{inviteInfo.company.name}</strong> as{' '}
-                  <strong>{inviteInfo.email || watch('email')}</strong>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+                  <p className="font-semibold">
+                    You’re joining {inviteInfo.company.name}
+                  </p>
+                  <p className="mt-1 text-emerald-900">
+                    Invitation for <strong>{inviteInfo.email || watch('email')}</strong>.
+                    Create your account, verify your email, then open My work to see the actions assigned to you.
+                  </p>
                 </div>
               )}
               {!isCompanyFlow && (

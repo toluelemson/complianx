@@ -78,6 +78,7 @@ vi.mock('../api', async () => {
     getBillingPlan: vi.fn(),
     getBillingUsage: vi.fn(),
     getSectionAutosave: vi.fn(),
+    saveProjectSection: vi.fn(),
     createTemplate: vi.fn(),
     runProjectWorkflowAction: vi.fn(),
   };
@@ -171,16 +172,110 @@ beforeEach(() => {
   mockedApi.getBillingUsage.mockResolvedValue({ docsGenerated: 0 } as never);
   mockedApi.getSectionAutosave.mockResolvedValue(null);
   mockedApi.createTemplate.mockResolvedValue({} as never);
+  mockedApi.saveProjectSection.mockImplementation(async (_projectId, payload) =>
+    ({
+      id: `${payload.name}-section`,
+      name: payload.name,
+      content: payload.content,
+      updatedAt: '2026-09-24T12:00:00.000Z',
+      comments: [],
+      artifacts: [],
+    }) as never,
+  );
   mockedApi.runProjectWorkflowAction.mockResolvedValue({} as never);
 });
 
 describe('ProjectPage integration', () => {
+  it('keeps System Overview values visible after saving', async () => {
+    renderPage();
+
+    const purpose = await screen.findByLabelText('Purpose');
+    await waitFor(() => {
+      expect(screen.getByLabelText('Intended Users')).toHaveValue('Users');
+      expect(screen.getByLabelText('Deployment Context')).toHaveValue('Cloud');
+    });
+    fireEvent.change(purpose, { target: { value: 'Updated purpose' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Section' }));
+
+    await waitFor(() =>
+      expect(mockedApi.saveProjectSection).toHaveBeenCalledWith('project-1', {
+        name: 'system_overview',
+        content: {
+          purpose: 'Updated purpose',
+          intendedUsers: 'Users',
+          deploymentContext: 'Cloud',
+        },
+      }),
+    );
+    expect(screen.getByLabelText('Purpose')).toHaveValue('Updated purpose');
+    expect(screen.getByLabelText('Intended Users')).toHaveValue('Users');
+  });
+
+  it('hydrates saved values after the section request arrives', async () => {
+    let resolveSections!: (value: unknown) => void;
+    mockedApi.getProjectSections.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSections = resolve;
+        }) as never,
+    );
+    renderPage();
+
+    const purpose = await screen.findByLabelText('Purpose');
+    fireEvent.change(purpose, { target: { value: 'Temporary browser value' } });
+    resolveSections(
+      [
+        ['system_overview', { purpose: 'Saved purpose', intendedUsers: 'Saved users', deploymentContext: 'Saved context' }],
+      ].map(([name, content]) => ({
+        id: `${name}-section`,
+        name,
+        content,
+        updatedAt: '2026-09-24T13:33:41.881Z',
+        comments: [],
+        artifacts: [],
+      })),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Purpose')).toHaveValue('Saved purpose'),
+    );
+    expect(screen.getByLabelText('Intended Users')).toHaveValue('Saved users');
+    expect(screen.getByLabelText('Deployment Context')).toHaveValue('Saved context');
+  });
+
+  it('does not overwrite a section with an empty save', async () => {
+    mockedApi.getProjectSections.mockResolvedValueOnce(
+      [
+        ['system_overview', {}],
+        ['model_info', { modelType: 'Classifier', trainingData: 'Dataset', metrics: 'Accuracy' }],
+        ['data_governance', { dataSources: 'Sources', qualityChecks: 'Checks', privacy: 'Controls' }],
+        ['risk_assessment', { risks: 'Risks', likelihood: 'Low', impact: 'Low' }],
+        ['human_oversight', { roles: 'Owner', escalations: 'Process' }],
+        ['monitoring', { monitoringPlan: 'Plan', maintenance: 'Monthly' }],
+      ].map(([name, content]) => ({
+        id: `${name}-section`,
+        name,
+        content,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        comments: [],
+        artifacts: [],
+      })) as never,
+    );
+    renderPage();
+
+    await screen.findByLabelText('Purpose');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Section' }));
+
+    await waitFor(() => expect(mockedApi.saveProjectSection).not.toHaveBeenCalled());
+  });
+
   it('opens and submits the template dialog', async () => {
     renderPage();
 
     await screen.findByDisplayValue('Complete');
+    fireEvent.click(screen.getByText('Templates'));
     const saveButton = await screen.findByRole('button', {
-      name: 'Save as Template',
+      name: 'Save as template',
     });
     fireEvent.click(saveButton);
 

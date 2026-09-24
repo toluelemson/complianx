@@ -20,14 +20,20 @@ const organizationFields = [
   ['contactEmail', 'Contact email'],
 ];
 const systemFields = [
-  ['description', 'Description'],
-  ['businessPurpose', 'Business purpose'],
-  ['intendedUse', 'Intended use'],
-  ['intendedUsers', 'Intended users'],
-  ['affectedPersons', 'Affected persons'],
-  ['deploymentGeography', 'Deployment geography'],
-  ['lifecycleStage', 'Lifecycle stage'],
+  ['description', 'System summary'],
+  ['businessPurpose', 'Why it helps the business'],
+  ['intendedUse', 'What it does'],
+  ['intendedUsers', 'Who uses it'],
+  ['affectedPersons', 'Who it affects'],
+  ['deploymentGeography', 'Where it is used'],
+  ['lifecycleStage', 'Current stage'],
 ];
+const coreSystemFieldKeys = new Set([
+  'intendedUse',
+  'deploymentGeography',
+  'lifecycleStage',
+]);
+const coreOrganizationFieldKeys = new Set(['legalName', 'industry']);
 
 export default function ProjectProfilePage({
   organization: organizationProp = false,
@@ -66,7 +72,16 @@ export default function ProjectProfilePage({
     },
   });
   if (!initializing && !token) return <Navigate to="/login" replace />;
-  const fields = organization ? organizationFields : systemFields;
+  const primaryFields = organization
+    ? organizationFields.filter(([key]) => coreOrganizationFieldKeys.has(key))
+    : systemFields.filter(([key]) => coreSystemFieldKeys.has(key));
+  const additionalFields = (
+    organization ? organizationFields : systemFields
+  ).filter(([key]) =>
+    organization
+      ? !coreOrganizationFieldKeys.has(key)
+      : !coreSystemFieldKeys.has(key),
+  );
   const profile = organization ? organizationQuery.data : query.data;
   const profileQuery = organization ? organizationQuery : query;
   const responseMessage = isAxiosError<{ message?: string | string[] }>(
@@ -96,7 +111,7 @@ export default function ProjectProfilePage({
           <p className="mt-1 text-sm text-slate-500">
             {organization
               ? 'Shared organization details reused across projects.'
-              : `System details for ${query.data?.name ?? 'this project'}.`}
+              : `These answers help fill in documents for ${query.data?.name ?? 'this project'}. You can update them at any time.`}
           </p>
         </div>
         {profileQuery.isPending ? (
@@ -126,7 +141,7 @@ export default function ProjectProfilePage({
               );
             }}
           >
-            {fields.map(([key, label]) => (
+            {primaryFields.map(([key, label]) => (
               <label
                 key={key}
                 className="rounded-xl border border-slate-100 p-4"
@@ -163,6 +178,34 @@ export default function ProjectProfilePage({
                 )}
               </label>
             ))}
+            {additionalFields.length ? (
+              <details className="rounded-xl border border-slate-100 p-4 sm:col-span-2">
+                <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                  Add {organization ? 'organization' : 'system'} context{' '}
+                  (optional)
+                </summary>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {additionalFields.map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="rounded-xl border border-slate-100 p-4"
+                    >
+                      <p className="text-xs uppercase tracking-wide text-slate-400">
+                        {label}
+                      </p>
+                      <textarea
+                        name={key}
+                        defaultValue={String(
+                          profile?.[key as keyof typeof profile] ?? '',
+                        )}
+                        rows={key === 'description' ? 3 : 2}
+                        className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
+            ) : null}
             {save.isError && (
               <p role="alert" className="sm:col-span-2">
                 {saveError || 'Unable to save profile. Please try again.'}

@@ -63,6 +63,8 @@ describe('ProjectsService access boundary', () => {
       service.assertAccess('project-1', 'reviewer-1', 'company-2', {
         allowReviewer: true,
       }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toMatchObject({
+      response: { message: 'Access denied' },
+    });
   });
 });

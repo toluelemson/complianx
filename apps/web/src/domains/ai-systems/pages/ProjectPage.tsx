@@ -1,6 +1,6 @@
 // AI systems domain route.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   useMutation,
   useQueries,
@@ -27,11 +27,10 @@ import {
   linkObligationEvidence,
   listObligationEvidence,
   listProjectReviewers,
-  listAssessmentAnswers,
-  saveAssessmentAnswers,
   updateProjectObligation,
   listTemplates,
   reviewClassification,
+  runProjectWorkflowAction,
   saveProjectSection,
   setCommentResolution,
   sendSuggestionFeedback,
@@ -263,37 +262,6 @@ export default function ProjectPage() {
         getApiErrorMessage(error) ?? 'Unable to save classification review',
       ),
   });
-  const assessmentId = classificationQuery.data?.assessmentId;
-  const answersQuery = useQuery({
-    queryKey: ['assessmentAnswers', projectId, assessmentId, activeCompanyId],
-    enabled: Boolean(projectAvailable && assessmentId),
-    queryFn: () => listAssessmentAnswers(projectId, assessmentId ?? ''),
-  });
-  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<
-    Record<string, unknown>
-  >({});
-  const answersSaveMutation = useMutation({
-    mutationFn: (answers: Record<string, unknown>) =>
-      saveAssessmentAnswers(projectId, assessmentId ?? '', answers),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['assessmentAnswers', projectId, assessmentId],
-      });
-      toast.success('Questionnaire saved');
-    },
-    onError: () => toast.error('Unable to save questionnaire'),
-  });
-  useEffect(() => {
-    if (!answersQuery.data) return;
-    setQuestionnaireAnswers(
-      Object.fromEntries(
-        answersQuery.data.map((answer) => [
-          answer.questionKey,
-          answer.valueJson,
-        ]),
-      ),
-    );
-  }, [answersQuery.data]);
   const obligationsQuery = useQuery({
     queryKey: ['obligations', projectId, activeCompanyId],
     enabled: projectAvailable,
@@ -478,9 +446,16 @@ export default function ProjectPage() {
     );
   }, [reviewersQuery.data]);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const hydratedSectionKeyRef = useRef<string | null>(null);
 
-  const { control, register, handleSubmit, reset, setValue } =
-    useForm<FormValues>();
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { isDirty },
+  } = useForm<FormValues>();
   const [commentBody, setCommentBody] = useState('');
   const commentResolutionMutation = useMutation({
     mutationFn: (payload: {
@@ -612,16 +587,34 @@ export default function ProjectPage() {
   }, [availableApprovers, projectQuery.data?.approverId]);
 
   useEffect(() => {
-    if (currentSection && activeStep.fields.length) {
-      reset(currentSection.content ?? {});
-    } else if (activeStep.fields.length) {
-      reset({});
-    }
+    if (!currentSection || !activeStep.fields.length) return;
+    const sectionKey = `${currentSection.id}:${currentSection.updatedAt}`;
+    if (hydratedSectionKeyRef.current === sectionKey && isDirty) return;
+    const profileDefaults: FormValues =
+      activeStepId === 'system_overview'
+        ? {
+            purpose:
+              projectQuery.data?.businessPurpose ??
+              projectQuery.data?.intendedUse ??
+              '',
+            intendedUsers: projectQuery.data?.intendedUsers ?? '',
+            deploymentContext: projectQuery.data?.deploymentGeography ?? '',
+          }
+        : {};
+    reset({ ...profileDefaults, ...(currentSection.content ?? {}) });
+    hydratedSectionKeyRef.current = sectionKey;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCommentBody('');
     setAiFieldSuggestions({});
     setAiSuggestion(null);
-  }, [currentSection, activeStep, reset]);
+  }, [
+    activeStep,
+    activeStepId,
+    currentSection,
+    currentSection?.updatedAt,
+    isDirty,
+    reset,
+  ]);
 
   const saveMutation = useMutation({
     mutationFn: (payload: { stepId: string; values: FormValues }) =>
@@ -629,8 +622,21 @@ export default function ProjectPage() {
         name: payload.stepId,
         content: payload.values,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
+    onSuccess: (savedSection) => {
+      queryClient.setQueryData<SectionWithMeta[]>(
+        sectionsQueryKey,
+        (sections) => {
+          const existing = sections ?? [];
+          const index = existing.findIndex(
+            (section) => section.id === savedSection.id,
+          );
+          if (index === -1) return [...existing, savedSection];
+          return existing.map((section) =>
+            section.id === savedSection.id ? savedSection : section,
+          );
+        },
+      );
+      reset(savedSection.content ?? {});
       toast.success('Section saved');
       markSaved();
     },
@@ -638,6 +644,17 @@ export default function ProjectPage() {
       toast.error('Unable to save section');
     },
   });
+
+  const saveCurrentSection = (values: FormValues) => {
+    const hasAnyAnswer = activeStep.fields.some((field) =>
+      hasFieldValue(values[field.name]),
+    );
+    if (!hasAnyAnswer) {
+      toast.error('Add an answer before saving this section');
+      return;
+    }
+    saveMutation.mutate({ stepId: activeStepId, values });
+  };
 
   const updateTemplateMutation = useMutation({
     mutationFn: (payload: {
@@ -989,15 +1006,22 @@ export default function ProjectPage() {
     workflow.requestChanges();
   };
 
-  const completedSteps = new Set(
-    sectionsQuery.data?.map((section) => section.name) ?? [],
-  );
   const trackableStepIds = useMemo(
     () =>
       STEP_CONFIG.filter((step) => step.fields.length > 0).map(
         (step) => step.id,
       ),
     [],
+  );
+  const completedSteps = new Set(
+    trackableStepIds.filter((stepId) => {
+      const step = STEP_CONFIG.find((candidate) => candidate.id === stepId);
+      const content = sectionByName.get(stepId)?.content ?? {};
+      return Boolean(
+        step &&
+          step.fields.every((field) => hasFieldValue(content[field.name])),
+      );
+    }),
   );
   const completedCount = trackableStepIds.filter((id) =>
     completedSteps.has(id),
@@ -1055,6 +1079,27 @@ export default function ProjectPage() {
     onPaywall: () => window.dispatchEvent(new Event('paywall')),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: projectQueryKey }),
+  });
+  const sectionWorkflowMutation = useMutation({
+    mutationFn: (payload: {
+      stepId: string;
+      action: 'complete' | 'start-review' | 'approve';
+      signature?: string;
+    }) => {
+      const section = sectionByName.get(payload.stepId);
+      if (!section) throw new Error('Section not found');
+      return runProjectWorkflowAction({
+        endpoint: `/sections/${section.id}/workflow/${payload.action}`,
+        body: payload.signature ? { signature: payload.signature } : {},
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: projectQueryKey });
+      toast.success('Section review updated');
+    },
+    onError: (error: unknown) =>
+      toast.error(getApiErrorMessage(error) ?? 'Unable to update section review'),
   });
   const PROJECT_STATUS_LABELS: Record<string, string> = {
     DRAFT: 'Draft',
@@ -1210,27 +1255,27 @@ export default function ProjectPage() {
   }, [documentsQuery.data]);
 
   const liveStatusText =
-    autosaveStatus === 'saving' ? 'Live Syncing' : 'Live Editing';
+    autosaveStatus === 'saving' ? 'Saving changes' : 'Changes saved';
   const formatSavedLabel = () => {
-    if (autosaveStatus === 'saving') return 'Saving...';
+    if (autosaveStatus === 'saving') return 'Saving changes...';
     if (lastSavedAt) {
       return `Saved ${new Date(lastSavedAt).toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
       })}`;
     }
-    return 'No autosave yet';
+    return 'Changes save automatically';
   };
   const liveStatusDotClass =
     autosaveStatus === 'saving'
       ? 'bg-emerald-500 animate-pulse'
       : 'bg-emerald-400';
   const liveStatusTimestamp = lastSavedAt
-    ? `Last save ${new Date(lastSavedAt).toLocaleTimeString([], {
+      ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], {
         hour: 'numeric',
         minute: '2-digit',
       })}`
-    : 'Not saved yet';
+      : 'Not saved yet';
 
   return (
     <AppShell
@@ -1357,89 +1402,23 @@ export default function ProjectPage() {
               ) : null}
               {classificationQuery.data?.assessmentId ? (
                 <div className="sm:col-span-3 rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
-                        Classification questionnaire
+                        Classification assessment
                       </p>
                       <p className="text-xs text-slate-500">
-                        Answers are stored with their author and timestamp.
+                        Classification answers are managed in one place and
+                        inform the requirements below.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        answersSaveMutation.mutate(questionnaireAnswers)
-                      }
-                      disabled={answersSaveMutation.isPending || !isOwner}
-                      className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    <Link
+                      to={`/projects/${projectId}/classification`}
+                      className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                     >
-                      {answersSaveMutation.isPending
-                        ? 'Saving…'
-                        : 'Save answers'}
-                    </button>
+                      View or update assessment
+                    </Link>
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    <label className="flex items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={
-                          questionnaireAnswers.uses_sensitive_data === true
-                        }
-                        onChange={(event) =>
-                          setQuestionnaireAnswers((answers) => ({
-                            ...answers,
-                            uses_sensitive_data: event.target.checked,
-                          }))
-                        }
-                        disabled={!isOwner}
-                      />
-                      Does the system use sensitive or personal data?
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={
-                          questionnaireAnswers.human_oversight_required === true
-                        }
-                        onChange={(event) =>
-                          setQuestionnaireAnswers((answers) => ({
-                            ...answers,
-                            human_oversight_required: event.target.checked,
-                          }))
-                        }
-                        disabled={!isOwner}
-                      />
-                      Is human oversight required for decisions?
-                    </label>
-                    {questionnaireAnswers.uses_sensitive_data === true ? (
-                      <label className="text-sm text-slate-700 md:col-span-2">
-                        Sensitive data categories
-                        <input
-                          value={String(
-                            questionnaireAnswers.sensitive_data_types ?? '',
-                          )}
-                          onChange={(event) =>
-                            setQuestionnaireAnswers((answers) => ({
-                              ...answers,
-                              sensitive_data_types: event.target.value,
-                            }))
-                          }
-                          disabled={!isOwner}
-                          placeholder="Health, biometrics, financial data…"
-                          className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                        />
-                      </label>
-                    ) : null}
-                  </div>
-                  {answersQuery.data?.length ? (
-                    <p className="mt-3 text-[11px] text-slate-400">
-                      Last updated by {answersQuery.data[0].answeredBy.email} ·{' '}
-                      {new Date(
-                        answersQuery.data[0].updatedAt,
-                      ).toLocaleString()}
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
               {obligationsQuery.data?.length ? (
@@ -1457,288 +1436,307 @@ export default function ProjectPage() {
                         classification
                       </span>
                     </div>
-                    <select
-                      aria-label="Filter requirements"
-                      value={obligationFilter}
-                      onChange={(event) =>
-                        setObligationFilter(event.target.value)
-                      }
-                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                    <Link
+                      to={`/projects/${projectId}/requirements`}
+                      className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                     >
-                      <option value="ALL">All statuses</option>
-                      <option value="NOT_STARTED">Not started</option>
-                      <option value="IN_PROGRESS">In progress</option>
-                      <option value="READY_FOR_REVIEW">Ready for review</option>
-                      <option value="SATISFIED">Satisfied</option>
-                    </select>
-                    <select
-                      aria-label="Filter requirement owner"
-                      value={obligationOwnerFilter}
-                      onChange={(event) =>
-                        setObligationOwnerFilter(event.target.value)
-                      }
-                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
-                    >
-                      <option value="ALL">All owners</option>
-                      {availableReviewers.map((reviewer) => (
-                        <option key={reviewer.id} value={reviewer.id}>
-                          {reviewer.email}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      aria-label="Filter requirement priority"
-                      value={obligationPriorityFilter}
-                      onChange={(event) =>
-                        setObligationPriorityFilter(event.target.value)
-                      }
-                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
-                    >
-                      <option value="ALL">All priorities</option>
-                      <option value="LOW">Low</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HIGH">High</option>
-                      <option value="CRITICAL">Critical</option>
-                    </select>
-                    <select
-                      aria-label="Filter requirement approval state"
-                      value={obligationApprovalFilter}
-                      onChange={(event) =>
-                        setObligationApprovalFilter(event.target.value)
-                      }
-                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
-                    >
-                      <option value="ALL">All approval states</option>
-                      <option value="DRAFT">Draft</option>
-                      <option value="READY_FOR_REVIEW">Ready for review</option>
-                      <option value="APPROVED">Approved</option>
-                      <option value="CHANGES_REQUESTED">
-                        Changes requested
-                      </option>
-                    </select>
-                    {activeObligationFilterCount ? (
-                      <button
-                        type="button"
-                        className="text-xs font-semibold text-slate-500 hover:text-slate-900"
-                        onClick={() => {
-                          setObligationFilter('ALL');
-                          setObligationOwnerFilter('ALL');
-                          setObligationPriorityFilter('ALL');
-                          setObligationApprovalFilter('ALL');
-                        }}
-                      >
-                        Clear filters ({activeObligationFilterCount})
-                      </button>
-                    ) : null}
+                      Manage requirements
+                    </Link>
                   </div>
-                  <ul className="mt-3 grid gap-2 md:grid-cols-2">
-                    {visibleObligations.map((item) => (
-                      <li
-                        key={item.id}
-                        className="rounded-lg border border-slate-100 px-3 py-2"
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs font-medium text-slate-600 hover:text-slate-900">
+                      Show requirement details and actions
+                    </summary>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <select
+                        aria-label="Filter requirements"
+                        value={obligationFilter}
+                        onChange={(event) =>
+                          setObligationFilter(event.target.value)
+                        }
+                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-slate-800">
-                              {item.obligation.title}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {item.obligation.legalReference ??
-                                'EU AI Act pack reference'}{' '}
-                              · {item.status.replaceAll('_', ' ').toLowerCase()}
-                              {item.actions.length
-                                ? ` · ${item.actions.length} action${item.actions.length === 1 ? '' : 's'}`
-                                : ''}
-                            </p>
-                            <p className="mt-1 text-[11px] text-slate-400">
-                              Owner: {item.owner?.email ?? 'Unassigned'}
-                              {item.dueAt
-                                ? ` · Due ${new Date(item.dueAt).toLocaleDateString()}`
-                                : ''}
-                            </p>
-                            {isOwner || canReviewEvidence ? (
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                <select
-                                  aria-label={`Priority for ${item.obligation.title}`}
-                                  value={item.priority}
-                                  onChange={(event) =>
-                                    obligationUpdateMutation.mutate({
-                                      obligationId: item.id,
-                                      field: 'priority',
-                                      value: event.target.value,
-                                    })
-                                  }
-                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
-                                >
-                                  <option value="LOW">Low priority</option>
-                                  <option value="MEDIUM">
-                                    Medium priority
-                                  </option>
-                                  <option value="HIGH">High priority</option>
-                                  <option value="CRITICAL">
-                                    Critical priority
-                                  </option>
-                                </select>
-                                <select
-                                  aria-label={`Approval state for ${item.obligation.title}`}
-                                  value={item.approvalState}
-                                  onChange={(event) =>
-                                    obligationUpdateMutation.mutate({
-                                      obligationId: item.id,
-                                      field: 'approvalState',
-                                      value: event.target.value,
-                                    })
-                                  }
-                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
-                                >
-                                  <option value="DRAFT">Draft</option>
-                                  <option value="READY_FOR_REVIEW">
-                                    Ready for review
-                                  </option>
-                                  <option value="APPROVED">Approved</option>
-                                  <option value="CHANGES_REQUESTED">
-                                    Changes requested
-                                  </option>
-                                </select>
-                                <select
-                                  aria-label={`Owner for ${item.obligation.title}`}
-                                  value={item.owner?.id ?? ''}
-                                  onChange={(event) =>
-                                    event.target.value
-                                      ? obligationUpdateMutation.mutate({
-                                          obligationId: item.id,
-                                          field: 'ownerId',
-                                          value: event.target.value,
-                                        })
-                                      : undefined
-                                  }
-                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
-                                >
-                                  <option value="">Unassigned</option>
-                                  {availableReviewers.map((reviewer) => (
-                                    <option
-                                      key={reviewer.id}
-                                      value={reviewer.id}
-                                    >
-                                      {reviewer.email}
-                                    </option>
-                                  ))}
-                                </select>
-                                <input
-                                  type="date"
-                                  aria-label={`Due date for ${item.obligation.title}`}
-                                  value={
-                                    item.dueAt ? item.dueAt.slice(0, 10) : ''
-                                  }
-                                  onChange={(event) =>
-                                    obligationUpdateMutation.mutate({
-                                      obligationId: item.id,
-                                      field: 'dueAt',
-                                      value: event.target.value,
-                                    })
-                                  }
-                                  className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
-                                />
-                              </div>
-                            ) : null}
-                          </div>
-                          <span className="shrink-0 text-xs font-medium text-slate-400">
-                            {evidenceByObligation.get(item.id)?.length ?? 0}{' '}
-                            linked
-                          </span>
-                        </div>
-                        <div className="mt-2 space-y-1">
-                          {(evidenceByObligation.get(item.id) ?? []).map(
-                            (link) => (
-                              <div
-                                key={link.id}
-                                className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-600"
-                              >
-                                <span className="truncate">
-                                  {link.artifact?.originalName ??
-                                    DOCUMENT_LABELS[
-                                      link.document?.type ?? ''
-                                    ] ??
-                                    'Linked document'}
-                                  {link.artifact
-                                    ? ` · v${link.artifact.version}`
-                                    : ''}
-                                </span>
-                                {isOwner || canReviewEvidence ? (
-                                  <button
-                                    type="button"
-                                    className="shrink-0 font-semibold text-slate-500 hover:text-rose-600"
-                                    onClick={() =>
-                                      evidenceLinkMutation.mutate({
-                                        action: 'unlink',
+                        <option value="ALL">All statuses</option>
+                        <option value="NOT_STARTED">Not started</option>
+                        <option value="IN_PROGRESS">In progress</option>
+                        <option value="READY_FOR_REVIEW">
+                          Ready for review
+                        </option>
+                        <option value="SATISFIED">Satisfied</option>
+                      </select>
+                      <select
+                        aria-label="Filter requirement owner"
+                        value={obligationOwnerFilter}
+                        onChange={(event) =>
+                          setObligationOwnerFilter(event.target.value)
+                        }
+                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                      >
+                        <option value="ALL">All owners</option>
+                        {availableReviewers.map((reviewer) => (
+                          <option key={reviewer.id} value={reviewer.id}>
+                            {reviewer.email}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="Filter requirement priority"
+                        value={obligationPriorityFilter}
+                        onChange={(event) =>
+                          setObligationPriorityFilter(event.target.value)
+                        }
+                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                      >
+                        <option value="ALL">All priorities</option>
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="CRITICAL">Critical</option>
+                      </select>
+                      <select
+                        aria-label="Filter requirement approval state"
+                        value={obligationApprovalFilter}
+                        onChange={(event) =>
+                          setObligationApprovalFilter(event.target.value)
+                        }
+                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                      >
+                        <option value="ALL">All approval states</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="READY_FOR_REVIEW">
+                          Ready for review
+                        </option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="CHANGES_REQUESTED">
+                          Changes requested
+                        </option>
+                      </select>
+                      {activeObligationFilterCount ? (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-slate-500 hover:text-slate-900"
+                          onClick={() => {
+                            setObligationFilter('ALL');
+                            setObligationOwnerFilter('ALL');
+                            setObligationPriorityFilter('ALL');
+                            setObligationApprovalFilter('ALL');
+                          }}
+                        >
+                          Clear filters ({activeObligationFilterCount})
+                        </button>
+                      ) : null}
+                    </div>
+                    <ul className="mt-3 grid gap-2 md:grid-cols-2">
+                      {visibleObligations.map((item) => (
+                        <li
+                          key={item.id}
+                          className="rounded-lg border border-slate-100 px-3 py-2"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-medium text-slate-800">
+                                {item.obligation.title}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {item.obligation.legalReference ??
+                                  'EU AI Act pack reference'}{' '}
+                                ·{' '}
+                                {item.status.replaceAll('_', ' ').toLowerCase()}
+                                {item.actions.length
+                                  ? ` · ${item.actions.length} action${item.actions.length === 1 ? '' : 's'}`
+                                  : ''}
+                              </p>
+                              <p className="mt-1 text-[11px] text-slate-400">
+                                Owner: {item.owner?.email ?? 'Unassigned'}
+                                {item.dueAt
+                                  ? ` · Due ${new Date(item.dueAt).toLocaleDateString()}`
+                                  : ''}
+                              </p>
+                              {isOwner || canReviewEvidence ? (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  <select
+                                    aria-label={`Priority for ${item.obligation.title}`}
+                                    value={item.priority}
+                                    onChange={(event) =>
+                                      obligationUpdateMutation.mutate({
                                         obligationId: item.id,
-                                        linkId: link.id,
+                                        field: 'priority',
+                                        value: event.target.value,
                                       })
                                     }
+                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
                                   >
-                                    Remove
-                                  </button>
-                                ) : null}
-                              </div>
-                            ),
-                          )}
-                        </div>
-                        {isOwner || canReviewEvidence ? (
-                          <select
-                            aria-label={`Link evidence to ${item.obligation.title}`}
-                            value=""
-                            onChange={(event) => {
-                              const selected = event.target.value;
-                              if (!selected) return;
-                              evidenceLinkMutation.mutate({
-                                action: 'link',
-                                obligationId: item.id,
-                                ...(selected.startsWith('doc:')
-                                  ? { documentId: selected.slice(4) }
-                                  : { artifactId: selected }),
-                              });
-                            }}
-                            className="mt-2 w-full rounded-md border border-dashed border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-500"
-                            disabled={evidenceLinkMutation.isPending}
-                          >
-                            <option value="">Link evidence…</option>
-                            {projectArtifacts
-                              .filter(
-                                (artifact) =>
-                                  !(
-                                    evidenceByObligation.get(item.id) ?? []
-                                  ).some(
-                                    (link) => link.artifact?.id === artifact.id,
-                                  ),
-                              )
-                              .map((artifact) => (
-                                <option key={artifact.id} value={artifact.id}>
-                                  {artifact.originalName} ·{' '}
-                                  {artifact.sectionName}
-                                </option>
-                              ))}
-                            {(projectQuery.data?.documents ?? []).map(
-                              (document) => (
-                                <option
-                                  key={`doc:${document.id}`}
-                                  value={`doc:${document.id}`}
+                                    <option value="LOW">Low priority</option>
+                                    <option value="MEDIUM">
+                                      Medium priority
+                                    </option>
+                                    <option value="HIGH">High priority</option>
+                                    <option value="CRITICAL">
+                                      Critical priority
+                                    </option>
+                                  </select>
+                                  <select
+                                    aria-label={`Approval state for ${item.obligation.title}`}
+                                    value={item.approvalState}
+                                    onChange={(event) =>
+                                      obligationUpdateMutation.mutate({
+                                        obligationId: item.id,
+                                        field: 'approvalState',
+                                        value: event.target.value,
+                                      })
+                                    }
+                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
+                                  >
+                                    <option value="DRAFT">Draft</option>
+                                    <option value="READY_FOR_REVIEW">
+                                      Ready for review
+                                    </option>
+                                    <option value="APPROVED">Approved</option>
+                                    <option value="CHANGES_REQUESTED">
+                                      Changes requested
+                                    </option>
+                                  </select>
+                                  <select
+                                    aria-label={`Owner for ${item.obligation.title}`}
+                                    value={item.owner?.id ?? ''}
+                                    onChange={(event) =>
+                                      event.target.value
+                                        ? obligationUpdateMutation.mutate({
+                                            obligationId: item.id,
+                                            field: 'ownerId',
+                                            value: event.target.value,
+                                          })
+                                        : undefined
+                                    }
+                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
+                                  >
+                                    <option value="">Unassigned</option>
+                                    {availableReviewers.map((reviewer) => (
+                                      <option
+                                        key={reviewer.id}
+                                        value={reviewer.id}
+                                      >
+                                        {reviewer.email}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    type="date"
+                                    aria-label={`Due date for ${item.obligation.title}`}
+                                    value={
+                                      item.dueAt ? item.dueAt.slice(0, 10) : ''
+                                    }
+                                    onChange={(event) =>
+                                      obligationUpdateMutation.mutate({
+                                        obligationId: item.id,
+                                        field: 'dueAt',
+                                        value: event.target.value,
+                                      })
+                                    }
+                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
+                            <span className="shrink-0 text-xs font-medium text-slate-400">
+                              {evidenceByObligation.get(item.id)?.length ?? 0}{' '}
+                              linked
+                            </span>
+                          </div>
+                          <div className="mt-2 space-y-1">
+                            {(evidenceByObligation.get(item.id) ?? []).map(
+                              (link) => (
+                                <div
+                                  key={link.id}
+                                  className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-600"
                                 >
-                                  {DOCUMENT_LABELS[document.type] ??
-                                    document.type}{' '}
-                                  · package
-                                </option>
+                                  <span className="truncate">
+                                    {link.artifact?.originalName ??
+                                      DOCUMENT_LABELS[
+                                        link.document?.type ?? ''
+                                      ] ??
+                                      'Linked document'}
+                                    {link.artifact
+                                      ? ` · v${link.artifact.version}`
+                                      : ''}
+                                  </span>
+                                  {isOwner || canReviewEvidence ? (
+                                    <button
+                                      type="button"
+                                      className="shrink-0 font-semibold text-slate-500 hover:text-rose-600"
+                                      onClick={() =>
+                                        evidenceLinkMutation.mutate({
+                                          action: 'unlink',
+                                          obligationId: item.id,
+                                          linkId: link.id,
+                                        })
+                                      }
+                                    >
+                                      Remove
+                                    </button>
+                                  ) : null}
+                                </div>
                               ),
                             )}
-                          </select>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                  {!visibleObligations.length ? (
-                    <p className="mt-3 text-sm text-slate-500">
-                      No requirements match this filter.
-                    </p>
-                  ) : null}
+                          </div>
+                          {isOwner || canReviewEvidence ? (
+                            <select
+                              aria-label={`Link evidence to ${item.obligation.title}`}
+                              value=""
+                              onChange={(event) => {
+                                const selected = event.target.value;
+                                if (!selected) return;
+                                evidenceLinkMutation.mutate({
+                                  action: 'link',
+                                  obligationId: item.id,
+                                  ...(selected.startsWith('doc:')
+                                    ? { documentId: selected.slice(4) }
+                                    : { artifactId: selected }),
+                                });
+                              }}
+                              className="mt-2 w-full rounded-md border border-dashed border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-500"
+                              disabled={evidenceLinkMutation.isPending}
+                            >
+                              <option value="">Link evidence…</option>
+                              {projectArtifacts
+                                .filter(
+                                  (artifact) =>
+                                    !(
+                                      evidenceByObligation.get(item.id) ?? []
+                                    ).some(
+                                      (link) =>
+                                        link.artifact?.id === artifact.id,
+                                    ),
+                                )
+                                .map((artifact) => (
+                                  <option key={artifact.id} value={artifact.id}>
+                                    {artifact.originalName} ·{' '}
+                                    {artifact.sectionName}
+                                  </option>
+                                ))}
+                              {(projectQuery.data?.documents ?? []).map(
+                                (document) => (
+                                  <option
+                                    key={`doc:${document.id}`}
+                                    value={`doc:${document.id}`}
+                                  >
+                                    {DOCUMENT_LABELS[document.type] ??
+                                      document.type}{' '}
+                                    · package
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                    {!visibleObligations.length ? (
+                      <p className="mt-3 text-sm text-slate-500">
+                        No requirements match this filter.
+                      </p>
+                    ) : null}
+                  </details>
                 </div>
               ) : null}
               <div id="organization-profile">
@@ -1850,41 +1848,49 @@ export default function ProjectPage() {
 
               {activeStep.fields.length ? (
                 <>
-                  <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
-                    <button
-                      type="button"
-                      onClick={handleSaveTemplate}
-                      className="rounded-md border border-slate-200 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                      disabled={saveTemplateMutation.isPending}
-                    >
-                      Save as Template
-                    </button>
-                    {templatesQuery.data?.length ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs uppercase tracking-wide text-slate-400">
-                          Apply template:
-                        </span>
-                        <select
-                          onChange={(event) => {
-                            const selected = templatesQuery.data.find(
-                              (tpl) => tpl.id === event.target.value,
-                            );
-                            if (selected) {
-                              handleApplyTemplate(selected);
-                            }
-                          }}
-                          className="rounded-md border border-slate-200 px-2 py-1 text-sm"
+                  {isOwner ? (
+                    <details className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                      <summary className="cursor-pointer font-medium text-slate-700">
+                        Templates
+                      </summary>
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleSaveTemplate}
+                          className="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                          disabled={saveTemplateMutation.isPending}
                         >
-                          <option value="">Select...</option>
-                          {templatesQuery.data.map((tpl) => (
-                            <option key={tpl.id} value={tpl.id}>
-                              {tpl.name}
-                            </option>
-                          ))}
-                        </select>
+                          Save as template
+                        </button>
+                        {templatesQuery.data?.length ? (
+                          <select
+                            aria-label="Apply template"
+                            onChange={(event) => {
+                              const selected = templatesQuery.data.find(
+                                (tpl) => tpl.id === event.target.value,
+                              );
+                              if (selected) handleApplyTemplate(selected);
+                            }}
+                            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm"
+                          >
+                            <option value="">Apply a template...</option>
+                            {templatesQuery.data.map((tpl) => (
+                              <option key={tpl.id} value={tpl.id}>
+                                {tpl.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setManageModalOpen(true)}
+                          className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                        >
+                          Manage templates
+                        </button>
                       </div>
-                    ) : null}
-                  </div>
+                    </details>
+                  ) : null}
                   {aiSuggestion && (
                     <div className="mt-4 rounded-xl border border-dashed border-sky-200 bg-sky-50/60 p-3 text-sm text-slate-700">
                       <div className="flex items-center justify-between">
@@ -1903,10 +1909,14 @@ export default function ProjectPage() {
                   )}
                   <form
                     className="mt-6"
-                    onSubmit={handleSubmit((values) =>
-                      saveMutation.mutate({ stepId: activeStepId, values }),
-                    )}
+                    onSubmit={handleSubmit(saveCurrentSection)}
                   >
+                    {activeStepId === 'system_overview' ? (
+                      <p className="mb-4 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                        Prefilled from the AI system profile. Edit only if this
+                        documentation context differs.
+                      </p>
+                    ) : null}
                     <fieldset className="space-y-4" disabled={!isOwner}>
                       {activeStep.fields.map((field) => (
                         <div key={field.name}>
@@ -1917,16 +1927,18 @@ export default function ProjectPage() {
                             >
                               {field.label}
                             </label>
-                            <button
-                              type="button"
-                              onClick={() => requestFieldSuggestion(field.name)}
-                              disabled={
-                                suggestionMutation.isPending || !currentSection
-                              }
-                              className="text-xs font-semibold text-sky-600 hover:text-sky-500 disabled:opacity-60"
-                            >
-                              Ask AI
-                            </button>
+                            {isOwner && currentSection ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  requestFieldSuggestion(field.name)
+                                }
+                                disabled={suggestionMutation.isPending}
+                                className="text-xs font-semibold text-sky-600 hover:text-sky-500 disabled:opacity-60"
+                              >
+                                Ask AI
+                              </button>
+                            ) : null}
                           </div>
                           {field.type === 'textarea' ? (
                             <textarea
@@ -2135,13 +2147,6 @@ export default function ProjectPage() {
                             {currentSection.artifacts.length === 1 ? '' : 's'}
                           </span>
                         ) : null}
-                        <button
-                          type="button"
-                          onClick={() => setManageModalOpen(true)}
-                          className="text-xs font-semibold text-slate-600 hover:text-slate-900"
-                        >
-                          Manage templates
-                        </button>
                       </div>
                     </div>
                     {currentSection ? (
@@ -2151,6 +2156,7 @@ export default function ProjectPage() {
                             <input
                               ref={artifactInputRef}
                               type="file"
+                              accept=".pdf,.doc,.docx,.txt,.csv,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,application/json"
                               className="hidden"
                               onChange={handleArtifactFileChange}
                               disabled={!isOwner}
@@ -2177,7 +2183,7 @@ export default function ProjectPage() {
                           </div>
                           <details className="md:col-span-2">
                             <summary className="cursor-pointer rounded-md border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-500">
-                              Add file details
+                              Add provenance or classification details
                             </summary>
                             <div className="mt-2 grid gap-2 sm:grid-cols-2">
                               <input
@@ -2320,9 +2326,6 @@ export default function ProjectPage() {
                                           </p>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
-                                            v{artifact.version}
-                                          </span>
                                           <span
                                             className={`rounded-full px-2 py-0.5 ${artifactStatusStyles[artifact.status]}`}
                                           >
@@ -2334,62 +2337,73 @@ export default function ProjectPage() {
                                           </span>
                                         </div>
                                       </div>
-                                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                                        <span>
-                                          Citation:
-                                          <code className="ml-1 rounded bg-white px-1 py-0.5 text-[11px] text-slate-700">
-                                            {artifact.citationKey}
-                                          </code>
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            handleCopyToClipboard(
-                                              artifact.citationKey,
-                                              'Citation copied',
-                                            )
-                                          }
-                                          className="text-[11px] font-semibold text-sky-600 hover:text-sky-500"
-                                        >
-                                          Copy citation
-                                        </button>
-                                      </div>
-                                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                                        <span>
-                                          Checksum:
-                                          <code className="ml-1 rounded bg-white px-1 py-0.5 text-[11px] text-slate-700">
-                                            {artifact.checksum}
-                                          </code>
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            handleCopyToClipboard(
-                                              artifact.checksum,
-                                              'Checksum copied',
-                                            )
-                                          }
-                                          className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
-                                        >
-                                          Copy checksum
-                                        </button>
-                                      </div>
-                                      {artifact.previousArtifact ? (
-                                        <p className="text-[11px] text-slate-500">
-                                          Replaces{' '}
-                                          <span className="font-medium">
-                                            {
-                                              artifact.previousArtifact
-                                                .citationKey
-                                            }
-                                          </span>{' '}
-                                          (checksum{' '}
-                                          <code className="bg-white px-1 py-0.5 text-[10px] text-slate-700">
-                                            {artifact.previousArtifact.checksum}
-                                          </code>
-                                          ).
-                                        </p>
-                                      ) : null}
+                                      <details className="text-xs text-slate-500">
+                                        <summary className="cursor-pointer font-medium hover:text-slate-800">
+                                          Audit details
+                                        </summary>
+                                        <div className="mt-2 space-y-2 rounded-lg bg-white p-3">
+                                          <p>Version {artifact.version}</p>
+                                          <div className="flex flex-wrap items-center gap-3">
+                                            <span>
+                                              Citation:
+                                              <code className="ml-1 rounded bg-slate-50 px-1 py-0.5 text-[11px] text-slate-700">
+                                                {artifact.citationKey}
+                                              </code>
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                handleCopyToClipboard(
+                                                  artifact.citationKey,
+                                                  'Citation copied',
+                                                )
+                                              }
+                                              className="text-[11px] font-semibold text-sky-600 hover:text-sky-500"
+                                            >
+                                              Copy citation
+                                            </button>
+                                          </div>
+                                          <div className="flex flex-wrap items-center gap-3">
+                                            <span>
+                                              Checksum:
+                                              <code className="ml-1 rounded bg-slate-50 px-1 py-0.5 text-[11px] text-slate-700">
+                                                {artifact.checksum}
+                                              </code>
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                handleCopyToClipboard(
+                                                  artifact.checksum,
+                                                  'Checksum copied',
+                                                )
+                                              }
+                                              className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
+                                            >
+                                              Copy checksum
+                                            </button>
+                                          </div>
+                                          {artifact.previousArtifact ? (
+                                            <p>
+                                              Replaces{' '}
+                                              <span className="font-medium">
+                                                {
+                                                  artifact.previousArtifact
+                                                    .citationKey
+                                                }
+                                              </span>{' '}
+                                              (checksum{' '}
+                                              <code className="bg-slate-50 px-1 py-0.5 text-[10px] text-slate-700">
+                                                {
+                                                  artifact.previousArtifact
+                                                    .checksum
+                                                }
+                                              </code>
+                                              ).
+                                            </p>
+                                          ) : null}
+                                        </div>
+                                      </details>
                                       {artifact.reviewedBy?.email ? (
                                         <p className="text-[11px] text-slate-500">
                                           Reviewed by{' '}
@@ -2730,11 +2744,23 @@ export default function ProjectPage() {
                     availableReviewers={availableReviewers}
                     canAssignSelf={canAssignSelf}
                     canSendForReview={isOwner || canStartProjectReview}
+                    canStartReview={canStartProjectReview}
                     sendForReviewDisabled={sendForReviewDisabled}
                     canApprove={canApproveProject && isPaidPlan}
                     canRequestChanges={canRequestProjectChanges && isPaidPlan}
                     disableAssignmentFields={disableAssignmentFields}
                     userId={user?.id}
+                    projectId={projectId}
+                    canCompleteSections={isOwner || isAdmin}
+                    canReviewSections={isAssignedReviewer || isAdmin}
+                    sectionActionPending={sectionWorkflowMutation.isPending}
+                    onSectionWorkflowAction={(stepId, action, signature) =>
+                      sectionWorkflowMutation.mutate({
+                        stepId,
+                        action,
+                        signature,
+                      })
+                    }
                   />
                   <details
                     className="rounded-2xl border border-slate-200 bg-white p-4"
@@ -2943,20 +2969,22 @@ export default function ProjectPage() {
                 <h3 className="text-lg font-semibold text-slate-900">
                   Deliverables
                 </h3>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleZipDownload}
-                    className="text-sm font-medium text-slate-500 hover:text-slate-800"
-                  >
-                    Download ZIP
-                  </button>
-                  <button
-                    onClick={() => documentsQuery.refetch()}
-                    className="text-sm font-medium text-sky-600 hover:text-sky-500"
-                  >
-                    Refresh
-                  </button>
-                </div>
+                {documentsQuery.data?.length ? (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleZipDownload}
+                      className="text-sm font-medium text-slate-500 hover:text-slate-800"
+                    >
+                      Download ZIP
+                    </button>
+                    <button
+                      onClick={() => documentsQuery.refetch()}
+                      className="text-sm font-medium text-sky-600 hover:text-sky-500"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                ) : null}
               </div>
               {documentsQuery.data?.length ? (
                 <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -3262,6 +3290,7 @@ export default function ProjectPage() {
                   onSubmit={handleReminderSubmit}
                 >
                   <input
+                    aria-label="Reminder message"
                     value={reminderForm.message}
                     onChange={(event) =>
                       setReminderForm((prev) => ({
@@ -3269,11 +3298,12 @@ export default function ProjectPage() {
                         message: event.target.value,
                       }))
                     }
-                    placeholder="Follow up with legal..."
+                    placeholder="What should we remember?"
                     className="rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
                   />
                   <input
                     type="datetime-local"
+                    aria-label="Reminder date and time"
                     value={reminderForm.dueAt}
                     onChange={(event) =>
                       setReminderForm((prev) => ({
@@ -3288,7 +3318,7 @@ export default function ProjectPage() {
                     disabled={createReminderMutation.isPending}
                     className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
                   >
-                    Add
+                    Schedule reminder
                   </button>
                 </form>
                 <div className="mt-4 space-y-3">
@@ -3328,14 +3358,13 @@ export default function ProjectPage() {
                           }
                           className="text-xs font-semibold text-sky-600 hover:text-sky-500"
                         >
-                          {reminder.completed ? 'Reopen' : 'Mark done'}
+                          {reminder.completed ? 'Reopen' : 'Mark complete'}
                         </button>
                       </div>
                     ))
                   ) : (
                     <p className="text-sm text-slate-500">
-                      No reminders yet. Schedule nudges to keep the project on
-                      track.
+                      No reminders yet. Add one when something needs attention later.
                     </p>
                   )}
                 </div>

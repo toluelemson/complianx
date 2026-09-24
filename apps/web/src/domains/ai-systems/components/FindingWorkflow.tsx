@@ -19,6 +19,25 @@ const nextStates: Record<string, string[]> = {
   RESOLVED: ['REOPENED'],
   ACCEPTED_RISK: ['REOPENED'],
 };
+
+const findingActionLabel = (status: string) =>
+  ({
+    ACKNOWLEDGED: 'Acknowledge problem',
+    IN_REMEDIATION: 'Start fixing',
+    READY_FOR_REVIEW: 'Ask for review',
+    RESOLVED: 'Mark as fixed',
+    ACCEPTED_RISK: 'Accept risk',
+    REOPENED: 'Reopen problem',
+  })[status] ?? status.replaceAll('_', ' ').toLowerCase();
+
+const actionStatusLabel = (status: string) =>
+  ({
+    OPEN: 'Not started',
+    IN_PROGRESS: 'In progress',
+    READY_FOR_REVIEW: 'Waiting for review',
+    COMPLETED: 'Complete',
+    DONE: 'Complete',
+  })[status] ?? status.replaceAll('_', ' ').toLowerCase();
 export function FindingWorkflow({
   projectId,
   finding,
@@ -88,11 +107,11 @@ export function FindingWorkflow({
   );
   return (
     <details className="w-full space-y-3">
-      <summary>Manage finding</summary>
+      <summary>Manage this problem</summary>
       {!closed ? (
         <>
           <label className="block">
-            Resolution summary
+            How it was fixed
             <textarea
               value={summary}
               onChange={(event) => setSummary(event.target.value)}
@@ -101,7 +120,7 @@ export function FindingWorkflow({
           </label>
           {canReview && finding.status === 'READY_FOR_REVIEW' ? (
             <label className="block">
-              Reviewer decision
+              Reviewer’s decision
               <textarea
                 value={decision}
                 onChange={(event) => setDecision(event.target.value)}
@@ -112,7 +131,7 @@ export function FindingWorkflow({
           {finding.obligationId ? (
             <>
               <label className="block">
-                Remediation action
+                Action to fix it
                 <input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
@@ -123,10 +142,10 @@ export function FindingWorkflow({
                 disabled={mutation.isPending || !title.trim()}
                 onClick={() => mutation.mutate({ create: true })}
               >
-                Add action
+                Add a fix
               </button>
               <label className="block">
-                Closure evidence
+                Proof the fix worked
                 <select
                   value={evidenceId}
                   onChange={(event) => setEvidenceId(event.target.value)}
@@ -145,7 +164,7 @@ export function FindingWorkflow({
                 </select>
               </label>
               <label className="block">
-                Closure notes
+                Notes about the fix
                 <textarea
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
@@ -154,7 +173,7 @@ export function FindingWorkflow({
               </label>
               {finding.actions.map((action) => (
                 <div key={action.id}>
-                  {action.title} · {action.status.replaceAll('_', ' ')}{' '}
+                  {action.title} · {actionStatusLabel(action.status)}{' '}
                   {!['DONE', 'COMPLETED', 'READY_FOR_REVIEW'].includes(
                     action.status,
                   ) ? (
@@ -169,7 +188,7 @@ export function FindingWorkflow({
                         })
                       }
                     >
-                      Submit action for review
+                      Ask for a review
                     </button>
                   ) : null}
                   {action.status === 'READY_FOR_REVIEW' && canReview ? (
@@ -182,7 +201,7 @@ export function FindingWorkflow({
                         })
                       }
                     >
-                      Approve remediation
+                      Approve fix
                     </button>
                   ) : null}
                 </div>
@@ -190,8 +209,7 @@ export function FindingWorkflow({
             </>
           ) : (
             <p>
-              Associate remediation with an obligation before requesting
-              closure.
+              Link this problem to a requirement before closing it.
             </p>
           )}
         </>
@@ -211,7 +229,7 @@ export function FindingWorkflow({
             }
             onClick={() => mutation.mutate({ status })}
           >
-            {status.replaceAll('_', ' ')}
+            {findingActionLabel(status)}
           </button>
         ))}
       </div>

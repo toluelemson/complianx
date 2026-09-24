@@ -8,11 +8,18 @@ import { useAuth } from '@/app/providers/AuthContext';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Select } from '@/shared/components/ui/select';
 
-const ROLE_OPTIONS: Array<'USER' | 'REVIEWER' | 'ADMIN'> = [
-  'USER',
-  'REVIEWER',
-  'ADMIN',
-];
+const ROLE_OPTIONS = [
+  { value: 'USER', label: 'Member' },
+  { value: 'REVIEWER', label: 'Reviewer' },
+  { value: 'ADMIN', label: 'Admin' },
+] as const;
+
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  USER: 'Works on assigned tasks.',
+  REVIEWER: 'Can review work and request changes.',
+  ADMIN: 'Can manage the workspace and team access.',
+  COMPANY_ADMIN: 'Can manage the workspace and team access.',
+};
 
 export default function RoleManagerPage() {
   const { user } = useAuth();
@@ -43,9 +50,9 @@ export default function RoleManagerPage() {
   }
 
   return (
-    <AppShell title="Role Management">
+    <AppShell title="Team roles">
       <p className="text-sm text-slate-600">
-        Grant reviewer or admin roles to members who handle approvals.
+        Choose who can work on tasks, review work, or manage this workspace.
       </p>
       <Card className="mt-6 rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
         <CardContent className="p-0">
@@ -53,7 +60,7 @@ export default function RoleManagerPage() {
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-6 py-3 font-medium">Email</th>
-                <th className="px-6 py-3 font-medium">Role</th>
+                <th className="px-6 py-3 font-medium">Access</th>
               </tr>
             </thead>
             <tbody>
@@ -73,11 +80,14 @@ export default function RoleManagerPage() {
                       disabled={mutation.isPending}
                     >
                       {ROLE_OPTIONS.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
+                        <option key={role.value} value={role.value}>
+                          {role.label}
                         </option>
                       ))}
                     </Select>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {ROLE_DESCRIPTIONS[member.role] ?? 'Workspace access.'}
+                    </p>
                   </td>
                 </tr>
               ))}

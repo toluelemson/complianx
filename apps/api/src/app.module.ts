@@ -19,8 +19,10 @@ import { ContactModule } from './domains/marketing/contact.module';
 import { ReviewApprovalModule } from './domains/review-approval/review-approval.module';
 import { AuditModule } from './domains/audit/audit.module';
 import { validateEnvironment } from './platform/config/environment';
+import { HealthController } from './platform/health.controller';
 
 @Module({
+  controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     ThrottlerModule.forRootAsync({

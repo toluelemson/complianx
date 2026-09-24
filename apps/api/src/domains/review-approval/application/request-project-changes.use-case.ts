@@ -27,7 +27,7 @@ export class RequestProjectChangesUseCase {
   }) {
     if (!params.note?.trim()) {
       throw new IncompleteAssessmentError(
-        'Reason is required when requesting changes',
+        'Add a note explaining what needs to change.',
       );
     }
     const context = await this.context.loadProjectContext(

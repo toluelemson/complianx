@@ -4,7 +4,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import ProjectProfilePage from './ProjectProfilePage';
-import { getOrganizationProfile, updateOrganizationProfile } from '../api';
+import {
+  getOrganizationProfile,
+  updateOrganizationProfile,
+  updateProject,
+} from '../api';
 
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({
@@ -54,6 +58,7 @@ beforeEach(() => {
     contactEmail: '',
   });
   vi.mocked(updateOrganizationProfile).mockResolvedValue({});
+  vi.mocked(updateProject).mockResolvedValue({} as never);
 });
 
 describe('Organization profile', () => {
@@ -120,5 +125,43 @@ describe('Organization profile', () => {
     expect(
       await screen.findByRole('textbox', { name: 'Legal name' }),
     ).toHaveValue('Saved company');
+  });
+});
+
+describe('AI system profile', () => {
+  it('saves clear system details to the current project', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/projects/project/ai-system-profile']}>
+          <Routes>
+            <Route
+              path="/projects/:projectId/:profileKey"
+              element={<ProjectProfilePage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const purpose = await screen.findByRole('textbox', {
+      name: 'What it does',
+    });
+    fireEvent.change(purpose, {
+      target: { value: 'Summarises customer-support calls for an agent.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
+
+    await waitFor(() =>
+      expect(updateProject).toHaveBeenCalledWith(
+        'project',
+        expect.objectContaining({
+          name: 'Project',
+          intendedUse: 'Summarises customer-support calls for an agent.',
+        }),
+      ),
+    );
   });
 });

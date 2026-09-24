@@ -5,6 +5,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import BillingModal from './BillingModal';
 import api from '@/platform/api/client';
 
+const authState = vi.hoisted(() => ({ role: 'ADMIN' }));
+
+vi.mock('@/app/providers/AuthContext', () => ({
+  useAuth: () => ({
+    activeCompanyId: 'company-1',
+    user: {
+      companies: [{ companyId: 'company-1', role: authState.role }],
+    },
+  }),
+}));
+
 vi.mock('@/platform/api/client', () => {
   return {
     __esModule: true,
@@ -29,6 +40,7 @@ function renderModal() {
 describe('BillingModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authState.role = 'ADMIN';
     (api.get as unknown as Mock).mockImplementation((path: string) => {
       if (path === '/billing/plan') {
         return Promise.resolve({
@@ -93,5 +105,20 @@ describe('BillingModal', () => {
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith('/billing/portal'),
     );
+  });
+
+  it('shows plan details but hides billing changes from ordinary members', async () => {
+    authState.role = 'USER';
+    renderModal();
+
+    expect(await screen.findByText('FREE')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Only a company administrator can change the plan or payment settings.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Upgrade to Pro/i }),
+    ).not.toBeInTheDocument();
   });
 });

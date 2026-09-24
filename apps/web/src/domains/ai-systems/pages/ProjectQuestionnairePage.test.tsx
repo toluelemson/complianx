@@ -28,6 +28,7 @@ vi.mock('../api', async () => {
   return {
     ...actual,
     getPreliminaryClassification: vi.fn(),
+    getProject: vi.fn(),
     listAssessmentAnswers: vi.fn(),
     listProjectObligations: vi.fn(),
     createProjectAssessment: vi.fn(),
@@ -59,6 +60,15 @@ beforeEach(() => {
       summary_sentence: 'The answers indicate a likely high-risk use.',
     },
   });
+  mockedApi.getProject.mockResolvedValue({
+    id: 'project-1',
+    name: 'Assessment test',
+    viewerRole: 'OWNER',
+    sections: [],
+    documents: [],
+    deploymentGeography: 'European Union',
+    operatorRoles: ['provider'],
+  } as never);
   mockedApi.listAssessmentAnswers.mockResolvedValue([]);
   mockedApi.listProjectObligations.mockResolvedValue([
     { id: 'one', approvalState: 'DRAFT' },
@@ -95,7 +105,7 @@ describe('EU AI Act onboarding result', () => {
     expect(screen.getByText(/not legal advice/i)).toBeVisible();
     expect(
       screen.getByRole('link', { name: 'Continue compliance setup' }),
-    ).toHaveAttribute('href', '/projects/project-1#requirements');
+    ).toHaveAttribute('href', '/projects/project-1/requirements');
     expect(mockedApi.createProjectAssessment).not.toHaveBeenCalled();
   });
 });

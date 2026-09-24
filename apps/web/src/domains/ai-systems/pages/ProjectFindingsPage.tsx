@@ -76,50 +76,58 @@ export default function ProjectFindingsPage() {
             Findings &amp; actions
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Track gaps, ownership, and remediation without hiding unresolved
-            work.
+            Track problems, who owns them, and what needs fixing. Open work
+            stays visible until it is reviewed.
           </p>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">
-            Add a finding
+            Record a problem
           </h2>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <select
-              aria-label="Related obligation"
-              value={obligationId}
-              onChange={(event) => setObligationId(event.target.value)}
-            >
-              <option value="">No obligation</option>
-              {(obligations.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.obligation.title}
-                </option>
-              ))}
-            </select>
+          <div className="mt-4 space-y-3">
             <label className="sr-only" htmlFor="finding-description">
-              Finding description
+              Problem description
             </label>
-            <input
-              id="finding-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Describe the gap or review issue"
-              className="min-h-10 flex-1 rounded-lg border border-slate-300 px-3 text-sm"
-            />
-            <button
-              type="button"
-              disabled={!canEdit || !description.trim() || create.isPending}
-              onClick={() => create.mutate()}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {create.isPending ? 'Adding…' : 'Add finding'}
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                id="finding-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Describe the problem and what needs fixing"
+                className="min-h-10 flex-1 rounded-lg border border-slate-300 px-3 text-sm"
+              />
+              <button
+                type="button"
+                disabled={!canEdit || !description.trim() || create.isPending}
+                onClick={() => create.mutate()}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {create.isPending ? 'Adding…' : 'Add problem'}
+              </button>
+            </div>
+            <details className="text-sm text-slate-600">
+              <summary className="cursor-pointer">
+                Link a requirement (optional)
+              </summary>
+              <select
+                aria-label="Related obligation"
+                value={obligationId}
+                onChange={(event) => setObligationId(event.target.value)}
+                className="mt-2 w-full max-w-lg rounded-lg border border-slate-300 px-3 py-2"
+              >
+                <option value="">No requirement selected</option>
+                {(obligations.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.obligation.title}
+                  </option>
+                ))}
+              </select>
+            </details>
           </div>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">
-            Open findings
+            Problems to fix
           </h2>
           {findings.isLoading ? <p>Loading findings…</p> : null}
           {findings.isError ? (

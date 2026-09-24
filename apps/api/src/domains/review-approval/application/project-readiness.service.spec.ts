@@ -67,4 +67,58 @@ describe('ProjectReadinessService approval readiness', () => {
       service.assertReadyForApproval(project([SectionWorkflowStatus.APPROVED])),
     ).rejects.toThrow('Blocking comments must be resolved first');
   });
+
+  it('does not block submission because of an extra evidence section', async () => {
+    const requiredContent = {
+      system_overview: {
+        purpose: 'Help staff',
+        intendedUsers: 'Support staff',
+        deploymentContext: 'Internal tool',
+      },
+      model_info: {
+        modelType: 'Classifier',
+        trainingData: 'Reviewed data',
+        metrics: 'Accuracy',
+      },
+      data_governance: {
+        dataSources: 'Customer records',
+        qualityChecks: 'Monthly checks',
+        privacy: 'Access controls',
+      },
+      risk_assessment: {
+        risks: 'Incorrect advice',
+        likelihood: 'Low',
+        impact: 'Medium',
+      },
+      human_oversight: {
+        roles: 'Support lead',
+        escalations: 'Escalate urgent cases',
+      },
+      monitoring: {
+        monitoringPlan: 'Weekly review',
+        maintenance: 'Monthly updates',
+      },
+    };
+    const submissionProject = {
+      ...project([SectionWorkflowStatus.APPROVED]),
+      sections: [
+        ...Object.entries(requiredContent).map(([name, content]) => ({
+          id: name,
+          name,
+          content,
+          workflowStatus: SectionWorkflowStatus.DRAFT,
+        })),
+        {
+          id: 'evidence',
+          name: 'Evidence',
+          content: null,
+          workflowStatus: SectionWorkflowStatus.DRAFT,
+        },
+      ],
+    };
+
+    await expect(
+      service.assertReadyForSubmission(submissionProject),
+    ).resolves.toBeUndefined();
+  });
 });

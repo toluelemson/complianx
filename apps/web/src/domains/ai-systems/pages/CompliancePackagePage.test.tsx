@@ -153,7 +153,7 @@ describe('Saved package download', () => {
     );
 
     const createButton = await screen.findByRole('button', {
-      name: 'Create finalized package',
+      name: 'Create package',
     });
     await waitFor(() => expect(createButton).toBeEnabled());
     fireEvent.click(createButton);
@@ -161,8 +161,11 @@ describe('Saved package download', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Package cannot be finalized yet',
+        name: 'This package is not ready yet',
       }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('A person must check the work first'),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Classification requires human review'),

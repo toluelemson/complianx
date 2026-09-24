@@ -21,6 +21,9 @@ export function useProjectAutosave(
   const pendingSectionRef = useRef<{ id: string; content: FormValues } | null>(
     null,
   );
+  // A section change can render more than once with the previous form values.
+  // Wait until the new section's values have loaded before allowing autosave.
+  const expectedInitialSnapshotRef = useRef<string | null>(null);
   const dirtyRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestVersionRef = useRef(0);
@@ -73,7 +76,13 @@ export function useProjectAutosave(
   useEffect(() => {
     return () => {
       const pending = pendingSectionRef.current;
-      if (dirtyRef.current && pending) void save(pending.id, pending.content);
+      if (
+        dirtyRef.current &&
+        pending &&
+        expectedInitialSnapshotRef.current === null
+      ) {
+        void save(pending.id, pending.content);
+      }
     };
   }, [save, sectionId]);
 
@@ -92,6 +101,7 @@ export function useProjectAutosave(
     baselineRef.current = snapshotOf(currentSection?.content);
     latestSnapshotRef.current = snapshotOf(formValues);
     dirtyRef.current = false;
+    expectedInitialSnapshotRef.current = baselineRef.current;
     pendingSectionRef.current = sectionId
       ? { id: sectionId, content: formValues }
       : null;
@@ -124,6 +134,12 @@ export function useProjectAutosave(
     if (!isFormStep || !sectionId) return;
     const snapshot = snapshotOf(formValues);
     latestSnapshotRef.current = snapshot;
+    if (expectedInitialSnapshotRef.current !== null) {
+      if (snapshot === expectedInitialSnapshotRef.current) {
+        expectedInitialSnapshotRef.current = null;
+      }
+      return;
+    }
     if (snapshot === baselineRef.current) {
       dirtyRef.current = false;
       return;

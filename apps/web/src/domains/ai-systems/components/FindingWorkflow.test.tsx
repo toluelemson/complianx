@@ -42,23 +42,25 @@ beforeEach(() => vi.clearAllMocks());
 describe('Finding workflow', () => {
   it('hides mutation controls from ordinary members', () => {
     show(false, false);
-    expect(screen.queryByText('Manage finding')).not.toBeInTheDocument();
+    expect(screen.queryByText('Manage this problem')).not.toBeInTheDocument();
   });
   it('hides reviewer decisions from owners', () => {
     show(true, false);
-    fireEvent.click(screen.getByText('Manage finding'));
+    fireEvent.click(screen.getByText('Manage this problem'));
     expect(
-      screen.queryByRole('button', { name: 'RESOLVED' }),
+      screen.queryByRole('button', { name: 'Mark as fixed' }),
     ).not.toBeInTheDocument();
   });
   it('requires a decision and sends it with the resolution summary', async () => {
     show();
-    fireEvent.click(screen.getByText('Manage finding'));
-    expect(screen.getByRole('button', { name: 'RESOLVED' })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Reviewer decision'), {
+    fireEvent.click(screen.getByText('Manage this problem'));
+    expect(
+      screen.getByRole('button', { name: 'Mark as fixed' }),
+    ).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Reviewer’s decision'), {
       target: { value: 'Evidence verified' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'RESOLVED' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as fixed' }));
     await waitFor(() =>
       expect(updateProjectFinding).toHaveBeenCalledWith('project', 'finding', {
         status: 'RESOLVED',

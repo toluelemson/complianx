@@ -102,7 +102,9 @@ export default function CompanyPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
       setInviteEmail('');
+      toast.success('Invitation created. Copy the link below to share it.');
     },
+    onError: () => toast.error('Unable to create the invitation. Try again.'),
   });
 
   const createCompanyMutation = useMutation({
@@ -219,11 +221,7 @@ export default function CompanyPage() {
         <>
           <Card className="rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
             <CardContent className="p-6">
-              <p className="text-sm text-slate-500">Company ID</p>
-              <p className="text-lg font-semibold text-slate-900">
-                {company?.id}
-              </p>
-              <p className="mt-4 text-sm text-slate-500">Company Name</p>
+              <p className="text-sm text-slate-500">Company name</p>
               <p className="text-lg font-semibold text-slate-900">
                 {company?.name}
               </p>
@@ -261,6 +259,9 @@ export default function CompanyPage() {
                 <p className="sm:col-span-2 text-sm font-semibold text-slate-900">
                   Organization profile
                 </p>
+                <p className="-mt-1 sm:col-span-2 text-sm text-slate-500">
+                  Add only the details that help describe your organization. All fields are optional.
+                </p>
                 {([
                   ['legalName', 'Legal name'],
                   ['website', 'Website'],
@@ -268,7 +269,10 @@ export default function CompanyPage() {
                   ['contactEmail', 'Contact email'],
                 ] as const).map(([key, label]) => (
                   <label key={key} className="text-xs font-semibold text-slate-500">
-                    {label}
+                    <span className="flex items-center justify-between gap-2">
+                      {label}
+                      <span className="font-normal text-slate-400">Optional</span>
+                    </span>
                     <Input
                       value={profile[key]}
                       onChange={(event) => setProfile((current) => ({ ...current, [key]: event.target.value }))}
@@ -278,7 +282,10 @@ export default function CompanyPage() {
                   </label>
                 ))}
                 <label className="sm:col-span-2 text-xs font-semibold text-slate-500">
-                  Address
+                  <span className="flex items-center justify-between gap-2">
+                    Address
+                    <span className="font-normal text-slate-400">Optional</span>
+                  </span>
                   <Input
                     value={profile.address}
                     onChange={(event) => setProfile((current) => ({ ...current, address: event.target.value }))}
@@ -446,7 +453,10 @@ export default function CompanyPage() {
           {isCompanyAdmin && (
             <Panel className="mt-6">
               <p className="text-sm font-semibold text-slate-900">
-                Invitations
+                Invite a teammate
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                They will get a link to join this workspace as a member. You can manage roles after they join.
               </p>
               <form
                 className="mt-4 flex gap-3"
@@ -456,7 +466,13 @@ export default function CompanyPage() {
                   inviteMutation.mutate({ email: inviteEmail.trim() });
                 }}
               >
+                <label className="sr-only" htmlFor="invite-email">
+                  Teammate email address
+                </label>
                 <input
+                  id="invite-email"
+                  type="email"
+                  required
                   value={inviteEmail}
                   onChange={(event) => setInviteEmail(event.target.value)}
                   placeholder="new.member@example.com"

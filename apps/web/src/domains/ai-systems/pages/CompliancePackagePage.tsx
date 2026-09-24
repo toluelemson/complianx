@@ -46,7 +46,7 @@ export default function CompliancePackagePage() {
       void queryClient.invalidateQueries({
         queryKey: ['compliance-packages', projectId, activeCompanyId],
       });
-      toast.success('Compliance package snapshot created');
+      toast.success('Package created and saved in the history below');
     },
     onError: (error) => {
       const failure = getPackageReadinessFailure(error);
@@ -144,7 +144,7 @@ export default function CompliancePackagePage() {
   };
 
   return (
-    <AppShell title="Compliance package" projectId={projectId}>
+    <AppShell title="Audit package" projectId={projectId}>
       <div className="hz-console-content space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -155,11 +155,11 @@ export default function CompliancePackagePage() {
               ← Back to project
             </Link>
             <h1 className="mt-3 text-2xl font-semibold text-slate-900">
-              {projectQuery.data?.name ?? 'Compliance package'}
+              {projectQuery.data?.name ?? 'Audit package'}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Finalized proof of the evidence and human decisions recorded for
-              this AI system.
+              The export-ready record of approved evidence and human decisions
+              for this AI system.
             </p>
           </div>
           <button
@@ -169,16 +169,17 @@ export default function CompliancePackagePage() {
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
           >
             {createPackageMutation.isPending
-              ? 'Finalizing…'
-              : 'Create finalized package'}
+              ? 'Creating package…'
+              : 'Create package'}
           </button>
         </div>
         <section className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
-          <p className="font-semibold">Human approval is required</p>
+          <p className="font-semibold">A person must check the work first</p>
           <p className="mt-1 text-sky-800">
-            AI suggestions and draft documents cannot finalize a package. The
-            classification, evidence, requirements, documents, and project must
-            have their required human decisions recorded first.
+            AI suggestions and draft documents are not enough on their own.
+            Someone must record the required decisions for the classification,
+            evidence, requirements, documents, and this project before a
+            package can be created.
           </p>
         </section>
         {packageGaps.length ? (
@@ -187,11 +188,10 @@ export default function CompliancePackagePage() {
             className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950"
           >
             <h2 id="package-readiness-heading" className="font-semibold">
-              Package cannot be finalized yet
+              This package is not ready yet
             </h2>
             <p className="mt-1 text-amber-900">
-              Complete these recorded human decisions, then create the package
-              again.
+              Complete these decisions, then try again.
             </p>
             <ul className="mt-4 space-y-3">
               {packageGaps.map((gap, index) => {
@@ -270,15 +270,15 @@ export default function CompliancePackagePage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">
-              Manifest history
+              Package history
             </h2>
             <span className="text-sm text-slate-500">
-              {packagesQuery.data?.length ?? 0} snapshots
+              {packagesQuery.data?.length ?? 0} saved packages
             </span>
           </div>
           {packagesQuery.isError ? (
             <button onClick={() => void packagesQuery.refetch()}>
-              Unable to load package history. Retry
+              Could not load package history. Try again
             </button>
           ) : null}
           <div className="mt-4 divide-y divide-slate-100">
@@ -336,45 +336,15 @@ export default function CompliancePackagePage() {
             ))}
             {!packagesQuery.data?.length ? (
               <p className="py-4 text-sm text-slate-500">
-                No manifest snapshots created yet.
+                No packages created yet.
               </p>
             ) : null}
           </div>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Package version history
-          </h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {Array.from(
-              (documentsQuery.data ?? []).reduce((groups, document) => {
-                const versions = groups.get(document.type) ?? [];
-                versions.push(document.version ?? 1);
-                groups.set(document.type, versions);
-                return groups;
-              }, new Map<string, number[]>()),
-            ).map(([type, versions]) => (
-              <div
-                key={type}
-                className="rounded-xl border border-slate-100 p-4"
-              >
-                <p className="text-sm font-medium text-slate-900">
-                  {DOCUMENT_LABELS[type] ?? type}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Versions{' '}
-                  {Array.from(new Set(versions))
-                    .sort((a, b) => b - a)
-                    .join(', ')}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">
-              Preparation summary
+              Ready to package
             </h2>
             <span className="text-sm text-slate-500">
               {obligationsQuery.data?.filter(
@@ -389,7 +359,7 @@ export default function CompliancePackagePage() {
               value={String(obligationsQuery.data?.length ?? 0)}
             />
             <Summary
-              label="Needs approval"
+              label="Still needs a decision"
               value={String(
                 obligationsQuery.data?.filter(
                   (item) => item.approvalState !== 'APPROVED',

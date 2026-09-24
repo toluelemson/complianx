@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/platform/api/client';
@@ -17,6 +17,9 @@ interface Notification {
   body: string;
   createdAt: string;
   read?: boolean;
+  readAt?: string | null;
+  type?: string;
+  meta?: { projectId?: string } | null;
 }
 
 interface AppShellProps {
@@ -33,6 +36,7 @@ export function AppShell({
   projectId,
 }: AppShellProps) {
   const { logout, user, activeCompanyId, setActiveCompany } = useAuth();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const countQuery = useQuery<{ count: number }>({
     queryKey: ['notifications', 'count'],
@@ -70,16 +74,9 @@ export function AppShell({
   const unread = countQuery.data?.count ?? 0;
   const [billingOpen, setBillingOpen] = useState(initialBillingOpen);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [rememberedProjectId] = useState(() => {
-    try {
-      return window.localStorage.getItem('neuraldocx:last-project-id');
-    } catch {
-      return null;
-    }
-  });
   const [projectToolsOpen, setProjectToolsOpen] = useState(true);
   const location = useLocation();
-  const activeProjectId = projectId ?? rememberedProjectId;
+  const activeProjectId = projectId;
   const projectToolRoute = [
     '/organization-profile',
     '/ai-system-profile',
@@ -89,14 +86,6 @@ export function AppShell({
   ].some((suffix) => location.pathname.endsWith(suffix));
   const projectToolsExpanded = projectToolsOpen || projectToolRoute;
 
-  useEffect(() => {
-    if (!projectId) return;
-    try {
-      window.localStorage.setItem('neuraldocx:last-project-id', projectId);
-    } catch {
-      // Some browser contexts block storage; the in-memory value still works.
-    }
-  }, [projectId]);
   useEffect(() => {
     const handler = (event: Event) => {
       if (event.type === 'paywall') {
@@ -110,7 +99,7 @@ export function AppShell({
     const primary = [
       { label: 'Dashboard', to: '/dashboard', show: true },
       { label: 'Reviews', to: '/reviews', show: true },
-      { label: 'Documents', to: '/documents', show: true },
+      { label: 'Document library', to: '/documents', show: true },
       { label: 'Organization', to: '/company', show: Boolean(user) },
       { label: 'Settings', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
@@ -156,34 +145,29 @@ export function AppShell({
             to: `/projects/${activeProjectId}/review-approval`,
             show: true,
           },
+          {
+            label: 'Audit package',
+            to: `/projects/${activeProjectId}/compliance-package`,
+            show: true,
+          },
         ],
       });
       sections.push({
         title: 'Project tools',
         links: [
           {
-            label: 'Organization profile',
-            to: `/projects/${activeProjectId}/organization-profile`,
-            show: true,
-          },
-          {
             label: 'AI system profile',
             to: `/projects/${activeProjectId}/ai-system-profile`,
             show: true,
           },
           {
-            label: 'Guided assessment',
+            label: 'Documentation workspace',
             to: `/projects/${activeProjectId}/compliance-workspace`,
             show: true,
           },
           {
             label: 'Messages',
             to: `/projects/${activeProjectId}/messages`,
-            show: true,
-          },
-          {
-            label: 'Compliance package',
-            to: `/projects/${activeProjectId}/compliance-package`,
             show: true,
           },
         ],
@@ -319,9 +303,12 @@ export function AppShell({
             </div>
             <div className="mt-2 space-y-2">
               {listQuery.data?.length ? (
-                listQuery.data.map((n) => (
-                  <Card key={n.id} className="rounded-xl shadow-none">
-                    <CardContent className="px-3 py-2">
+                listQuery.data.map((n) => {
+                  const isRead = Boolean(n.readAt ?? n.read);
+                  const destination = getNotificationDestination(n);
+                  return (
+                    <Card key={n.id} className="rounded-xl shadow-none">
+                      <CardContent className="px-3 py-2">
                       <p className="text-sm font-medium text-slate-900">
                         {n.title}
                       </p>
@@ -329,8 +316,26 @@ export function AppShell({
                       <p className="text-[11px] text-slate-400">
                         {new Date(n.createdAt).toLocaleString()}
                       </p>
-                      <div className="mt-2 flex justify-end">
-                        {n.read ? (
+                      <div className="mt-2 flex justify-end gap-2">
+                        {destination ? (
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              if (!isRead) {
+                                setMarkingId(n.id);
+                                markSingleMutation.mutate(n.id);
+                              }
+                              navigate(destination);
+                              setOpen(false);
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                          >
+                            Open
+                          </Button>
+                        ) : null}
+                        {isRead ? (
                           <span className="text-[11px] font-semibold text-slate-400">
                             Read
                           </span>
@@ -354,9 +359,10 @@ export function AppShell({
                           </Button>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
+                      </CardContent>
+                    </Card>
+                  );
+                })
               ) : (
                 <p className="text-sm text-slate-500">No new notifications.</p>
               )}
@@ -368,7 +374,7 @@ export function AppShell({
                 size="sm"
                 className="h-8 px-2 text-xs font-semibold text-sky-600 hover:text-sky-500"
               >
-                Mark all read
+                Mark all as read
               </Button>
               <Button
                 onClick={() => setOpen(false)}
@@ -553,4 +559,12 @@ export function AppShell({
       </div>
     </div>
   );
+}
+
+function getNotificationDestination(notification: Notification) {
+  if (notification.meta?.projectId) {
+    return `/projects/${notification.meta.projectId}`;
+  }
+  if (notification.type === 'role_request') return '/company';
+  return null;
 }

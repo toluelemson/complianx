@@ -17,6 +17,7 @@ import {
 import {
   buildProjectAttention,
   type AttentionCategory,
+  type AttentionItem,
 } from '../lib/project-attention';
 
 const categoryStyle: Record<AttentionCategory, string> = {
@@ -128,6 +129,71 @@ export default function ProjectOverviewPage() {
   const actionCount = attention.items.filter(
     (item) => item.category === 'ACTION_REQUIRED',
   ).length;
+  const priorityItems = attention.items.filter(
+    (item) => item.category !== 'WAITING',
+  );
+  const waitingItems = attention.items.filter(
+    (item) => item.category === 'WAITING',
+  );
+  const missingEvidence = requirements
+    .filter(
+      (requirement) =>
+        (evidenceByRequirement[requirement.id] as unknown[] | undefined)
+          ?.length === 0,
+    )
+    .slice(0, 5);
+  const unassignedRequirements = requirements
+    .filter((requirement) => !requirement.owner)
+    .slice(0, 5);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueSoon = new Date(today);
+  dueSoon.setDate(dueSoon.getDate() + 14);
+  const datedRequirements = requirements
+    .filter((requirement) => requirement.dueAt)
+    .map((requirement) => ({
+      requirement,
+      dueAt: new Date(requirement.dueAt!),
+    }))
+    .filter(({ dueAt }) => dueAt <= dueSoon)
+    .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())
+    .slice(0, 5);
+  const milestones = [
+    {
+      label: 'Classified',
+      complete: Boolean(classificationQuery.data),
+      detail: 'Preliminary EU AI Act mapping recorded',
+    },
+    {
+      label: 'Requirements assigned',
+      complete:
+        requirements.length > 0 && requirements.every((item) => item.owner),
+      detail: 'Each applicable requirement has an owner',
+    },
+    {
+      label: 'Evidence linked',
+      complete:
+        requirements.length > 0 &&
+        requirements.every(
+          (item) =>
+            (evidenceByRequirement[item.id] as unknown[] | undefined)
+              ?.length,
+        ),
+      detail: 'Each applicable requirement has supporting proof',
+    },
+    {
+      label: 'Ready for review',
+      complete: ['IN_REVIEW', 'APPROVED'].includes(
+        projectQuery.data?.workflowStatus ?? '',
+      ),
+      detail: 'Submitted for human verification',
+    },
+    {
+      label: 'Audit package ready',
+      complete: (documentsQuery.data?.length ?? 0) > 0,
+      detail: 'A compliance package has been generated',
+    },
+  ];
 
   return (
     <AppShell
@@ -177,10 +243,161 @@ export default function ProjectOverviewPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Compliance milestones
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Follow these stages instead of relying on a percentage alone.
+          </p>
+          <ol className="mt-5 grid gap-3 md:grid-cols-5">
+            {milestones.map((milestone, index) => (
+              <li
+                key={milestone.label}
+                className={`rounded-xl border p-3 ${
+                  milestone.complete
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : 'border-slate-200 bg-slate-50'
+                }`}
+              >
+                <p className="text-xs font-bold text-slate-500">
+                  {milestone.complete ? 'COMPLETE' : `STEP ${index + 1}`}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {milestone.label}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  {milestone.detail}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {!loading && missingEvidence.length ? (
+          <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-sky-950">
+                  Evidence checklist
+                </h2>
+                <p className="mt-1 text-sm text-sky-900">
+                  These requirements need proof before they can move to review.
+                </p>
+              </div>
+              <Link
+                to={`/projects/${projectId}/evidence`}
+                className="rounded-lg bg-sky-800 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-900"
+              >
+                Upload evidence
+              </Link>
+            </div>
+            <ul className="mt-4 grid gap-2 md:grid-cols-2">
+              {missingEvidence.map((requirement) => (
+                <li
+                  key={requirement.id}
+                  className="rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <Link
+                    to={`/projects/${projectId}/requirements#requirement-${requirement.id}`}
+                    className="font-medium text-sky-800 hover:underline"
+                  >
+                    {requirement.obligation.title}
+                  </Link>
+                  <span className="ml-2 text-xs text-slate-500">
+                    No evidence linked
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {!loading && unassignedRequirements.length ? (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-amber-950">
+                  Ownership checklist
+                </h2>
+                <p className="mt-1 text-sm text-amber-900">
+                  Assign an accountable person before work is handed into review.
+                </p>
+              </div>
+              <Link
+                to={`/projects/${projectId}/requirements`}
+                className="rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900"
+              >
+                Assign owners
+              </Link>
+            </div>
+            <ul className="mt-4 grid gap-2 md:grid-cols-2">
+              {unassignedRequirements.map((requirement) => (
+                <li
+                  key={requirement.id}
+                  className="rounded-lg border border-amber-100 bg-white px-3 py-2 text-sm text-slate-700"
+                >
+                  <Link
+                    to={`/projects/${projectId}/requirements#requirement-${requirement.id}`}
+                    className="font-medium text-amber-900 hover:underline"
+                  >
+                    {requirement.obligation.title}
+                  </Link>
+                  <span className="ml-2 text-xs text-slate-500">
+                    Owner not assigned
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {!loading && datedRequirements.length ? (
+          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-rose-950">
+                  Due soon
+                </h2>
+                <p className="mt-1 text-sm text-rose-900">
+                  Overdue and next-14-day requirement deadlines.
+                </p>
+              </div>
+              <Link
+                to={`/projects/${projectId}/requirements`}
+                className="rounded-lg bg-rose-800 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-900"
+              >
+                Manage deadlines
+              </Link>
+            </div>
+            <ul className="mt-4 space-y-2">
+              {datedRequirements.map(({ requirement, dueAt }) => {
+                const overdue = dueAt < today;
+                return (
+                  <li
+                    key={requirement.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-100 bg-white px-3 py-2 text-sm"
+                  >
+                    <Link
+                      to={`/projects/${projectId}/requirements#requirement-${requirement.id}`}
+                      className="font-medium text-rose-950 hover:underline"
+                    >
+                      {requirement.obligation.title}
+                    </Link>
+                    <span className={overdue ? 'font-semibold text-rose-700' : 'text-rose-800'}>
+                      {overdue ? 'Overdue' : 'Due'} {dueAt.toLocaleDateString()}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">
-                What is missing?
+                Next to resolve
               </h2>
               <p className="mt-1 text-sm text-slate-500">
                 Prioritized from blocking issues through items waiting on a
@@ -195,30 +412,22 @@ export default function ProjectOverviewPage() {
             </Link>
           </div>
           <div className="mt-5 space-y-3">
-            {attention.items.map((item) => (
-              <article
-                key={`${item.category}-${item.entityType}-${item.entityId}`}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 p-4"
-              >
-                <div className="min-w-0 flex-1">
-                  <span
-                    className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${categoryStyle[item.category]}`}
-                  >
-                    {categoryLabel[item.category]}
-                  </span>
-                  <h3 className="mt-2 font-semibold text-slate-900">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-500">{item.detail}</p>
-                </div>
-                <Link
-                  to={item.href}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700"
-                >
-                  {item.actionLabel} →
-                </Link>
-              </article>
+            {priorityItems.map((item) => (
+              <AttentionItemCard key={itemKey(item)} item={item} />
             ))}
+            {waitingItems.length ? (
+              <details className="rounded-xl border border-slate-200 px-4 py-3">
+                <summary className="cursor-pointer text-sm font-medium text-slate-600">
+                  Show {waitingItems.length} item
+                  {waitingItems.length === 1 ? '' : 's'} awaiting review
+                </summary>
+                <div className="mt-3 space-y-3">
+                  {waitingItems.map((item) => (
+                    <AttentionItemCard key={itemKey(item)} item={item} />
+                  ))}
+                </div>
+              </details>
+            ) : null}
             {!loading && !attention.items.length ? (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
                 No missing or waiting items were found. The project can move to
@@ -229,6 +438,32 @@ export default function ProjectOverviewPage() {
         </section>
       </div>
     </AppShell>
+  );
+}
+
+function itemKey(item: AttentionItem) {
+  return `${item.category}-${item.entityType}-${item.entityId}`;
+}
+
+function AttentionItemCard({ item }: { item: AttentionItem }) {
+  return (
+    <article className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 p-4">
+      <div className="min-w-0 flex-1">
+        <span
+          className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${categoryStyle[item.category]}`}
+        >
+          {categoryLabel[item.category]}
+        </span>
+        <h3 className="mt-2 font-semibold text-slate-900">{item.title}</h3>
+        <p className="mt-1 text-sm text-slate-500">{item.detail}</p>
+      </div>
+      <Link
+        to={item.href}
+        className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700"
+      >
+        {item.actionLabel} →
+      </Link>
+    </article>
   );
 }
 
