@@ -716,22 +716,6 @@ export default function ProjectPage() {
       action: bulkAction,
     });
   };
-  const handleCopyToClipboard = async (
-    value: string,
-    successMessage: string,
-  ) => {
-    if (!navigator?.clipboard) {
-      toast.error('Clipboard unavailable');
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(value);
-      toast.success(successMessage);
-    } catch {
-      toast.error('Unable to copy value');
-    }
-  };
-
   const commentMutation = useMutation({
     mutationFn: (payload: {
       sectionId: string;
@@ -1287,7 +1271,7 @@ export default function ProjectPage() {
           <ProjectPanel>
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-semibold text-slate-600">
-                System workspace
+                Your project
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-800">
                 <span
@@ -1300,14 +1284,8 @@ export default function ProjectPage() {
               </span>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
-              <span>ID: {projectQuery.data?.id ?? '—'}</span>
               <span>
-                Organization:{' '}
-                {projectQuery.data?.companyId ?? 'Personal workspace'}
-              </span>
-              <span>Framework: EU AI Act</span>
-              <span>
-                Status:{' '}
+                Project status:{' '}
                 {(projectQuery.data?.workflowStatus ?? 'DRAFT').replaceAll(
                   '_',
                   ' ',
@@ -1324,33 +1302,30 @@ export default function ProjectPage() {
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Documentation readiness
+                  Progress
                 </p>
                 <p className="text-xl font-semibold text-slate-900">
                   {Math.round(completionRate)}%
                 </p>
                 <p className="text-xs text-slate-500">
-                  {completedCount} / {TRACKABLE_STEP_COUNT} control areas
-                  complete
+                  {completedCount} of {TRACKABLE_STEP_COUNT} sections complete
                 </p>
               </div>
               {classificationQuery.data ? (
                 <div className="sm:col-span-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-amber-900">
-                      Preliminary classification
+                      Classification
                     </p>
                     <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-amber-800">
-                      Human review required
+                      Needs review
                     </span>
                   </div>
                   <p
                     id="classification"
                     className="mt-1 text-sm text-amber-800"
                   >
-                    {classificationQuery.data.category.replaceAll('_', ' ')} ·
-                    pack{' '}
-                    {classificationQuery.data.regulatoryContentVersion ?? '—'}
+                    {classificationQuery.data.category.replaceAll('_', ' ')}
                   </p>
                   {classificationQuery.data.resultSnapshot?.missing_information
                     ?.length ? (
@@ -1894,7 +1869,7 @@ export default function ProjectPage() {
                   {aiSuggestion && (
                     <div className="mt-4 rounded-xl border border-dashed border-sky-200 bg-sky-50/60 p-3 text-sm text-slate-700">
                       <div className="flex items-center justify-between">
-                        <p className="font-semibold text-slate-900">AI Draft</p>
+                        <p className="font-semibold text-slate-900">Suggested text</p>
                         <button
                           className="text-xs text-slate-500 hover:text-slate-700"
                           onClick={() => setAiSuggestion(null)}
@@ -1936,7 +1911,7 @@ export default function ProjectPage() {
                                 disabled={suggestionMutation.isPending}
                                 className="text-xs font-semibold text-sky-600 hover:text-sky-500 disabled:opacity-60"
                               >
-                                Ask AI
+                                Suggest
                               </button>
                             ) : null}
                           </div>
@@ -2095,7 +2070,7 @@ export default function ProjectPage() {
                       <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Project evidence register
+                            Files for this project
                           </p>
                           <p className="text-xs text-slate-500">
                             {projectArtifacts.length} item
@@ -2183,7 +2158,7 @@ export default function ProjectPage() {
                           </div>
                           <details className="md:col-span-2">
                             <summary className="cursor-pointer rounded-md border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-500">
-                              Add provenance or classification details
+                              Add file details
                             </summary>
                             <div className="mt-2 grid gap-2 sm:grid-cols-2">
                               <input
@@ -2247,7 +2222,7 @@ export default function ProjectPage() {
                                 onChange={(event) =>
                                   setArtifactProvenanceNote(event.target.value)
                                 }
-                                placeholder="Provenance note"
+                                placeholder="Where this file came from (optional)"
                                 rows={2}
                                 disabled={!isOwner}
                                 className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50 sm:col-span-2"
@@ -2337,73 +2312,6 @@ export default function ProjectPage() {
                                           </span>
                                         </div>
                                       </div>
-                                      <details className="text-xs text-slate-500">
-                                        <summary className="cursor-pointer font-medium hover:text-slate-800">
-                                          Audit details
-                                        </summary>
-                                        <div className="mt-2 space-y-2 rounded-lg bg-white p-3">
-                                          <p>Version {artifact.version}</p>
-                                          <div className="flex flex-wrap items-center gap-3">
-                                            <span>
-                                              Citation:
-                                              <code className="ml-1 rounded bg-slate-50 px-1 py-0.5 text-[11px] text-slate-700">
-                                                {artifact.citationKey}
-                                              </code>
-                                            </span>
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                handleCopyToClipboard(
-                                                  artifact.citationKey,
-                                                  'Citation copied',
-                                                )
-                                              }
-                                              className="text-[11px] font-semibold text-sky-600 hover:text-sky-500"
-                                            >
-                                              Copy citation
-                                            </button>
-                                          </div>
-                                          <div className="flex flex-wrap items-center gap-3">
-                                            <span>
-                                              Checksum:
-                                              <code className="ml-1 rounded bg-slate-50 px-1 py-0.5 text-[11px] text-slate-700">
-                                                {artifact.checksum}
-                                              </code>
-                                            </span>
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                handleCopyToClipboard(
-                                                  artifact.checksum,
-                                                  'Checksum copied',
-                                                )
-                                              }
-                                              className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
-                                            >
-                                              Copy checksum
-                                            </button>
-                                          </div>
-                                          {artifact.previousArtifact ? (
-                                            <p>
-                                              Replaces{' '}
-                                              <span className="font-medium">
-                                                {
-                                                  artifact.previousArtifact
-                                                    .citationKey
-                                                }
-                                              </span>{' '}
-                                              (checksum{' '}
-                                              <code className="bg-slate-50 px-1 py-0.5 text-[10px] text-slate-700">
-                                                {
-                                                  artifact.previousArtifact
-                                                    .checksum
-                                                }
-                                              </code>
-                                              ).
-                                            </p>
-                                          ) : null}
-                                        </div>
-                                      </details>
                                       {artifact.reviewedBy?.email ? (
                                         <p className="text-[11px] text-slate-500">
                                           Reviewed by{' '}
@@ -2549,8 +2457,7 @@ export default function ProjectPage() {
                             )
                           ) : (
                             <p className="text-sm text-slate-500">
-                              No evidence uploaded yet. Add policies, risk logs,
-                              or evaluation files to keep auditors aligned.
+                              No files added yet. Add a file that supports this section.
                             </p>
                           )}
                         </div>
@@ -2576,7 +2483,7 @@ export default function ProjectPage() {
                       </div>
                       <details className="rounded-xl border border-dashed border-slate-200 px-3 py-2">
                         <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                          Status history
+                          Recent changes
                         </summary>
                         <div className="mt-2 space-y-1">
                           {currentSection.statusEvents?.length ? (
@@ -2764,10 +2671,9 @@ export default function ProjectPage() {
                   />
                   <details
                     className="rounded-2xl border border-slate-200 bg-white p-4"
-                    open
                   >
                     <summary className="cursor-pointer text-sm font-semibold text-slate-900">
-                      Project audit history
+                      Activity history
                     </summary>
                     <div className="mt-3 space-y-2">
                       {projectQuery.data?.statusEvents?.length ? (
@@ -2808,10 +2714,10 @@ export default function ProjectPage() {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">
-                          Framework coverage
+                          Documents to create
                         </p>
                         <p className="text-xs text-slate-500">
-                          Select which deliverables to create (
+                          Choose documents to create (
                           {selectedDocumentTypes.length}/
                           {DOCUMENT_GENERATION_OPTIONS.length} selected).
                         </p>
@@ -2888,7 +2794,7 @@ export default function ProjectPage() {
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-slate-900">
-                            Documentation readiness: {readinessQuery.data.score}
+                            Ready to create: {readinessQuery.data.score}
                             %
                           </p>
                           <p className="mt-1 text-sm text-slate-700">
@@ -2901,26 +2807,25 @@ export default function ProjectPage() {
                       </div>
                       {readinessQuery.data.missingCriticalFields.length ? (
                         <p className="mt-3 text-xs text-slate-600">
-                          Missing critical fields:{' '}
+                          Still needed:{' '}
                           {readinessQuery.data.missingCriticalFields.join(', ')}
                         </p>
                       ) : null}
                       {readinessQuery.data.weakSections.length ? (
                         <p className="mt-2 text-xs text-slate-600">
-                          Weak sections:{' '}
+                          Needs more detail:{' '}
                           {readinessQuery.data.weakSections.join(', ')}
                         </p>
                       ) : null}
                       {readinessQuery.data.status === 'partial' ? (
                         <p className="mt-2 text-xs font-medium text-amber-700">
-                          Generation is allowed, but the output will be treated
-                          as a draft with a readiness notice.
+                          You can create a draft now. Add the missing details
+                          before sharing it externally.
                         </p>
                       ) : null}
                       {readinessQuery.data.status === 'insufficient' ? (
                         <p className="mt-2 text-xs font-medium text-rose-700">
-                          Full document generation is blocked until the missing
-                          critical fields are filled in.
+                          Add the missing details before creating documents.
                         </p>
                       ) : null}
                     </div>
@@ -2967,7 +2872,7 @@ export default function ProjectPage() {
             <ProjectPanel>
               <div id="documents" className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">
-                  Deliverables
+                  Documents
                 </h3>
                 {documentsQuery.data?.length ? (
                   <div className="flex items-center gap-3">
@@ -3091,14 +2996,14 @@ export default function ProjectPage() {
                 <p className="mt-4 text-sm text-slate-500">
                   {documentsQuery.isLoading
                     ? 'Fetching documents...'
-                    : 'No documents yet. Generate them from the review step.'}
+                    : 'No documents yet. Choose documents to create above.'}
                 </p>
               )}
             </ProjectPanel>
 
             <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
               <summary className="cursor-pointer text-lg font-semibold text-slate-900">
-                Project intelligence
+                Project summary
               </summary>
               <div className="mt-4 grid gap-6 lg:grid-cols-2">
                 <ProjectPanel>
@@ -3108,7 +3013,7 @@ export default function ProjectPage() {
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div className="rounded-xl border border-slate-100 p-4">
                       <p className="text-xs uppercase tracking-wide text-slate-400">
-                        Pending sections
+                        Sections to finish
                       </p>
                       <p className="mt-1 text-3xl font-semibold text-slate-900">
                         {pendingSteps.length}
@@ -3119,12 +3024,12 @@ export default function ProjectPage() {
                               .map((id) => stepTitleMap.get(id) ?? id)
                               .slice(0, 2)
                               .join(', ')
-                          : 'All compliance questions captured'}
+                          : 'All sections are complete'}
                       </p>
                     </div>
                     <div className="rounded-xl border border-slate-100 p-4">
                       <p className="text-xs uppercase tracking-wide text-slate-400">
-                        Latest artifact
+                        Latest document
                       </p>
                       {latestDoc ? (
                         <>
@@ -3144,13 +3049,13 @@ export default function ProjectPage() {
                         </>
                       ) : (
                         <p className="mt-1 text-sm text-slate-500">
-                          Generate documents to populate this summary.
+                          Create a document to see it here.
                         </p>
                       )}
                     </div>
                     <div className="rounded-xl border border-rose-100 bg-rose-50/60 p-4 md:col-span-2">
                       <p className="text-xs uppercase tracking-wide text-rose-500">
-                        Risk highlight
+                        Risk summary
                       </p>
                       <p className="mt-1 text-sm text-rose-900">
                         {riskSummaryText}
@@ -3161,7 +3066,7 @@ export default function ProjectPage() {
 
                 <ProjectPanel>
                   <h3 className="text-lg font-semibold text-slate-900">
-                    Activity Timeline
+                    Recent activity
                   </h3>
                   <div className="mt-4 space-y-4">
                     {timelineEvents.length ? (
@@ -3193,15 +3098,15 @@ export default function ProjectPage() {
                       ))
                     ) : (
                       <p className="text-sm text-slate-500">
-                        No activity yet. Save a section or generate documents to
-                        see timeline updates.
+                        No activity yet. Save a section or create a document to
+                        see updates here.
                       </p>
                     )}
                   </div>
                 </ProjectPanel>
                 <ProjectPanel>
                   <h3 className="text-lg font-semibold text-slate-900">
-                    Risk Heatmap
+                    Risk overview
                   </h3>
                   {riskEntries.length ? (
                     <div className="mt-4 overflow-auto">
@@ -3264,8 +3169,7 @@ export default function ProjectPage() {
                     </div>
                   ) : (
                     <p className="mt-4 text-sm text-slate-500">
-                      Provide structured risk entries (severity & likelihood) to
-                      see this visualization.
+                      Add risk details to see them here.
                     </p>
                   )}
                 </ProjectPanel>

@@ -109,12 +109,12 @@ export default function ProjectMessagesPage() {
               role="status"
               className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
             >
-              Save a documentation section before starting a discussion.{' '}
+              Save a section before starting a discussion.{' '}
               <Link
                 to={`/projects/${projectId}/compliance-workspace`}
                 className="font-semibold underline"
               >
-                Open the workspace
+                Open project
               </Link>
               .
             </p>

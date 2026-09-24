@@ -145,11 +145,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <AppShell title="Documentation workspace">
+    <AppShell title="Your projects">
       <div className="hz-console-content hz-dashboard">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-slate-500">Intake to approval.</p>
+            <p className="text-sm text-slate-500">Track each AI system from setup to approval.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -188,7 +188,7 @@ export default function DashboardPage() {
             className="hz-dashboard__metric-card border border-slate-200 bg-white p-6 shadow-sm"
           >
             <p className="text-sm font-semibold text-slate-700">
-              Documents generated
+              Documents created
             </p>
             <p className="mt-3 text-3xl font-semibold text-slate-900">
               {ownedProjects.reduce(
@@ -205,7 +205,7 @@ export default function DashboardPage() {
             >
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-700">
-                  Recent package activity
+                  Recent documents
                 </p>
                 <span className="text-xs text-slate-400">
                   {recentDocuments.length} recent records
@@ -243,7 +243,7 @@ export default function DashboardPage() {
                   Your first 30 minutes
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-slate-900">
-                  Start with one system, then let the workspace guide you.
+                  Add your first AI system to get started.
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
                   You do not need every policy or document upfront. Start with
@@ -289,7 +289,7 @@ export default function DashboardPage() {
                   Next actions
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  What needs attention in your workspace.
+                  What needs your attention.
                 </p>
               </div>
               <span className="text-xs font-semibold text-slate-500">
@@ -471,7 +471,7 @@ export default function DashboardPage() {
                       <p className="text-sm text-slate-500">
                         {project.industry ?? '—'} ·{' '}
                         {project.riskLevel
-                          ? 'Preliminary classification'
+                          ? 'Classification'
                           : 'Not classified'}
                       </p>
                     </div>

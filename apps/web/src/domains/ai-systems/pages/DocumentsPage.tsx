@@ -120,8 +120,7 @@ export default function DocumentsPage() {
             Document library
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Find documents made for your AI systems. Open a package when you
-            need its full review and download record.
+            Find documents created for your AI systems. Open one to review or download it.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-4" aria-label="Document status">
@@ -217,7 +216,7 @@ export default function DocumentsPage() {
                       to={`/projects/${document.project.id}/compliance-package`}
                       className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                     >
-                      Open package
+                      Open document
                     </Link>
                   </div>
                 </div>
@@ -229,7 +228,7 @@ export default function DocumentsPage() {
                 ? 'Loading documents…'
                 : documents.length
                   ? 'No documents match your search.'
-                  : 'No documents yet. Generate one from an AI system when you are ready.'}
+                  : 'No documents yet. Create one from a project when you are ready.'}
             </div>
           )}
         </div>

@@ -60,7 +60,7 @@ function renderPage() {
 beforeEach(() => vi.clearAllMocks());
 
 describe('Document library', () => {
-  it('helps people find a document and open its AI system or package', async () => {
+  it('helps people find a document and open its AI system or audit export', async () => {
     renderPage();
 
     const projectLinks = await screen.findAllByRole('link', {
@@ -69,7 +69,7 @@ describe('Document library', () => {
     expect(projectLinks).toHaveLength(2);
     expect(screen.getByText(/Version 2.*Ready/)).toBeInTheDocument();
     expect(projectLinks[0]).toHaveAttribute('href', '/projects/project-1');
-    expect(screen.getAllByRole('link', { name: 'Open package' })[0])
+    expect(screen.getAllByRole('link', { name: 'Open document' })[0])
       .toHaveAttribute('href', '/projects/project-1/compliance-package');
   });
 

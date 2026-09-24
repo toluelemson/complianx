@@ -147,20 +147,19 @@ export default function ProjectEvidencePage() {
           <div className="mb-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
             <h2 className="font-semibold text-slate-900">Add evidence</h2>
             <p className="mt-1 text-xs text-slate-500">
-              This file is added to the first project area. Use the documentation
-              workspace when it belongs to a particular area.
+              This file is added to the first section. You can move or link it later.
             </p>
             {!currentSection ? (
               <div
                 role="status"
                 className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
               >
-                Save a documentation section before attaching evidence.{' '}
+                Save a section before adding a file.{' '}
                 <Link
                   to={`/projects/${projectId}/compliance-workspace`}
                   className="font-semibold underline"
                 >
-                  Open the workspace
+                  Open project
                 </Link>
                 .
               </div>
@@ -267,7 +266,7 @@ export default function ProjectEvidencePage() {
             })}
             {!projectEvidence.length ? (
               <p className="py-8 text-center text-sm text-slate-500">
-                No evidence uploaded yet.
+                No files added yet.
               </p>
             ) : null}
           </div>
@@ -350,7 +349,7 @@ export default function ProjectEvidencePage() {
             to={`/projects/${projectId}/compliance-workspace`}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
           >
-            Open evidence workspace
+            Open project
           </Link>
         </div>
       </div>

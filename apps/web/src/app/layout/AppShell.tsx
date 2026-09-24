@@ -113,7 +113,7 @@ export function AppShell({
     }> = primary.length ? [{ title: 'Navigation', links: primary }] : [];
     if (activeProjectId) {
       sections.push({
-        title: 'Project workspace',
+        title: 'Project',
         links: [
           {
             label: 'Overview',
@@ -146,7 +146,7 @@ export function AppShell({
             show: true,
           },
           {
-            label: 'Audit package',
+            label: 'Documents',
             to: `/projects/${activeProjectId}/compliance-package`,
             show: true,
           },
@@ -161,7 +161,7 @@ export function AppShell({
             show: true,
           },
           {
-            label: 'Documentation workspace',
+            label: 'Project details',
             to: `/projects/${activeProjectId}/compliance-workspace`,
             show: true,
           },

@@ -229,7 +229,7 @@ export default function ProjectQuestionnairePage() {
           <p className="mt-1 text-sm text-slate-500">
             Answer a short set of questions about your system and how your
             organization uses it. Neuraldocx uses your answers to suggest which
-            current EU AI Act rules may apply in this workspace.
+            current EU AI Act rules may apply to this project.
           </p>
         </div>
         {error ? (
@@ -283,8 +283,8 @@ export default function ProjectQuestionnairePage() {
                 text="The answers you supplied about the system, EU market context, and your organization’s role."
               />
               <Explanation
-                label="Regulatory source"
-                text={`EU AI Act content pack ${result.regulatoryContentVersion ?? 'version unavailable'} and its recorded rules.`}
+                label="How this was checked"
+                text="Based on the EU AI Act question set used by this project."
               />
               <Explanation
                 label="Neuraldocx interpretation"

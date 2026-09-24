@@ -3,8 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import type { ProjectDetail } from '@complianx/contracts/ai-systems';
-import { getProject, listProjectAuditEvents } from '../api';
-import type { AuditEvent } from '@complianx/contracts/ai-systems';
+import { getProject } from '../api';
 
 export default function ProjectReviewPage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
@@ -13,11 +12,6 @@ export default function ProjectReviewPage() {
     queryKey: ['project', projectId, activeCompanyId],
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getProject(projectId),
-  });
-  const auditQuery = useQuery<AuditEvent[]>({
-    queryKey: ['project-audit-events', projectId, activeCompanyId],
-    enabled: Boolean(token && projectId && activeCompanyId),
-    queryFn: () => listProjectAuditEvents(projectId),
   });
   if (!initializing && !token) return <Navigate to="/login" replace />;
   return (
@@ -34,7 +28,7 @@ export default function ProjectReviewPage() {
             Review &amp; approval
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            An immutable record of the project decision path.
+            See the project’s current review status and recent decisions.
           </p>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -55,7 +49,7 @@ export default function ProjectReviewPage() {
               value={query.data?.approver?.email ?? 'Not assigned'}
             />
           </div>
-          <h2 className="mt-8 text-lg font-semibold text-slate-900">History</h2>
+          <h2 className="mt-8 text-lg font-semibold text-slate-900">Recent decisions</h2>
           <div className="mt-4 space-y-3">
             {query.data?.statusEvents?.map((event) => (
               <div key={event.id} className="border-l-2 border-slate-200 pl-4">
@@ -63,7 +57,7 @@ export default function ProjectReviewPage() {
                   {event.status.replaceAll('_', ' ')}
                 </p>
                 <p className="text-xs text-slate-400">
-                  {event.actor?.email ?? 'System'} ·{' '}
+                  {event.actor?.email ?? 'Automated update'} ·{' '}
                   {new Date(event.createdAt).toLocaleString()}
                   {event.note ? ` · ${event.note}` : ''}
                 </p>
@@ -71,34 +65,7 @@ export default function ProjectReviewPage() {
             ))}
             {!query.data?.statusEvents?.length ? (
               <p className="text-sm text-slate-500">
-                No review events recorded yet.
-              </p>
-            ) : null}
-          </div>
-        </section>
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Compliance activity
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Append-only changes to assessments, classifications, requirements,
-            and actions.
-          </p>
-          <div className="mt-4 space-y-3">
-            {auditQuery.data?.map((event) => (
-              <div key={event.id} className="border-l-2 border-slate-200 pl-4">
-                <p className="text-sm font-medium text-slate-800">
-                  {event.action.replaceAll('_', ' ')} · {event.entityType}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {event.actor?.email ?? 'System'} ·{' '}
-                  {new Date(event.createdAt).toLocaleString()}
-                </p>
-              </div>
-            ))}
-            {!auditQuery.data?.length ? (
-              <p className="text-sm text-slate-500">
-                No compliance activity recorded yet.
+                No decisions recorded yet.
               </p>
             ) : null}
           </div>
@@ -108,7 +75,7 @@ export default function ProjectReviewPage() {
             to={`/projects/${projectId}/compliance-workspace`}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
           >
-            Open guided assessment
+            Open project
           </Link>
         </div>
       </div>

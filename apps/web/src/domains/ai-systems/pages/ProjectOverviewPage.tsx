@@ -86,7 +86,7 @@ export default function ProjectOverviewPage() {
             <h1 className="text-xl font-semibold">AI system unavailable</h1>
             <p className="mt-2 text-sm text-amber-900">
               This AI system may have been removed, or it is not available in
-              the selected workspace.
+              this company.
             </p>
             <Link
               to="/dashboard"
@@ -189,9 +189,9 @@ export default function ProjectOverviewPage() {
       detail: 'Submitted for human verification',
     },
     {
-      label: 'Audit package ready',
+      label: 'Documents ready',
       complete: (documentsQuery.data?.length ?? 0) > 0,
-      detail: 'A compliance package has been generated',
+      detail: 'Your documents are ready',
     },
   ];
 
@@ -205,17 +205,17 @@ export default function ProjectOverviewPage() {
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                EU AI Act readiness
+                Project progress
               </p>
               <h1 className="mt-2 text-2xl font-semibold text-slate-950">
                 {loading
-                  ? 'Checking what needs attention…'
+                  ? 'Checking what needs your attention…'
                   : (attention.primary?.title ??
                     'Ready for the next review stage')}
               </h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 {loading
-                  ? 'Reviewing classification, requirements, evidence, and approvals.'
+                  ? 'Checking your classification, requirements, files, and approvals.'
                   : (attention.primary?.detail ??
                     'No unresolved compliance preparation items were found.')}
               </p>
