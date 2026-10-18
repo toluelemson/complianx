@@ -62,12 +62,10 @@ export class ProjectReadinessService {
       },
       {
         key: 'required_fields_complete',
-        passed:
-          requiredSectionsComplete,
-        message:
-          requiredSectionsComplete
-            ? 'All required fields are complete'
-            : 'Every required field must be complete before submission',
+        passed: requiredSectionsComplete,
+        message: requiredSectionsComplete
+          ? 'All required fields are complete'
+          : 'Every required field must be complete before submission',
       },
     ];
     const blocking = await this.blockingComments.checkProject(project.id);

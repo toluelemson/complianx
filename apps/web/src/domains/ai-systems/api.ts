@@ -481,7 +481,7 @@ export async function generateProjectDocuments(
   projectId: string,
   payload: { documentTypes: string[]; operationId?: string },
 ) {
-  const { data } = await api.post<DocumentItem[]>(
+  const { data } = await api.post<{ runId: string; operationId: string }>(
     `/projects/${projectId}/generate`,
     payload,
   );

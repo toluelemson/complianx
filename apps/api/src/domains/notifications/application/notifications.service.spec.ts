@@ -24,9 +24,11 @@ describe('NotificationsService', () => {
     });
     prisma.notification.update.mockResolvedValue({ id: 'notification-1' });
 
-    await expect(service.markRead('user-1', 'notification-1')).resolves.toEqual({
-      id: 'notification-1',
-    });
+    await expect(service.markRead('user-1', 'notification-1')).resolves.toEqual(
+      {
+        id: 'notification-1',
+      },
+    );
     expect(prisma.notification.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'notification-1' } }),
     );
@@ -50,9 +52,9 @@ describe('NotificationsService', () => {
       userId: 'user-2',
     });
 
-    await expect(service.markRead('user-1', 'notification-1')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.markRead('user-1', 'notification-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.notification.update).not.toHaveBeenCalled();
   });
 

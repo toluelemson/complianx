@@ -65,7 +65,11 @@ describe('RequestProjectChangesUseCase', () => {
     );
 
     await expect(
-      useCase.execute({ projectId: project.id, actorId: 'reviewer-1', note: ' ' }),
+      useCase.execute({
+        projectId: project.id,
+        actorId: 'reviewer-1',
+        note: ' ',
+      }),
     ).rejects.toThrow('Add a note explaining what needs to change.');
   });
 });

@@ -21,11 +21,11 @@ Review approval, assessments, evidence, reporting, identity access, organization
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22.16+
 - pnpm 10+
 - PostgreSQL
 
-Use Node 20 (`.nvmrc`) and pnpm 10.13.1. Keep development and test databases separate; set a test-only `DATABASE_URL` when running API integration/e2e tests.
+Use Node 22.16+ (`.nvmrc`) and pnpm 10.13.1. Keep development and test databases separate; set a test-only `DATABASE_URL` when running API integration/e2e tests.
 
 ## Setup
 

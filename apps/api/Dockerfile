@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /workspace
 
 ENV NODE_ENV=production
@@ -15,7 +15,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm --filter api build
 
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /workspace
 ENV NODE_ENV=production
 RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
