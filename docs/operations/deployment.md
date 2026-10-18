@@ -4,6 +4,16 @@ The active deployment target is Hetzner managed through Coolify. Both applicatio
 
 Configure the API and web services from the same repository and set production secrets in Coolify. Keep the API database private to the deployment network and configure the web service with the public API URL. Preserve existing environment variables, API paths, webhook paths, and storage configuration.
 
+## Aiki report-generation worker
+
+Deploy `apps/worker/Dockerfile` as a third Coolify service on the same private network as the API. Do not publish its port. Give it a dedicated PostgreSQL database for Aiki workflow state, then run its migration before starting the service:
+
+```bash
+DATABASE_PROVIDER=pg DATABASE_URL="$AIKI_DATABASE_URL" pnpm --filter worker aiki:migrate
+```
+
+Set the same cryptographically random `AIKI_SERVICE_TOKEN` in both services. The API also needs `AIKI_WORKER_URL=http://<private-worker-host>:9850`; the worker needs `API_INTERNAL_URL=http://<private-api-host>:3000` and `AIKI_DATABASE_URL`. The worker calls only the API's private `/api/internal/aiki/report-generation` endpoint, which rejects requests without that token.
+
 ## Production environment
 
 The API validates production configuration before opening its HTTP port. Set real values in Coolify; never commit them or copy them into build arguments.

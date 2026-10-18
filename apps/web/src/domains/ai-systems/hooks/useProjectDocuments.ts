@@ -38,6 +38,7 @@ export function useProjectDocuments(
   const [previewLoading, setPreviewLoading] = useState(false);
   const previewRequestRef = useRef(0);
   const previewUrlRef = useRef<string | null>(null);
+  const generationRefreshTimersRef = useRef<number[]>([]);
   const planQuery = useQuery<BillingPlan>({
     queryKey: ['billing', 'plan'],
     queryFn: getBillingPlan,
@@ -60,12 +61,26 @@ export function useProjectDocuments(
     mutationFn: (documentTypes: string[]) =>
       generateProjectDocuments(projectId, { documentTypes }),
     onSuccess: () => {
-      onDocumentsChanged?.();
+      generationRefreshTimersRef.current.forEach((timer) =>
+        window.clearTimeout(timer),
+      );
+      generationRefreshTimersRef.current = [0, 3_000, 10_000, 30_000, 60_000].map(
+        (delay) => window.setTimeout(() => onDocumentsChanged?.(), delay),
+      );
       trackMarketingEvent('package_generated');
       toast.success('Compliance documents are being prepared');
     },
     onError: () => toast.error('Failed to trigger document generation'),
   });
+
+  useEffect(
+    () => () => {
+      generationRefreshTimersRef.current.forEach((timer) =>
+        window.clearTimeout(timer),
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     if (

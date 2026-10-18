@@ -17,6 +17,8 @@ const productionEnvironment = () => ({
   SMTP_USER: 'mailer',
   SMTP_PASS: 'smtp-password-value',
   EMAIL_FROM: 'Neuraldocx <mail@example.com>',
+  AIKI_WORKER_URL: 'http://aiki-worker:9850',
+  AIKI_SERVICE_TOKEN: 'aiki-service-token-value',
   MONETIZATION_ENABLED: 'true',
   STRIPE_SECRET_KEY: 'sk_live_value',
   STRIPE_WEBHOOK_SECRET: 'whsec_value',
@@ -45,6 +47,8 @@ describe('production environment validation', () => {
     ['FILE_SCANNER_PROVIDER', 'noop', 'requires FILE_SCANNER_PROVIDER=clamav'],
     ['LLM_API_KEY', '', 'required'],
     ['SMTP_PASS', '', 'required'],
+    ['AIKI_WORKER_URL', '', 'required'],
+    ['AIKI_SERVICE_TOKEN', '', 'required'],
     ['STRIPE_WEBHOOK_SECRET', '', 'required'],
   ])('rejects unsafe production %s configuration', (key, value, message) => {
     expect(() =>
