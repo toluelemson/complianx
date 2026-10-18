@@ -26,8 +26,9 @@ describe('ApproveProjectUseCase', () => {
         project,
       }),
     } as unknown as WorkflowContextService;
+    const assertReadyForApproval = jest.fn().mockResolvedValue(undefined);
     const readiness = {
-      assertReadyForApproval: jest.fn().mockResolvedValue(undefined),
+      assertReadyForApproval,
     } as unknown as ProjectReadinessService;
     const repository = {
       transitionProject: jest.fn().mockResolvedValue(undefined),
@@ -53,7 +54,7 @@ describe('ApproveProjectUseCase', () => {
       signature: 'Ada Approver',
     });
 
-    expect(readiness.assertReadyForApproval).toHaveBeenCalledWith(project);
+    expect(assertReadyForApproval).toHaveBeenCalledWith(project);
     expect(repository.transitionProject).toHaveBeenCalledWith(
       expect.objectContaining({
         toStatus: ProjectWorkflowStatus.APPROVED,
@@ -99,7 +100,9 @@ describe('ApproveProjectUseCase', () => {
       context,
       new WorkflowPolicyService(),
       readiness,
-      { onProjectTransition: jest.fn() } as unknown as WorkflowSideEffectsService,
+      {
+        onProjectTransition: jest.fn(),
+      } as unknown as WorkflowSideEffectsService,
       repository as never,
     );
 

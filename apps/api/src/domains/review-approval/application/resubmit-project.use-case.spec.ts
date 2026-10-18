@@ -25,8 +25,9 @@ describe('ResubmitProjectUseCase', () => {
         project,
       }),
     } as unknown as WorkflowContextService;
+    const assertReadyForSubmission = jest.fn().mockResolvedValue(undefined);
     const readiness = {
-      assertReadyForSubmission: jest.fn().mockResolvedValue(undefined),
+      assertReadyForSubmission,
     } as unknown as ProjectReadinessService;
     const repository = {
       transitionProject: jest.fn().mockResolvedValue(undefined),
@@ -48,7 +49,7 @@ describe('ResubmitProjectUseCase', () => {
 
     await useCase.execute({ projectId: project.id, actorId: 'owner-1' });
 
-    expect(readiness.assertReadyForSubmission).toHaveBeenCalledWith(project);
+    expect(assertReadyForSubmission).toHaveBeenCalledWith(project);
     expect(repository.transitionProject).toHaveBeenCalledWith(
       expect.objectContaining({
         toStatus: ProjectWorkflowStatus.RESUBMITTED,
