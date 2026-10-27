@@ -340,17 +340,27 @@ describe('API security (e2e)', () => {
       monitoringPlan: 'Continuous monitoring',
       maintenance: 'Quarterly maintenance',
     };
-    const sections = sectionsResponse.body.length
-      ? sectionsResponse.body
-      : [
-          (
-            await request(app.getHttpServer())
-              .post(`/api/projects/${project.body.id}/sections`)
-              .set(authenticated(adminToken))
-              .send({ name: 'system_overview', content: completeContent })
-              .expect(201)
-          ).body,
-        ];
+    const requiredSectionNames = [
+      'system_overview',
+      'model_info',
+      'data_governance',
+      'risk_assessment',
+      'human_oversight',
+      'monitoring',
+    ];
+    const sections = [...sectionsResponse.body];
+    for (const name of requiredSectionNames) {
+      if (sections.some((section) => section.name === name)) continue;
+      sections.push(
+        (
+          await request(app.getHttpServer())
+            .post(`/api/projects/${project.body.id}/sections`)
+            .set(authenticated(adminToken))
+            .send({ name, content: completeContent })
+            .expect(201)
+        ).body,
+      );
+    }
     for (const section of sections) {
       await request(app.getHttpServer())
         .put(`/api/projects/${project.body.id}/sections/${section.id}`)

@@ -3,7 +3,11 @@ import axios, { AxiosInstance } from 'axios';
 import { ConfigService } from '@nestjs/config';
 
 type GenerationMode =
-  'technical' | 'model_card' | 'risk' | 'section_helper' | 'nist_rmf';
+  | 'technical'
+  | 'model_card'
+  | 'risk'
+  | 'section_helper'
+  | 'nist_rmf';
 
 export class LlmAuthenticationError extends Error {
   constructor() {

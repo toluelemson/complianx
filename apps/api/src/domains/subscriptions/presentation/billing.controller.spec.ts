@@ -49,9 +49,9 @@ describe('BillingController', () => {
       membership: { companyId: 'company-1', role: 'USER' },
     });
 
-    await expect(controller.checkout({ plan: 'PRO' }, request())).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      controller.checkout({ plan: 'PRO' }, request()),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     await expect(controller.portal(request())).rejects.toBeInstanceOf(
       ForbiddenException,
     );
@@ -67,7 +67,9 @@ describe('BillingController', () => {
     billing.isEnabled.mockReturnValue(true);
     billing.createCheckoutSession.mockResolvedValue('https://billing.test');
 
-    await expect(controller.checkout({ plan: 'PRO' }, request())).resolves.toEqual({
+    await expect(
+      controller.checkout({ plan: 'PRO' }, request()),
+    ).resolves.toEqual({
       url: 'https://billing.test',
     });
     expect(billing.createCheckoutSession).toHaveBeenCalledWith(
