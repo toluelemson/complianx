@@ -117,15 +117,14 @@ export class EuAiActPublicService {
           legalVersion: pack.version,
           resultSnapshot: resultPayload as unknown as Prisma.InputJsonValue,
           reasoningTrace:
-            resultPayload.reasoning_trace as unknown as Prisma.InputJsonValue,
-          obligations:
-            resultPayload.obligations as unknown as Prisma.InputJsonValue,
+            resultPayload.reasoning_trace as Prisma.InputJsonValue,
+          obligations: resultPayload.obligations as Prisma.InputJsonValue,
           evidenceChecklist:
-            resultPayload.missing_evidence as unknown as Prisma.InputJsonValue,
+            resultPayload.missing_evidence as Prisma.InputJsonValue,
           nextDocuments:
-            resultPayload.next_required_documents as unknown as Prisma.InputJsonValue,
+            resultPayload.next_required_documents as Prisma.InputJsonValue,
           ambiguityFlags:
-            resultPayload.ambiguity_flags as unknown as Prisma.InputJsonValue,
+            resultPayload.ambiguity_flags as Prisma.InputJsonValue,
         },
       });
     });
@@ -289,16 +288,13 @@ export class EuAiActPublicService {
         ruleVersion: session.packVersion.version,
         legalVersion: session.packVersion.version,
         resultSnapshot: resultPayload as unknown as Prisma.InputJsonValue,
-        reasoningTrace:
-          resultPayload.reasoning_trace as unknown as Prisma.InputJsonValue,
-        obligations:
-          resultPayload.obligations as unknown as Prisma.InputJsonValue,
+        reasoningTrace: resultPayload.reasoning_trace as Prisma.InputJsonValue,
+        obligations: resultPayload.obligations as Prisma.InputJsonValue,
         evidenceChecklist:
-          resultPayload.missing_evidence as unknown as Prisma.InputJsonValue,
+          resultPayload.missing_evidence as Prisma.InputJsonValue,
         nextDocuments:
-          resultPayload.next_required_documents as unknown as Prisma.InputJsonValue,
-        ambiguityFlags:
-          resultPayload.ambiguity_flags as unknown as Prisma.InputJsonValue,
+          resultPayload.next_required_documents as Prisma.InputJsonValue,
+        ambiguityFlags: resultPayload.ambiguity_flags as Prisma.InputJsonValue,
       },
     });
 

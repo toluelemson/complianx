@@ -46,7 +46,7 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "markdown-it": "^14.1.0",
-    "multer": "^2.3.0",
+    "multer": "2.5.0",
     "nodemailer": "^10.0.9",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

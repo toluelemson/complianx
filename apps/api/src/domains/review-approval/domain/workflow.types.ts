@@ -133,4 +133,8 @@ export type ProjectPermissionAction =
   | 'READINESS';
 
 export type SectionPermissionAction =
-  'COMPLETE' | 'START_REVIEW' | 'REQUEST_CHANGES' | 'APPROVE' | 'READINESS';
+  | 'COMPLETE'
+  | 'START_REVIEW'
+  | 'REQUEST_CHANGES'
+  | 'APPROVE'
+  | 'READINESS';

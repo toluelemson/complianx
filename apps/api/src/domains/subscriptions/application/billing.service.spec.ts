@@ -92,8 +92,8 @@ describe('BillingService', () => {
         billingEmail: 'billing@acme.com',
         stripeCustomerId: 'cus_123',
       };
-      (prisma.company.findUnique as jest.Mock).mockResolvedValue(company);
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      prisma.company.findUnique.mockResolvedValue(company);
+      prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
         email: 'user@acme.com',
         company,

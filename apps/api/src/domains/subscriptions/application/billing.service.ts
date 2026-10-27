@@ -40,7 +40,7 @@ export class BillingService {
   isEnabled() {
     return Boolean(
       this.stripe &&
-      Object.values(this.priceMap).every((priceId) => Boolean(priceId)),
+        Object.values(this.priceMap).every((priceId) => Boolean(priceId)),
     );
   }
 
@@ -145,15 +145,11 @@ export class BillingService {
     }
     switch (event.type) {
       case 'checkout.session.completed':
-        await this.handleCheckoutCompleted(
-          event.data.object as Stripe.Checkout.Session,
-        );
+        await this.handleCheckoutCompleted(event.data.object);
         break;
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
-        await this.handleSubscriptionUpdated(
-          event.data.object as Stripe.Subscription,
-        );
+        await this.handleSubscriptionUpdated(event.data.object);
         break;
       default:
         break;
