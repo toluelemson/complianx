@@ -9,13 +9,13 @@ test('Mia marks the most important job to do first', async ({ page }) => {
   await logIn(page);
   await page.goto('/projects/e2e-project/requirements');
 
-  const requirement = page
-    .locator('article')
-    .filter({
-      has: page.getByRole('heading', { name: 'E2E requirement control' }),
-    });
+  const requirement = page.locator('article').filter({
+    has: page.getByRole('heading', { name: 'E2E requirement control' }),
+  });
   await expect(requirement).toHaveCount(1);
-  const priority = requirement.getByRole('combobox');
+  const priority = requirement.getByLabel(
+    'Priority for E2E requirement control',
+  );
   await expect(priority).toHaveValue('MEDIUM');
   await priority.selectOption('HIGH');
   await expect(priority).toHaveValue('HIGH');

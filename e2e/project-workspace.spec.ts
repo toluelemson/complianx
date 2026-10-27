@@ -13,15 +13,13 @@ test('Mia adds a few helpful details about her AI helper', async ({ page }) => {
     page.getByRole('heading', { name: 'AI system profile' }),
   ).toBeVisible();
   await page
-    .getByRole('textbox', { name: 'Intended use' })
+    .locator('textarea[name="intendedUse"]')
     .fill('Answers routine customer-support questions with human escalation.');
   await page.getByRole('button', { name: 'Save profile' }).click();
   await expect(page.getByRole('status')).toHaveText('Profile saved.');
 });
 
-test('Mia adds a file and leaves a note for her team', async ({
-  page,
-}) => {
+test('Mia adds a file and leaves a note for her team', async ({ page }) => {
   await logIn(page);
   await page.goto('/projects/e2e-project/evidence');
 
@@ -33,7 +31,9 @@ test('Mia adds a file and leaves a note for her team', async ({
     buffer: Buffer.from('E2E evaluation evidence.'),
   });
   await page.getByRole('button', { name: 'Upload evidence' }).click();
-  await expect(page.getByText('evaluation-summary.txt').last()).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'evaluation-summary.txt' }),
+  ).toBeVisible();
 
   await page.goto('/projects/e2e-project/messages');
   await page

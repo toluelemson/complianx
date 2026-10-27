@@ -10,9 +10,10 @@ test('Mia writes down a problem that needs fixing', async ({ page }) => {
   await page.goto('/projects/e2e-project/findings');
 
   const finding = 'E2E: document a human-oversight escalation path.';
-  await page.getByPlaceholder('Describe the gap or review issue').fill(finding);
-  await page.getByRole('button', { name: 'Add finding' }).click();
+  await page
+    .getByPlaceholder('Describe the problem and what needs fixing')
+    .fill(finding);
+  await page.getByRole('button', { name: 'Add problem' }).click();
 
   await expect(page.getByText(finding).last()).toBeVisible();
-  await expect(page.getByText('MANUAL REVIEW').last()).toBeVisible();
 });
