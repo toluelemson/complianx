@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
-import api from '@/platform/api/client';
 import type {
   DocumentItem,
   ProjectDetail,
@@ -15,6 +14,7 @@ import {
   getProjectDocuments,
   listProjectObligations,
   createCompliancePackage,
+  downloadCompliancePackage,
   listCompliancePackages,
   verifyCompliancePackage,
 } from '../api';
@@ -117,17 +117,9 @@ export default function CompliancePackagePage() {
     if (!token) return;
     setDownloading(true);
     try {
-      const response = await fetch(
-        `${api.defaults.baseURL}/ai-systems/${projectId}/reports/packages/${packageId}/download`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            ...(activeCompanyId ? { 'X-Company-Id': activeCompanyId } : {}),
-          },
-        },
+      const url = URL.createObjectURL(
+        await downloadCompliancePackage(projectId, packageId),
       );
-      if (!response.ok) throw new Error('Unable to download package');
-      const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
       link.href = url;
       link.download = `compliance-package-${packageId}.zip`;

@@ -4,9 +4,8 @@ import { Link, Navigate } from 'react-router-dom';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import type { ProjectListItem } from '@complianx/contracts/ai-systems';
-import { listProjects } from '../api';
+import { downloadDocument, listProjects } from '../api';
 import { DOCUMENT_LABELS } from '../constants/documents';
-import api from '@/platform/api/client';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
 
 type DocumentWithProject = ProjectListItem['documents'][number] & {
@@ -82,17 +81,7 @@ export default function DocumentsPage() {
     if (!token) return;
     setDownloadingId(documentId);
     try {
-      const response = await fetch(
-        `${api.defaults.baseURL}/documents/${documentId}/download`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            ...(activeCompanyId ? { 'X-Company-Id': activeCompanyId } : {}),
-          },
-        },
-      );
-      if (!response.ok) throw new Error('Unable to download document');
-      const url = URL.createObjectURL(await response.blob());
+      const url = URL.createObjectURL(await downloadDocument(documentId));
       const link = document.createElement('a');
       link.href = url;
       link.download = `${type}.pdf`;

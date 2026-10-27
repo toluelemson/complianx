@@ -5,6 +5,7 @@ import { PrismaService } from './platform/database/prisma.service';
 import { raw, type NextFunction, type Request, type Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 function normalizeOrigin(origin: string) {
   return origin.replace(/\/$/, '').toLowerCase();
@@ -40,6 +41,34 @@ async function bootstrap() {
   app.setGlobalPrefix('api', {
     exclude: [{ path: 'billing/webhook', method: RequestMethod.POST }],
   });
+
+  if (config.getOrThrow<boolean>('SWAGGER_ENABLED')) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Neuraldocx API')
+      .setDescription(
+        'Neuraldocx EU AI Act compliance workspace API. Authenticated endpoints require a JWT. Tenant-scoped endpoints use the active company resolved from the authenticated membership and the X-Company-Id header.',
+      )
+      .setVersion('1.0')
+      .addBearerAuth(
+        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        'bearerAuth',
+      )
+      .addApiKey(
+        { type: 'apiKey', in: 'header', name: 'X-Company-Id' },
+        'companyId',
+      )
+      .addTag('Authentication')
+      .addTag('AI systems and projects')
+      .addTag('Assessments and evidence')
+      .addTag('Compliance workflow and reporting')
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('docs', app, document, {
+      useGlobalPrefix: true,
+      jsonDocumentUrl: 'docs/openapi.json',
+      yamlDocumentUrl: 'docs/openapi.yaml',
+    });
+  }
 
   const allowedOrigins = parseConfiguredOrigins(
     config.get<string>('CORS_ORIGINS'),

@@ -1,7 +1,7 @@
 // Marketing route.
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
-import api from '@/platform/api/client';
+import { submitContactRequest } from '@/domains/marketing/api';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
@@ -26,7 +26,7 @@ export default function ContactPage() {
   const [statusMessage, setStatusMessage] = useState<string | undefined>();
   const mutation = useMutation({
     mutationFn: (values: ContactFormValues) =>
-      api.post('/contact', values).then((res) => res.data),
+      submitContactRequest(values),
     onSuccess: () => {
       setStatusMessage('Thanks! We’ll get back to you shortly.');
       reset();

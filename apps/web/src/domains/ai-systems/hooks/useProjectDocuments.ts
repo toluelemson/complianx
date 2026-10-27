@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
-import api from '@/platform/api/client';
 import type {
   BillingPlan,
   BillingUsage,
@@ -13,6 +12,8 @@ import {
   DOCUMENT_GENERATION_OPTIONS,
 } from '../constants/documents';
 import {
+  downloadDocument,
+  downloadProjectDocuments,
   generateProjectDocuments,
   getBillingPlan,
   getBillingUsage,
@@ -148,12 +149,7 @@ export function useProjectDocuments(
   };
   const fetchBlob = async (docId: string) => {
     if (!token) throw new Error('Not authenticated');
-    const response = await fetch(
-      `${api.defaults.baseURL}/documents/${docId}/download`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    if (!response.ok) throw new Error('Unable to download document');
-    return response.blob();
+    return downloadDocument(docId);
   };
   const handleDownload = async (docId: string, type: string) => {
     try {
@@ -201,12 +197,7 @@ export function useProjectDocuments(
   const handleZipDownload = async () => {
     if (!token) return void toast.error('Not authenticated');
     try {
-      const response = await fetch(
-        `${api.defaults.baseURL}/projects/${projectId}/documents.zip`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!response.ok) throw new Error();
-      const url = URL.createObjectURL(await response.blob());
+      const url = URL.createObjectURL(await downloadProjectDocuments(projectId));
       const link = document.createElement('a');
       link.href = url;
       link.download = `project-${projectId}-documents.zip`;

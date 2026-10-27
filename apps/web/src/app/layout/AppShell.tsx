@@ -3,7 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/platform/api/client';
+import {
+  getUnreadNotificationCount,
+  listUnreadNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@/domains/notifications/api';
 import BillingModal from '@/domains/billing/components/BillingModal';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -41,19 +46,18 @@ export function AppShell({
   const countQuery = useQuery<{ count: number }>({
     queryKey: ['notifications', 'count'],
     enabled: Boolean(user?.id),
-    queryFn: () => api.get('/notifications/count').then((r) => r.data),
+    queryFn: getUnreadNotificationCount,
     refetchInterval: 15000,
   });
   const [open, setOpen] = useState(false);
   const listQuery = useQuery<Notification[]>({
     queryKey: ['notifications', 'list'],
     enabled: Boolean(user?.id),
-    queryFn: () =>
-      api.get('/notifications?unreadOnly=true&limit=5').then((r) => r.data),
+    queryFn: listUnreadNotifications,
     refetchInterval: open ? 15000 : false,
   });
   const markAllMutation = useMutation({
-    mutationFn: () => api.post('/notifications/read-all').then((r) => r.data),
+    mutationFn: markAllNotificationsRead,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications', 'count'] });
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] });
@@ -61,8 +65,7 @@ export function AppShell({
   });
   const [markingId, setMarkingId] = useState<string | null>(null);
   const markSingleMutation = useMutation({
-    mutationFn: (id: string) =>
-      api.post(`/notifications/${id}/read`).then((r) => r.data),
+    mutationFn: markNotificationRead,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications', 'count'] });
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] });

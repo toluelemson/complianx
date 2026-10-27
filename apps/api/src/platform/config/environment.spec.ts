@@ -34,6 +34,7 @@ describe('production environment validation', () => {
       RATE_LIMIT_TTL_MS: 60_000,
       RATE_LIMIT_REQUESTS: 300,
       TRUST_PROXY_HOPS: 1,
+      SWAGGER_ENABLED: false,
       SMTP_PORT: 587,
     });
   });
@@ -64,15 +65,28 @@ describe('production environment validation', () => {
     expect(() => validateEnvironment(environment)).not.toThrow();
   });
 
+  it('allows Swagger to be explicitly enabled in a controlled production environment', () => {
+    expect(
+      validateEnvironment({
+        ...productionEnvironment(),
+        SWAGGER_ENABLED: 'true',
+      }),
+    ).toMatchObject({ SWAGGER_ENABLED: true });
+  });
+
   it('keeps development services optional while validating configured limits', () => {
     expect(validateEnvironment({ NODE_ENV: 'development' })).toMatchObject({
       API_BODY_LIMIT_BYTES: 1_048_576,
       UPLOAD_MAX_BYTES: 26_214_400,
       FRONTEND_URL: 'http://localhost:5173',
       CORS_ORIGINS: 'http://localhost:5173',
+      SWAGGER_ENABLED: true,
     });
     expect(() =>
       validateEnvironment({ NODE_ENV: 'test', UPLOAD_MAX_BYTES: 'unlimited' }),
     ).toThrow('UPLOAD_MAX_BYTES must be an integer');
+    expect(() =>
+      validateEnvironment({ NODE_ENV: 'test', SWAGGER_ENABLED: 'sometimes' }),
+    ).toThrow('SWAGGER_ENABLED must be true or false');
   });
 });

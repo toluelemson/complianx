@@ -4,7 +4,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CompliancePackagePage from './CompliancePackagePage';
-import { approveDocument, createCompliancePackage } from '../api';
+import {
+  approveDocument,
+  createCompliancePackage,
+  downloadCompliancePackage,
+} from '../api';
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({
     token: 'test-token',
@@ -32,6 +36,7 @@ vi.mock('../api', () => ({
     },
   ]),
   approveDocument: vi.fn().mockResolvedValue({ approvalState: 'APPROVED' }),
+  downloadCompliancePackage: vi.fn().mockResolvedValue(new Blob(['zip'])),
   listProjectObligations: vi.fn().mockResolvedValue([]),
   createCompliancePackage: vi.fn(),
   listCompliancePackages: vi.fn().mockResolvedValue([
@@ -63,12 +68,6 @@ vi.mock('../api', () => ({
 }));
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValue({ ok: true, blob: async () => new Blob(['zip']) }),
-  );
   URL.createObjectURL = vi.fn().mockReturnValue('blob:test');
   URL.revokeObjectURL = vi.fn();
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
@@ -91,13 +90,9 @@ describe('Saved package download', () => {
       await screen.findByRole('button', { name: 'Download export 1' }),
     );
     await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(
-          '/ai-systems/project/reports/packages/old-package/download',
-        ),
-        expect.objectContaining({
-          headers: expect.objectContaining({ 'X-Company-Id': 'company' }),
-        }),
+      expect(downloadCompliancePackage).toHaveBeenCalledWith(
+        'project',
+        'old-package',
       ),
     );
     expect(

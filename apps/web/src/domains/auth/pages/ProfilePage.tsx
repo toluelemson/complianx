@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import api from '@/platform/api/client';
+import { getCurrentUser, updateCurrentUser } from '@/domains/auth/api';
 import { AppShell } from '@/app/layout/AppShell';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
@@ -45,7 +45,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const profileQuery = useQuery<ProfileResponse>({
     queryKey: ['profile'],
-    queryFn: () => api.get('/users/me').then((res) => res.data),
+    queryFn: getCurrentUser,
   });
   const form = useForm<ProfileForm>({
     defaultValues: {
@@ -73,7 +73,7 @@ export default function ProfilePage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: ProfileForm) =>
-      api.patch('/users/me', payload).then((res) => res.data),
+      updateCurrentUser(payload),
     onSuccess: (data: ProfileResponse) => {
       toast.success('Profile updated');
       form.reset({
