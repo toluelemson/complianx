@@ -24,6 +24,9 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Gitleaks compares the pull request's commit range, including its base commit.
+          fetch-depth: 0
       - name: Scan repository for secrets
         uses: gitleaks/gitleaks-action@v2
         env:
