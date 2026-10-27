@@ -1,6 +1,6 @@
-export const MANIFEST_HASH_ALGORITHM = 'sha256' as const;
-export const MANIFEST_CANONICALIZATION = 'jcs-v1' as const;
-export const LEGACY_MANIFEST_CANONICALIZATION = 'legacy-json' as const;
+export const MANIFEST_HASH_ALGORITHM = 'sha256';
+export const MANIFEST_CANONICALIZATION = 'jcs-v1';
+export const LEGACY_MANIFEST_CANONICALIZATION = 'legacy-json';
 
 /** RFC 8785-style JSON canonicalization for values accepted by Prisma Json. */
 export function canonicalizeManifest(value: unknown): string {

@@ -15,9 +15,7 @@ import {
   WorkflowMembership,
 } from '../domain/workflow.types';
 import { WorkflowVersionConflictError } from '../domain/workflow-errors';
-import {
-  ReviewerNotAssignedError,
-} from '../domain/workflow-errors';
+import { ReviewerNotAssignedError } from '../domain/workflow-errors';
 import { ProjectWorkflowRepository } from './project-workflow.repository';
 import { SectionWorkflowRepository } from './section-workflow.repository';
 

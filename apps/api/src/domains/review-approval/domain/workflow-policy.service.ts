@@ -179,7 +179,8 @@ export class WorkflowPolicyService {
 
   private isAdmin(
     context:
-      ProjectWorkflowPermissionContext | SectionWorkflowPermissionContext,
+      | ProjectWorkflowPermissionContext
+      | SectionWorkflowPermissionContext,
   ) {
     return (
       context.membership?.role === 'ADMIN' || context.actor.role === 'ADMIN'
