@@ -27,8 +27,10 @@ export default function ResetPasswordPage() {
     });
   const passwordValue = watch('password');
   const mutation = useMutation({
-    mutationFn: (values: ResetPasswordForm) =>
-      resetPassword(token, values.password),
+    mutationFn: (values: ResetPasswordForm) => {
+      if (!token) throw new Error('A reset token is required.');
+      return resetPassword(token, values.password);
+    },
     onSuccess: () => {
       setResetComplete(true);
       setMessage('Your password has been reset. You can now sign in.');

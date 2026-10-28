@@ -4,7 +4,7 @@ export function getInvitation(token: string) {
   return api.get(`/invitations/${token}`).then((response) => response.data);
 }
 
-export function signUp(payload: Record<string, unknown>) {
+export function signUp(payload: object) {
   return api.post('/auth/signup', payload).then((response) => response.data);
 }
 
@@ -28,6 +28,6 @@ export function getCurrentUser() {
   return api.get('/users/me').then((response) => response.data);
 }
 
-export function updateCurrentUser(payload: Record<string, unknown>) {
+export function updateCurrentUser(payload: object) {
   return api.patch('/users/me', payload).then((response) => response.data);
 }

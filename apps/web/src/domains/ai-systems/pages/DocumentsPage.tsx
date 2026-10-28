@@ -4,7 +4,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import type { ProjectListItem } from '@complianx/contracts/ai-systems';
-import { downloadDocument, listProjects } from '../api';
+import { downloadDocument as downloadDocumentFile, listProjects } from '../api';
 import { DOCUMENT_LABELS } from '../constants/documents';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
 
@@ -81,7 +81,7 @@ export default function DocumentsPage() {
     if (!token) return;
     setDownloadingId(documentId);
     try {
-      const url = URL.createObjectURL(await downloadDocument(documentId));
+      const url = URL.createObjectURL(await downloadDocumentFile(documentId));
       const link = document.createElement('a');
       link.href = url;
       link.download = `${type}.pdf`;
