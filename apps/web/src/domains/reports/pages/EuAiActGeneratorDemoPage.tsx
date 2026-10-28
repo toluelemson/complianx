@@ -7,7 +7,7 @@ import {
   RefreshCcw,
   Sparkles,
 } from 'lucide-react';
-import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
+import { AppShell } from '@/app/layout/AppShell';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -533,21 +533,13 @@ export default function EuAiActGeneratorDemoPage() {
   };
 
   return (
-    <>
-      <SiteHeader />
+    <AppShell>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.07),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-7xl space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <div>
-                <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  EU AI Act report
-                </h1>
-              </div>
-            </div>
-            <div className="rounded-[1.5rem] border border-slate-200 bg-white/92 px-4 py-3 text-sm text-slate-600 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.18)]">
-              Edit the scenario live, then regenerate only when needed.
-            </div>
+            <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
+              EU AI Act report
+            </h1>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
@@ -617,6 +609,14 @@ export default function EuAiActGeneratorDemoPage() {
                       }
                     />
                   </Field>
+                  <details className="group border-t border-slate-100 pt-4">
+                    <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 marker:hidden">
+                      <span className="flex items-center justify-between">
+                        Additional assessment details
+                        <span className="text-base normal-case tracking-normal text-slate-400 transition group-open:rotate-180">⌄</span>
+                      </span>
+                    </summary>
+                    <div className="mt-4 space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Operator role">
                       <Select
@@ -700,6 +700,8 @@ export default function EuAiActGeneratorDemoPage() {
                       onChange={(event) => update('notes', event.target.value)}
                     />
                   </Field>
+                    </div>
+                  </details>
                 </CardContent>
               </Card>
 
@@ -717,7 +719,7 @@ export default function EuAiActGeneratorDemoPage() {
                   type="button"
                   onClick={handleGenerate}
                   disabled={submitting}
-                  className="bg-slate-950 text-white hover:bg-black"
+                  className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
                   {submitting
@@ -759,7 +761,7 @@ export default function EuAiActGeneratorDemoPage() {
           </div>
         </div>
       </div>
-    </>
+    </AppShell>
   );
 }
 

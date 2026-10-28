@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type { TemplateItem } from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import {
@@ -34,7 +35,9 @@ export class TemplatesService {
       sectionName: template.sectionName,
       category: template.category ?? undefined,
       shared: template.shared,
-      owner: template.owner?.email ? { email: template.owner.email } : undefined,
+      owner: template.owner?.email
+        ? { email: template.owner.email }
+        : undefined,
       content:
         template.content && typeof template.content === 'object'
           ? (template.content as Record<string, unknown>)
@@ -43,16 +46,20 @@ export class TemplatesService {
   }
 
   listForUser(userId: string, sectionName?: string): Promise<TemplateItem[]> {
-    return this.prisma.sectionTemplate.findMany({
-      where: {
-        sectionName: sectionName ?? undefined,
-        OR: [{ ownerId: userId }, { shared: true }],
-      },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        owner: { select: { id: true, email: true } },
-      },
-    }).then((templates) => templates.map((template) => this.mapTemplate(template)));
+    return this.prisma.sectionTemplate
+      .findMany({
+        where: {
+          sectionName: sectionName ?? undefined,
+          OR: [{ ownerId: userId }, { shared: true }],
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          owner: { select: { id: true, email: true } },
+        },
+      })
+      .then((templates) =>
+        templates.map((template) => this.mapTemplate(template)),
+      );
   }
 
   async create(userId: string, dto: CreateTemplateDto): Promise<TemplateItem> {
@@ -70,7 +77,7 @@ export class TemplatesService {
       where: {
         ownerId: userId,
         sectionName: dto.sectionName,
-        content: dto.content,
+        content: { equals: dto.content as Prisma.InputJsonValue },
       },
     });
     if (duplicateContent) {
@@ -78,16 +85,18 @@ export class TemplatesService {
         'Template with identical content already exists',
       );
     }
-    return this.prisma.sectionTemplate.create({
-      data: {
-        name: dto.name,
-        sectionName: dto.sectionName,
-        content: dto.content,
-        ownerId: userId,
-        category: dto.category,
-        shared: dto.shared ?? false,
-      },
-    }).then((template) => this.mapTemplate(template));
+    return this.prisma.sectionTemplate
+      .create({
+        data: {
+          name: dto.name,
+          sectionName: dto.sectionName,
+          content: dto.content,
+          ownerId: userId,
+          category: dto.category,
+          shared: dto.shared ?? false,
+        },
+      })
+      .then((template) => this.mapTemplate(template));
   }
 
   async update(
@@ -104,14 +113,16 @@ export class TemplatesService {
     if (template.ownerId !== userId) {
       throw new ForbiddenException('Only the owner can update the template');
     }
-    return this.prisma.sectionTemplate.update({
-      where: { id: templateId },
-      data: {
-        ...(dto.name ? { name: dto.name } : {}),
-        ...('category' in dto ? { category: dto.category } : {}),
-        ...(dto.shared !== undefined ? { shared: dto.shared } : {}),
-      },
-    }).then((updatedTemplate) => this.mapTemplate(updatedTemplate));
+    return this.prisma.sectionTemplate
+      .update({
+        where: { id: templateId },
+        data: {
+          ...(dto.name ? { name: dto.name } : {}),
+          ...('category' in dto ? { category: dto.category } : {}),
+          ...(dto.shared !== undefined ? { shared: dto.shared } : {}),
+        },
+      })
+      .then((updatedTemplate) => this.mapTemplate(updatedTemplate));
   }
 
   async delete(userId: string, templateId: string): Promise<TemplateItem> {
@@ -160,10 +171,10 @@ export class TemplatesService {
       [TemplateBulkAction.DELETE]: (template: any) =>
         this.prisma.sectionTemplate.delete({ where: { id: template.id } }),
     };
-    return this.prisma.$transaction(
-      templates.map((template) => actions[dto.action](template)),
-    ).then((updatedTemplates) =>
-      updatedTemplates.map((template) => this.mapTemplate(template)),
-    );
+    return this.prisma
+      .$transaction(templates.map((template) => actions[dto.action](template)))
+      .then((updatedTemplates) =>
+        updatedTemplates.map((template) => this.mapTemplate(template)),
+      );
   }
 }

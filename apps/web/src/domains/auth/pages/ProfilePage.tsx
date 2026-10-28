@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import api from '@/platform/api/client';
+import { getCurrentUser, updateCurrentUser } from '@/domains/auth/api';
 import { AppShell } from '@/app/layout/AppShell';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
@@ -19,6 +19,7 @@ interface ProfileResponse {
   jobTitle?: string | null;
   phone?: string | null;
   timezone?: string | null;
+  preferredLocale?: string;
 }
 
 interface ProfileForm {
@@ -27,6 +28,7 @@ interface ProfileForm {
   jobTitle?: string | null;
   phone?: string | null;
   timezone?: string | null;
+  preferredLocale?: string;
 }
 
 const timezoneOptions = [
@@ -43,7 +45,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const profileQuery = useQuery<ProfileResponse>({
     queryKey: ['profile'],
-    queryFn: () => api.get('/users/me').then((res) => res.data),
+    queryFn: getCurrentUser,
   });
   const form = useForm<ProfileForm>({
     defaultValues: {
@@ -52,6 +54,7 @@ export default function ProfilePage() {
       jobTitle: '',
       phone: '',
       timezone: 'UTC',
+      preferredLocale: 'en',
     },
   });
 
@@ -63,13 +66,14 @@ export default function ProfilePage() {
         jobTitle: profileQuery.data.jobTitle ?? '',
         phone: profileQuery.data.phone ?? '',
         timezone: profileQuery.data.timezone ?? 'UTC',
+        preferredLocale: profileQuery.data.preferredLocale ?? 'en',
       });
     }
   }, [profileQuery.data, form]);
 
   const updateMutation = useMutation({
     mutationFn: (payload: ProfileForm) =>
-      api.patch('/users/me', payload).then((res) => res.data),
+      updateCurrentUser(payload),
     onSuccess: (data: ProfileResponse) => {
       toast.success('Profile updated');
       form.reset({
@@ -78,6 +82,7 @@ export default function ProfilePage() {
         jobTitle: data.jobTitle ?? '',
         phone: data.phone ?? '',
         timezone: data.timezone ?? 'UTC',
+        preferredLocale: data.preferredLocale ?? 'en',
       });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
@@ -164,6 +169,15 @@ export default function ProfilePage() {
                   />
                 </label>
                 <label className="grid gap-1 text-sm">
+                  <span className="font-medium text-slate-700">Language</span>
+                  <Select className="rounded-2xl" {...form.register('preferredLocale')}>
+                    <option value="en">English</option>
+                    <option value="de">Deutsch</option>
+                    <option value="fr">Français</option>
+                    <option value="et">Eesti</option>
+                  </Select>
+                </label>
+                <label className="grid gap-1 text-sm">
                   <span className="font-medium text-slate-700">Last name</span>
                   <Input
                     type="text"
@@ -213,7 +227,7 @@ export default function ProfilePage() {
               <Button
                 type="submit"
                 disabled={updateMutation.isPending}
-                className="bg-slate-950 text-white hover:bg-black"
+                className="bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 {updateMutation.isPending ? 'Saving…' : 'Save changes'}
               </Button>

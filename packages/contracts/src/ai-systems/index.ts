@@ -14,12 +14,19 @@ export type SectionComment = {
   body: string;
   createdAt: string;
   author?: UserRef;
+  resolvedAt?: string | null;
+  resolvedBy?: UserRef | null;
+  linkedEntityType?: string | null;
+  linkedEntityId?: string | null;
+  mentions?: string[];
 };
 
 export type StatusEvent = {
   id: string;
   status:
     | 'DRAFT'
+    | 'INFORMATION_REQUIRED'
+    | 'COLLECTING_EVIDENCE'
     | 'COMPLETE'
     | 'READY_FOR_REVIEW'
     | 'IN_REVIEW'
@@ -35,10 +42,28 @@ export type StatusEvent = {
   actor?: UserRef;
 };
 
+export type AuditEvent = {
+  id: string;
+  companyId: string;
+  projectId?: string | null;
+  entityType: string;
+  entityId: string;
+  action: string;
+  beforeSnapshot?: Record<string, unknown> | null;
+  afterSnapshot?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  actor?: UserRef | null;
+};
+
 export type SectionArtifactItem = {
   id: string;
   originalName: string;
   description?: string | null;
+  source?: string | null;
+  expiresAt?: string | null;
+  externalUrl?: string | null;
+  provenanceNote?: string | null;
   createdAt: string;
   size: number;
   mimeType: string;
@@ -78,11 +103,14 @@ export type SectionWithMeta = {
 
 export type ProjectWorkflowStatus =
   | 'DRAFT'
+  | 'INFORMATION_REQUIRED'
+  | 'COLLECTING_EVIDENCE'
   | 'READY_FOR_REVIEW'
   | 'IN_REVIEW'
   | 'CHANGES_REQUESTED'
   | 'RESUBMITTED'
   | 'APPROVED'
+  | 'MONITORING'
   | 'ARCHIVED'
   | 'REJECTED'
   | 'CANCELLED';
@@ -92,6 +120,24 @@ export type ProjectDetail = {
   name: string;
   industry?: string | null;
   riskLevel?: string | null;
+  description?: string | null;
+  businessPurpose?: string | null;
+  intendedUse?: string | null;
+  intendedUsers?: string | null;
+  affectedPersons?: string | null;
+  deploymentGeography?: string | null;
+  operatorRoles?: string[];
+  lifecycleStage?: string | null;
+  responsibleOwner?: string | null;
+  providerOrDeveloper?: string | null;
+  deployerOrUser?: string | null;
+  importer?: string | null;
+  distributor?: string | null;
+  authorizedRepresentative?: string | null;
+  generatesContent?: boolean | null;
+  useCaseIndicators?: string[];
+  sourcePublicResultId?: string | null;
+  dueDate?: string | null;
   createdAt: string;
   updatedAt?: string;
   companyId?: string | null;
@@ -118,6 +164,12 @@ export type DocumentItem = {
   id: string;
   type: string;
   url: string;
+  version?: number;
+  frameworkKey?: string;
+  regulatoryContentVersion?: string | null;
+  approvalState?: 'DRAFT' | 'APPROVED';
+  lifecycleStatus?: 'CURRENT' | 'SUPERSEDED' | 'FAILED';
+  provenanceStatus?: 'COMPLETE' | 'PARTIAL' | 'UNVERIFIED';
   createdAt: string;
 };
 
@@ -126,12 +178,43 @@ export type ProjectListItem = {
   name: string;
   industry?: string | null;
   riskLevel?: string | null;
+  description?: string | null;
+  businessPurpose?: string | null;
+  intendedUse?: string | null;
+  intendedUsers?: string | null;
+  affectedPersons?: string | null;
+  deploymentGeography?: string | null;
+  operatorRoles?: string[];
+  lifecycleStage?: string | null;
+  responsibleOwner?: string | null;
+  providerOrDeveloper?: string | null;
+  deployerOrUser?: string | null;
+  importer?: string | null;
+  distributor?: string | null;
+  authorizedRepresentative?: string | null;
+  generatesContent?: boolean | null;
+  useCaseIndicators?: string[];
+  sourcePublicResultId?: string | null;
+  dueDate?: string | null;
   createdAt: string;
   updatedAt: string;
   workflowStatus?: ProjectWorkflowStatus;
   viewerRole: 'OWNER' | 'REVIEWER' | 'APPROVER' | 'MEMBER';
   sections: ProjectListSection[];
-  documents: Array<Pick<DocumentItem, 'id' | 'type' | 'createdAt'>>;
+  documents: Array<
+    Pick<
+      DocumentItem,
+      | 'id'
+      | 'type'
+      | 'createdAt'
+      | 'version'
+      | 'frameworkKey'
+      | 'regulatoryContentVersion'
+      | 'approvalState'
+      | 'lifecycleStatus'
+      | 'provenanceStatus'
+    >
+  >;
 };
 
 export type TrackableStepSummary = {
@@ -182,6 +265,19 @@ export type GenerationReadiness = {
   missingCriticalFields: string[];
   weakSections: string[];
   summary: string;
+  obligationReadiness?: ObligationReadiness;
+};
+
+export type ObligationReadiness = {
+  total: number;
+  evidenced: number;
+  complete: number;
+  outstanding: Array<{
+    id: string;
+    title: string;
+    status: string;
+    evidenceCount: number;
+  }>;
 };
 
 export type SuggestionResponse = {
@@ -202,6 +298,12 @@ export type BillingPlan = {
     docs: number;
     reviews?: number;
     trust?: number;
+    activeAiSystems?: number;
+    users?: number;
+    clientWorkspaces?: number;
+    versionHistory?: boolean;
+    reviewApproval?: boolean;
+    exports?: boolean;
   };
 };
 

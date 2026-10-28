@@ -4,22 +4,19 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/utilities/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background',
+  'hz-button inline-flex items-center justify-center whitespace-nowrap focus-visible:outline-none disabled:pointer-events-none',
   {
     variants: {
       variant: {
-        default:
-          'bg-primary text-primary-foreground shadow-[0_12px_30px_-18px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 hover:bg-primary/92',
-        secondary:
-          'bg-secondary text-secondary-foreground hover:-translate-y-0.5 hover:bg-secondary/85',
-        outline:
-          'border border-input bg-background/85 text-foreground shadow-[0_10px_24px_-18px_rgba(15,23,42,0.35)] hover:-translate-y-0.5 hover:bg-accent hover:text-accent-foreground',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        default: 'hz-button--primary',
+        secondary: 'hz-button--secondary',
+        outline: 'hz-button--outline',
+        ghost: 'hz-button--ghost',
       },
       size: {
-        default: 'h-11 px-5 py-2.5',
-        sm: 'h-9 px-4',
-        lg: 'h-12 px-6',
+        default: 'hz-button--md',
+        sm: 'hz-button--sm',
+        lg: 'hz-button--lg',
       },
     },
     defaultVariants: {

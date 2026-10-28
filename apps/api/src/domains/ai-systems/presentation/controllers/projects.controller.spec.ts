@@ -7,9 +7,13 @@ describe('ProjectsController company context', () => {
   const projectsService = {
     listForUser: jest.fn(),
   };
+  const monetization = {
+    assertCanAddAiSystem: jest.fn().mockResolvedValue(undefined),
+  };
   const controller = new ProjectsController(
     projectsService as never,
     new CompanyContextService(),
+    monetization as never,
   );
 
   beforeEach(() => {

@@ -49,7 +49,7 @@ const SUBMIT_SYSTEM_CONTEXT: Partial<
     eyebrow: 'Direct intake',
     title: 'Skip the checker and send the system directly',
     description:
-      'Share the system details once and we will scope the right package, quote, and delivery path without requiring the self-assessment first.',
+      'Share your system details and we will recommend the right package and next step.',
     timelineLabel: 'Best first response: 48 hours',
   },
   pricing_enterprise: {
@@ -61,10 +61,10 @@ const SUBMIT_SYSTEM_CONTEXT: Partial<
   },
   pricing_professional: {
     eyebrow: 'Professional package intake',
-    title: 'Tell us about the system that needs deeper review',
+    title: 'Start classification',
     description:
-      'We will use this intake to scope the deeper risk, controls, and governance documentation pack your team likely needs.',
-    timelineLabel: 'Best first response: 48 hours',
+      'Share the details we need to scope your review and documentation package.',
+    timelineLabel: 'We respond within 48 hours',
   },
   trial_modal_exit: {
     eyebrow: 'Fastest next step',
@@ -114,10 +114,10 @@ export default function SubmitSystemPage() {
       email: '',
       company: '',
       aiSystemName: '',
-      packageInterest: packageFromQuery ?? 'starter',
+      packageInterest: packageFromQuery ?? 'not_sure',
       useCase: '',
       dataUsed: '',
-      timeline: '48_hours',
+      timeline: 'flexible',
     },
   });
 
@@ -174,95 +174,18 @@ export default function SubmitSystemPage() {
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)] px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">
           <div className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-400">
-              {pageContext.eyebrow}
-            </p>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
               {pageContext.title}
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-500">
               {pageContext.description}
             </p>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-              {pageContext.timelineLabel}.{' '}
-              Larger or more regulated deployment?{' '}
-              <a
-                href="https://calendly.com/neuraldocx"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-slate-700 transition hover:text-slate-950"
-              >
-                Book an enterprise demo
-              </a>
-              .
-            </p>
           </div>
 
           <Card className="mt-10 rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.2)]">
             <CardContent className="p-8 sm:p-10">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Step 1
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    Submit your system
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Step 2
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    Get a quote
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Step 3
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    Receive documents
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Starter
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    EUR500 - EUR1,500
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    2-4 day turnaround
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Professional
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    EUR2,000 - EUR5,000
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Most common engagement
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Enterprise
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    EUR8,000 - EUR20,000+
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">Custom scope</p>
-                </div>
-              </div>
-
               <form
-                className="mt-8 space-y-5"
+                className="space-y-5"
                 onSubmit={handleSubmit((values) => {
                   trackMarketingEvent('marketing_submit_form_submitted', {
                     package_interest: values.packageInterest,
@@ -309,34 +232,6 @@ export default function SubmitSystemPage() {
                   </label>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Package interest
-                    <Select
-                      {...register('packageInterest', { required: true })}
-                      className="mt-2"
-                    >
-                      <option value="starter">Starter</option>
-                      <option value="professional">Professional</option>
-                      <option value="enterprise">Enterprise</option>
-                      <option value="not_sure">Not sure yet</option>
-                    </Select>
-                  </label>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Delivery target
-                    <Select
-                      {...register('timeline', { required: true })}
-                      className="mt-2"
-                    >
-                      <option value="24_hours">24 hours</option>
-                      <option value="48_hours">48 hours</option>
-                      <option value="72_hours">72 hours</option>
-                      <option value="this_week">This week</option>
-                      <option value="flexible">Flexible</option>
-                    </Select>
-                  </label>
-                </div>
-
                 <label className="block text-sm font-medium text-slate-700">
                   Use case / product flow
                   <Textarea
@@ -356,6 +251,39 @@ export default function SubmitSystemPage() {
                     placeholder="What data sources or inputs does the system rely on?"
                   />
                 </label>
+
+                <details className="rounded-xl border border-slate-200 px-4 py-3">
+                  <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                    Add package or delivery preferences (optional)
+                  </summary>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Package interest
+                      <Select
+                        {...register('packageInterest', { required: true })}
+                        className="mt-2"
+                      >
+                        <option value="not_sure">Not sure yet</option>
+                        <option value="starter">Starter</option>
+                        <option value="professional">Professional</option>
+                        <option value="enterprise">Enterprise</option>
+                      </Select>
+                    </label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Delivery target
+                      <Select
+                        {...register('timeline', { required: true })}
+                        className="mt-2"
+                      >
+                        <option value="flexible">Flexible</option>
+                        <option value="24_hours">24 hours</option>
+                        <option value="48_hours">48 hours</option>
+                        <option value="72_hours">72 hours</option>
+                        <option value="this_week">This week</option>
+                      </Select>
+                    </label>
+                  </div>
+                </details>
 
                 <Button
                   type="submit"

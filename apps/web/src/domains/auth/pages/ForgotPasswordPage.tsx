@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import api from '@/platform/api/client';
+import { requestPasswordReset } from '@/domains/auth/api';
 import { useState } from 'react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { Button } from '@/shared/components/ui/button';
@@ -20,7 +20,7 @@ export default function ForgotPasswordPage() {
   const [message, setMessage] = useState<string | undefined>();
   const mutation = useMutation({
     mutationFn: (values: ForgotPasswordForm) =>
-      api.post('/auth/request-password-reset', values),
+      requestPasswordReset(values),
     onSuccess: () => {
       setMessage(
         'If an account exists for that email, you will receive password reset instructions shortly.',
@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full bg-slate-950 text-white hover:bg-black"
+                className="w-full bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 {mutation.isPending ? 'Sending...' : 'Send reset link'}
               </Button>

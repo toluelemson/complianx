@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -25,4 +25,8 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(80)
   timezone?: string | null;
+
+  @IsOptional()
+  @IsIn(['en', 'de', 'fr', 'et'])
+  preferredLocale?: string;
 }

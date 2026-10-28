@@ -13,13 +13,13 @@ export function BrandLink({
   className = 'flex items-center gap-3',
   iconClassName,
   imageClassName = 'h-6 w-6 rounded-xl',
-  label = 'NeuralDocx',
+  label = 'Neuraldocx',
 }: BrandLinkProps) {
   return (
     <Link to="/" className={className}>
       <div className={iconClassName}>
         <img
-          src="/compliance-icon.svg"
+          src="/neuraldocx-mark.svg"
           alt={label}
           className={imageClassName}
         />

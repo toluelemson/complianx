@@ -1,0 +1,81 @@
+/* Review workflow treatment: the same compact, neutral console language as the dashboard. */
+.hz-review-panel {
+  border: var(--hz-border-default);
+  border-radius: var(--hz-radius-card);
+  background: var(--hz-color-surface);
+  box-shadow: var(--hz-shadow-card);
+  color: var(--hz-color-text);
+}
+
+.hz-review-panel__header {
+  border-bottom: var(--hz-border-default);
+  background: var(--hz-color-surface-subtle);
+  padding: var(--hz-space-9);
+}
+
+.hz-review-panel__eyebrow,
+.hz-review-panel__stat p:first-child {
+  color: var(--hz-color-text-muted);
+  font: var(--hz-font-weight-semibold) var(--hz-font-size-xs)/var(--hz-line-height-default) var(--hz-font-control);
+  letter-spacing: var(--hz-letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.hz-review-panel__title {
+  color: var(--hz-color-text);
+  font: var(--hz-font-weight-semibold) var(--hz-font-size-xl)/var(--hz-line-height-compact) var(--hz-font-control);
+  letter-spacing: var(--hz-letter-spacing-heading);
+}
+
+.hz-review-status {
+  display: inline-flex;
+  align-items: center;
+  border: var(--hz-border-control);
+  border-radius: var(--hz-radius-pill);
+  padding: var(--hz-space-3) var(--hz-space-7);
+  font: var(--hz-font-weight-semibold) var(--hz-font-size-xs)/var(--hz-line-height-tight) var(--hz-font-control);
+  letter-spacing: var(--hz-letter-spacing-status);
+  text-transform: uppercase;
+}
+
+.hz-review-status--warning { border-color: var(--hz-color-warning-border); background: var(--hz-color-warning-bg); color: var(--hz-color-warning); }
+.hz-review-status--brand { border-color: var(--hz-color-brand-disabled); background: var(--hz-color-brand-subtle); color: var(--hz-color-brand); }
+.hz-review-status--success { border-color: var(--hz-color-success); background: var(--hz-color-success-bg); color: var(--hz-color-success-text); }
+.hz-review-status--danger { border-color: var(--hz-color-danger); background: var(--hz-color-danger-bg); color: var(--hz-color-danger); }
+.hz-review-status--neutral { border-color: var(--hz-color-border-strong); background: var(--hz-color-canvas); color: var(--hz-color-text-secondary); }
+
+.hz-review-panel__body { background: var(--hz-color-surface); }
+.hz-review-panel__owner { border-radius: var(--hz-radius-card) !important; background: var(--hz-color-surface-subtle) !important; box-shadow: var(--hz-shadow-none) !important; }
+.hz-review-panel__gate { border-radius: var(--hz-radius-card) !important; border: var(--hz-border-default); box-shadow: var(--hz-shadow-none) !important; }
+.hz-review-panel__step { border-radius: var(--hz-radius-card) !important; box-shadow: var(--hz-shadow-none) !important; }
+.hz-review-panel__stat { border-radius: var(--hz-radius-card) !important; background: var(--hz-color-surface) !important; }
+.hz-review-panel__stat-value { color: var(--hz-color-text) !important; font-family: var(--hz-font-control) !important; }
+.hz-review-panel__stat.text-amber-950 .hz-review-panel__stat-value { color: var(--hz-color-warning) !important; }
+.hz-review-panel__stat.text-emerald-950 .hz-review-panel__stat-value { color: var(--hz-color-success-text) !important; }
+
+.hz-review-panel__footer {
+  background: var(--hz-color-surface-subtle);
+}
+
+.hz-review-panel__footer > div > p { color: var(--hz-color-text-secondary); }
+.hz-review-panel__footer .hz-button--secondary { background: var(--hz-color-border-strong); color: var(--hz-color-text); }
+.hz-review-panel__footer .hz-button--outline { background: var(--hz-color-surface); }
+.hz-review-panel__paywall { color: var(--hz-color-text-muted); }
+.hz-review-panel .text-slate-900,
+.hz-review-panel .text-slate-950 { color: var(--hz-color-text); }
+.hz-review-panel .text-slate-600 { color: var(--hz-color-text-secondary); }
+.hz-review-panel .text-slate-400,
+.hz-review-panel .text-slate-500 { color: var(--hz-color-text-muted); }
+
+@media (max-width: 992px) {
+  .hz-review-panel__header { padding: var(--hz-space-8); }
+  .hz-review-panel__body { padding: var(--hz-space-8); }
+}
+
+@media (max-width: 576px) {
+  .hz-review-panel__header,
+  .hz-review-panel__body,
+  .hz-review-panel__footer { padding: var(--hz-space-7); }
+  .hz-review-panel__title { font-size: var(--hz-font-size-lg); }
+  .hz-review-panel__stat { min-width: 0; }
+}

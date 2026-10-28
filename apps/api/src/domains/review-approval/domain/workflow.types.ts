@@ -19,6 +19,7 @@ export interface ProjectWorkflowAggregate {
   name: string;
   companyId: string | null;
   ownerId: string;
+  ownerEmail?: string;
   reviewerId: string | null;
   approverId: string | null;
   workflowStatus: ProjectWorkflowStatus;
@@ -26,6 +27,7 @@ export interface ProjectWorkflowAggregate {
   sections: Array<{
     id: string;
     name: string;
+    content?: unknown;
     workflowStatus: SectionWorkflowStatus;
   }>;
 }
@@ -131,4 +133,8 @@ export type ProjectPermissionAction =
   | 'READINESS';
 
 export type SectionPermissionAction =
-  'COMPLETE' | 'START_REVIEW' | 'REQUEST_CHANGES' | 'APPROVE' | 'READINESS';
+  | 'COMPLETE'
+  | 'START_REVIEW'
+  | 'REQUEST_CHANGES'
+  | 'APPROVE'
+  | 'READINESS';

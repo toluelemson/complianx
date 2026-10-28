@@ -2,6 +2,7 @@ import api from '@/platform/api/client';
 import type { NewProjectFormValues } from './components/NewProjectModal';
 import type {
   ArtifactStatus,
+  AuditEvent,
   AutosaveRecord,
   BillingPlan,
   BillingUsage,
@@ -20,8 +21,40 @@ import type {
   TemplateUpdatePayload,
 } from '@complianx/contracts/ai-systems';
 
+export async function listProjectAuditEvents(projectId: string) {
+  const { data } = await api.get<AuditEvent[]>(
+    `/projects/${projectId}/audit-events`,
+  );
+  return data;
+}
+
 export async function listProjects() {
   const { data } = await api.get<ProjectListItem[]>('/projects');
+  return data;
+}
+
+export async function getOrganizationProfile() {
+  const { data } = await api.get<{
+    company: {
+      legalName?: string | null;
+      website?: string | null;
+      industry?: string | null;
+      address?: string | null;
+      contactEmail?: string | null;
+    };
+  }>('/company');
+  return data.company;
+}
+
+export async function updateOrganizationProfile(
+  profile: Record<string, string>,
+) {
+  const { data } = await api.patch('/company/profile', profile);
+  return data;
+}
+
+export async function listAiSystems() {
+  const { data } = await api.get<ProjectListItem[]>('/ai-systems');
   return data;
 }
 
@@ -30,15 +63,375 @@ export async function createProject(values: NewProjectFormValues) {
   return data;
 }
 
+export async function createAiSystem(values: NewProjectFormValues) {
+  const { data } = await api.post<ProjectDetail>('/ai-systems', values);
+  return data;
+}
+
+export async function classifyProjectIntake(projectId: string) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/assessments/preliminary`,
+  );
+  return data;
+}
+
+export async function createProjectAssessment(projectId: string) {
+  const { data } = await api.post<{ id: string }>(
+    `/ai-systems/${projectId}/assessments`,
+    {},
+  );
+  return data;
+}
+
+export async function classifyAssessment(
+  projectId: string,
+  assessmentId: string,
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/assessments/${assessmentId}/classify`,
+  );
+  return data;
+}
+
+export type PreliminaryClassification = {
+  id: string;
+  assessmentId: string;
+  category: string;
+  reviewStatus: string;
+  regulatoryContentVersion?: string;
+  ruleSetVersion?: string;
+  resultSnapshot?: {
+    in_scope?: boolean;
+    high_risk?: boolean;
+    prohibited?: boolean;
+    operator_roles?: string[];
+    summary_sentence?: string;
+    missing_information?: string[];
+    human_review_required?: boolean;
+  };
+};
+
+export async function getPreliminaryClassification(projectId: string) {
+  const { data } = await api.get(
+    `/ai-systems/${projectId}/assessments/preliminary`,
+  );
+  return data as PreliminaryClassification | null;
+}
+
+export async function listAssessmentAnswers(
+  projectId: string,
+  assessmentId: string,
+) {
+  const { data } = await api.get<
+    Array<{
+      id: string;
+      questionKey: string;
+      valueJson: unknown;
+      createdAt: string;
+      updatedAt: string;
+      answeredBy: { id: string; email: string };
+    }>
+  >(`/ai-systems/${projectId}/assessments/${assessmentId}/answers`);
+  return data;
+}
+
+export async function saveAssessmentAnswers(
+  projectId: string,
+  assessmentId: string,
+  answers: Record<string, unknown>,
+) {
+  const { data } = await api.put(
+    `/ai-systems/${projectId}/assessments/${assessmentId}/answers`,
+    { answers },
+  );
+  return data;
+}
+
+export async function reviewClassification(
+  projectId: string,
+  classificationId: string,
+  payload: {
+    status: 'REVIEWED' | 'OVERRIDDEN';
+    overrideCategory?: string;
+    reason?: string;
+  },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/assessments/classifications/${classificationId}/review`,
+    payload,
+  );
+  return data;
+}
+
+export async function listProjectObligations(projectId: string) {
+  const { data } = await api.get<
+    Array<{
+      id: string;
+      status: string;
+      priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+      approvalState:
+        'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED';
+      applicabilityReason?: string | null;
+      owner?: { id: string; email: string } | null;
+      dueAt?: string | null;
+      obligation: {
+        key?: string;
+        title: string;
+        legalReference?: string | null;
+      };
+      actions: Array<{
+        id: string;
+        title: string;
+        status: string;
+        closureEvidenceId?: string | null;
+        closureNotes?: string | null;
+      }>;
+    }>
+  >(`/ai-systems/${projectId}/obligations`);
+  return data.map((item) => ({
+    ...item,
+    status:
+      item.status === 'READY'
+        ? 'READY_FOR_REVIEW'
+        : item.status === 'COMPLETE'
+          ? 'SATISFIED'
+          : item.status,
+  }));
+}
+
+export async function listProjectFindings(projectId: string) {
+  const { data } = await api.get<
+    Array<{
+      id: string;
+      source: string;
+      severity: string;
+      status: string;
+      description: string;
+      obligationId?: string | null;
+      resolutionSummary?: string | null;
+      reviewerDecision?: string | null;
+      owner?: { id: string; email: string } | null;
+      obligation?: { obligation?: { key?: string; title: string } } | null;
+      actions: Array<{
+        id: string;
+        title: string;
+        status: string;
+        closureEvidenceId?: string | null;
+        closureNotes?: string | null;
+      }>;
+    }>
+  >(`/ai-systems/${projectId}/findings`);
+  return data;
+}
+
+export async function getObligationTraceability(
+  projectId: string,
+  obligationId: string,
+) {
+  const { data } = await api.get<ObligationTraceability>(
+    `/ai-systems/${projectId}/obligations/${obligationId}/traceability`,
+  );
+  return data;
+}
+
+export type ObligationTraceability = {
+  requirement: {
+    id: string;
+    identifier: string;
+    title: string;
+    description?: string | null;
+    legalReference?: string | null;
+    applicability: string;
+    ownerId?: string | null;
+  };
+  applicability: { status: string; reason?: string | null };
+  implementation: { approvalState: string };
+  evidence: Array<{
+    id: string;
+    linkType: 'PRIMARY' | 'SUPPORTING' | 'REFERENCE';
+    artifact?: {
+      id: string;
+      originalName: string;
+      evidenceVersion: number;
+      uploadedAt: string;
+      reviewerStatus: ArtifactStatus;
+      reviewer?: { id: string; email: string } | null;
+      reviewedAt?: string | null;
+    } | null;
+    document?: {
+      id: string;
+      type: string;
+      version?: number;
+      approvalState?: string;
+    } | null;
+  }>;
+  missingEvidence: Array<{ id: string; title: string; status: string }>;
+  review: {
+    approvalState: string;
+    approval?: {
+      actor?: { id: string; email: string } | null;
+      decidedAt: string;
+    } | null;
+  };
+  packageInclusion: Array<{
+    id: string;
+    version: number;
+    createdAt: string;
+    included: boolean;
+  }>;
+};
+
+export async function createProjectFinding(
+  projectId: string,
+  payload: {
+    obligationId?: string;
+    source: 'ASSESSMENT' | 'EVIDENCE_REVIEW' | 'MONITORING' | 'MANUAL_REVIEW';
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    description: string;
+    ownerId?: string;
+  },
+) {
+  const { data } = await api.post(`/ai-systems/${projectId}/findings`, payload);
+  return data;
+}
+
+export async function updateProjectFinding(
+  projectId: string,
+  findingId: string,
+  payload: {
+    status?: string;
+    resolutionSummary?: string;
+    reviewerDecision?: string;
+  },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/findings/${findingId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function updateProjectObligation(
+  projectId: string,
+  obligationId: string,
+  payload: {
+    status?: string;
+    priority?: string;
+    approvalState?: string;
+    ownerId?: string;
+    dueAt?: string;
+  },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/obligations/${obligationId}`,
+    payload,
+  );
+  return data;
+}
+
+export type ObligationEvidenceLink = {
+  id: string;
+  linkType: 'PRIMARY' | 'SUPPORTING' | 'REFERENCE';
+  notes?: string | null;
+  artifact?: {
+    id: string;
+    originalName: string;
+    citationKey: string;
+    status: ArtifactStatus;
+    version: number;
+    expiresAt?: string | null;
+  } | null;
+  document?: {
+    id: string;
+    type: string;
+    approvalState?: 'DRAFT' | 'APPROVED';
+    lifecycleStatus?: 'CURRENT' | 'SUPERSEDED' | 'FAILED';
+    createdAt: string;
+  } | null;
+};
+
+export async function listObligationEvidence(
+  projectId: string,
+  obligationId: string,
+) {
+  const { data } = await api.get<ObligationEvidenceLink[]>(
+    `/ai-systems/${projectId}/obligations/${obligationId}/evidence`,
+  );
+  return data;
+}
+
+export async function linkObligationEvidence(
+  projectId: string,
+  obligationId: string,
+  payload: {
+    artifactId?: string;
+    documentId?: string;
+    linkType?: 'PRIMARY' | 'SUPPORTING' | 'REFERENCE';
+  },
+) {
+  const { data } = await api.post<ObligationEvidenceLink>(
+    `/ai-systems/${projectId}/obligations/${obligationId}/evidence`,
+    payload,
+  );
+  return data;
+}
+
+export async function unlinkObligationEvidence(
+  projectId: string,
+  obligationId: string,
+  linkId: string,
+) {
+  const { data } = await api.delete<{ success: boolean }>(
+    `/ai-systems/${projectId}/obligations/${obligationId}/evidence/${linkId}`,
+  );
+  return data;
+}
+
+export async function listAssignedReviews() {
+  const { data } = await api.get<
+    Array<{
+      id: string;
+      name: string;
+      ownerId: string;
+      ownerEmail?: string;
+      reviewerId: string | null;
+      approverId: string | null;
+      workflowStatus: string;
+      workflowVersion: number;
+      updatedAt: string;
+    }>
+  >('/reviews/assigned-to-me');
+  return data;
+}
+
+export async function getAiSystem(aiSystemId: string) {
+  const { data } = await api.get<ProjectDetail>(`/ai-systems/${aiSystemId}`);
+  return data;
+}
+
 export async function cloneProject(projectId: string, name: string) {
-  const { data } = await api.post<ProjectDetail>(`/projects/${projectId}/clone`, {
-    name,
-  });
+  const { data } = await api.post<ProjectDetail>(
+    `/projects/${projectId}/clone`,
+    {
+      name,
+    },
+  );
   return data;
 }
 
 export async function getProject(projectId: string) {
   const { data } = await api.get<ProjectDetail>(`/projects/${projectId}`);
+  return data;
+}
+
+export async function updateProject(
+  projectId: string,
+  payload: Record<string, unknown> & { name: string },
+) {
+  const { data } = await api.patch<ProjectDetail>(
+    `/projects/${projectId}`,
+    payload,
+  );
   return data;
 }
 
@@ -49,10 +442,13 @@ export async function getProjectSections(projectId: string) {
   return data;
 }
 
-export async function saveProjectSection(projectId: string, payload: {
-  name: string;
-  content: FormValues;
-}) {
+export async function saveProjectSection(
+  projectId: string,
+  payload: {
+    name: string;
+    content: FormValues;
+  },
+) {
   const { data } = await api.post<SectionWithMeta>(
     `/projects/${projectId}/sections`,
     payload,
@@ -67,6 +463,13 @@ export async function getProjectDocuments(projectId: string) {
   return data;
 }
 
+export async function approveDocument(documentId: string) {
+  const { data } = await api.patch<DocumentItem>(
+    `/documents/${documentId}/approve`,
+  );
+  return data;
+}
+
 export async function getGenerationReadiness(projectId: string) {
   const { data } = await api.get<GenerationReadiness>(
     `/projects/${projectId}/generate/readiness`,
@@ -76,13 +479,45 @@ export async function getGenerationReadiness(projectId: string) {
 
 export async function generateProjectDocuments(
   projectId: string,
-  payload: { documentTypes: string[] },
+  payload: { documentTypes: string[]; operationId?: string },
 ) {
-  const { data } = await api.post<DocumentItem[]>(
+  const { data } = await api.post<{ runId: string; operationId: string }>(
     `/projects/${projectId}/generate`,
     payload,
   );
   return data;
+}
+
+export type CompliancePackageRecord = {
+  id: string;
+  projectId: string;
+  version: number;
+  status: string;
+  manifest: Record<string, unknown> & {
+    completeness?: { status: string; gaps: string[] };
+  };
+  manifestHash: string;
+  archiveHash?: string | null;
+  createdAt: string;
+};
+
+export async function createCompliancePackage(projectId: string) {
+  const { data } = await api.post<CompliancePackageRecord>(
+    `/ai-systems/${projectId}/reports/package`,
+  );
+  return data;
+}
+
+export async function listCompliancePackages(projectId: string) {
+  const { data } = await api.get<CompliancePackageRecord[]>(
+    `/ai-systems/${projectId}/reports/packages`,
+  );
+  return data;
+}
+
+export async function verifyCompliancePackage(projectId: string, packageId: string) {
+  const { data } = await api.get(`/ai-systems/${projectId}/reports/packages/${packageId}/verify`);
+  return data as { valid: boolean; manifestValid: boolean; archiveValid: boolean; checkedAt: string; errors: string[] };
 }
 
 export async function listTemplates(sectionName: string) {
@@ -164,12 +599,19 @@ export async function listProjectReviewers(projectId: string) {
   return data;
 }
 
-export async function uploadArtifact(projectId: string, payload: {
-  sectionId: string;
-  file: File;
-  description?: string;
-  purpose?: 'GENERIC' | 'DATASET' | 'MODEL';
-}) {
+export async function uploadArtifact(
+  projectId: string,
+  payload: {
+    sectionId: string;
+    file: File;
+    description?: string;
+    purpose?: 'GENERIC' | 'DATASET' | 'MODEL';
+    source?: string;
+    expiresAt?: string;
+    externalUrl?: string;
+    provenanceNote?: string;
+  },
+) {
   const formData = new FormData();
   formData.append('file', payload.file);
   if (payload.description) {
@@ -178,6 +620,11 @@ export async function uploadArtifact(projectId: string, payload: {
   if (payload.purpose) {
     formData.append('purpose', payload.purpose);
   }
+  if (payload.source) formData.append('source', payload.source);
+  if (payload.expiresAt) formData.append('expiresAt', payload.expiresAt);
+  if (payload.externalUrl) formData.append('externalUrl', payload.externalUrl);
+  if (payload.provenanceNote)
+    formData.append('provenanceNote', payload.provenanceNote);
   const { data } = await api.post<SectionArtifactItem>(
     `/projects/${projectId}/sections/${payload.sectionId}/artifacts`,
     formData,
@@ -247,7 +694,10 @@ export async function saveSectionAutosave(payload: {
   sectionId: string;
   content: FormValues;
 }) {
-  const { data } = await api.post<AutosaveRecord>('/autosave/sections', payload);
+  const { data } = await api.post<AutosaveRecord>(
+    '/autosave/sections',
+    payload,
+  );
   return data;
 }
 
@@ -258,13 +708,37 @@ export async function getSectionAutosave(sectionId: string) {
   return data;
 }
 
-export async function addSectionComment(projectId: string, payload: {
-  sectionId: string;
-  body: string;
-}) {
+export async function addSectionComment(
+  projectId: string,
+  payload: {
+    sectionId: string;
+    body: string;
+    mentions?: string[];
+    linkedEntityType?: string;
+    linkedEntityId?: string;
+  },
+) {
   const { data } = await api.post(
     `/projects/${projectId}/sections/${payload.sectionId}/comments`,
-    { body: payload.body },
+    {
+      body: payload.body,
+      mentions: payload.mentions,
+      linkedEntityType: payload.linkedEntityType,
+      linkedEntityId: payload.linkedEntityId,
+    },
+  );
+  return data;
+}
+
+export async function setCommentResolution(
+  projectId: string,
+  sectionId: string,
+  commentId: string,
+  resolved: boolean,
+) {
+  const { data } = await api.patch(
+    `/projects/${projectId}/sections/${sectionId}/comments/${commentId}/resolution`,
+    { resolved },
   );
   return data;
 }
@@ -275,4 +749,63 @@ export async function runProjectWorkflowAction(payload: {
 }) {
   const { data } = await api.post(payload.endpoint, payload.body ?? {});
   return data;
+}
+
+export async function createRemediationAction(
+  projectId: string,
+  obligationId: string,
+  payload: { title: string; findingId: string },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/obligations/${obligationId}/actions`,
+    payload,
+  );
+  return data;
+}
+export async function updateRemediationAction(
+  projectId: string,
+  actionId: string,
+  payload: {
+    status: string;
+    closureEvidenceId?: string;
+    closureNotes?: string;
+  },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/actions/${actionId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function downloadDocument(documentId: string) {
+  const { data } = await api.get(`/documents/${documentId}/download`, {
+    responseType: 'blob',
+  });
+  return data as Blob;
+}
+
+export async function downloadProjectDocuments(projectId: string) {
+  const { data } = await api.get(`/projects/${projectId}/documents.zip`, {
+    responseType: 'blob',
+  });
+  return data as Blob;
+}
+
+export async function downloadArtifact(artifactId: string) {
+  const { data } = await api.get(`/artifacts/${artifactId}/download`, {
+    responseType: 'blob',
+  });
+  return data as Blob;
+}
+
+export async function downloadCompliancePackage(
+  projectId: string,
+  packageId: string,
+) {
+  const { data } = await api.get(
+    `/ai-systems/${projectId}/reports/packages/${packageId}/download`,
+    { responseType: 'blob' },
+  );
+  return data as Blob;
 }

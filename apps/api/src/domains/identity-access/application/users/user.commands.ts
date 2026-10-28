@@ -6,6 +6,7 @@ export interface UpdateUserProfileCommand {
   jobTitle?: string | null;
   phone?: string | null;
   timezone?: string | null;
+  preferredLocale?: string;
 }
 
 export interface UpdateUserRoleCommand {

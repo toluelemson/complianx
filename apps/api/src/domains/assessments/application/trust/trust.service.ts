@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   TrustCohortAnalysisResponse,
   TrustMetric as TrustMetricContract,
@@ -10,8 +10,11 @@ import {
   TrustSample as TrustSampleModel,
 } from '@prisma/client';
 import { promises as fs } from 'fs';
-import { join } from 'path';
 import { MonetizationService } from '../../../subscriptions/application/monetization.service';
+import {
+  FILE_STORAGE,
+  FileStorage,
+} from '../../../../platform/files/file-storage.port';
 import {
   calculateKld,
   calculatePsi,
@@ -27,6 +30,7 @@ export class TrustService {
     private readonly prisma: PrismaService,
     private readonly projectsService: ProjectsService,
     private readonly monetization: MonetizationService,
+    @Inject(FILE_STORAGE) private readonly storage: FileStorage,
   ) {}
 
   async listByProject(
@@ -39,34 +43,36 @@ export class TrustService {
       allowReviewer: true,
       allowApprover: true,
     });
-    return this.prisma.trustMetric.findMany({
-      where: { projectId },
-      include: {
-        samples: {
-          orderBy: { timestamp: 'desc' },
-          take: 6,
+    return this.prisma.trustMetric
+      .findMany({
+        where: { projectId },
+        include: {
+          samples: {
+            orderBy: { timestamp: 'desc' },
+            take: 6,
+          },
         },
-      },
-    }).then((metrics) =>
-      metrics.map((metric) => ({
-        id: metric.id,
-        name: metric.name,
-        pillar: metric.pillar,
-        unit: metric.unit,
-        datasetName: metric.datasetName ?? undefined,
-        modelName: metric.modelName ?? undefined,
-        targetMin: metric.targetMin ?? undefined,
-        targetMax: metric.targetMax ?? undefined,
-        sectionId: metric.sectionId ?? undefined,
-        samples: metric.samples.map((sample) => ({
-          id: sample.id,
-          value: sample.value,
-          status: sample.status,
-          note: sample.note ?? undefined,
-          timestamp: sample.timestamp.toISOString(),
+      })
+      .then((metrics) =>
+        metrics.map((metric) => ({
+          id: metric.id,
+          name: metric.name,
+          pillar: metric.pillar,
+          unit: metric.unit,
+          datasetName: metric.datasetName ?? undefined,
+          modelName: metric.modelName ?? undefined,
+          targetMin: metric.targetMin ?? undefined,
+          targetMax: metric.targetMax ?? undefined,
+          sectionId: metric.sectionId ?? undefined,
+          samples: metric.samples.map((sample) => ({
+            id: sample.id,
+            value: sample.value,
+            status: sample.status,
+            note: sample.note ?? undefined,
+            timestamp: sample.timestamp.toISOString(),
+          })),
         })),
-      })),
-    );
+      );
   }
 
   async create(
@@ -177,8 +183,7 @@ export class TrustService {
       throw new NotFoundException('Model artifact not found');
     }
 
-    const storageRoot = join(process.cwd(), 'storage', 'artifacts');
-    const datasetPath = join(storageRoot, dataset.storedName);
+    const datasetPath = this.storage.resolve('artifacts', dataset.storedName);
     const csvRaw = await fs.readFile(datasetPath, 'utf8');
     const rows = parseCsv(csvRaw);
     const cols = dto.columns || {};
@@ -420,8 +425,7 @@ export class TrustService {
     if (!dataset || dataset.projectId !== projectId) {
       throw new NotFoundException('Dataset artifact not found');
     }
-    const storageRoot = join(process.cwd(), 'storage', 'artifacts');
-    const datasetPath = join(storageRoot, dataset.storedName);
+    const datasetPath = this.storage.resolve('artifacts', dataset.storedName);
     const csvRaw = await fs.readFile(datasetPath, 'utf8');
     const allRows = parseCsv(csvRaw);
     const cols = dto.columns || {};
@@ -577,8 +581,7 @@ export class TrustService {
     if (!dataset || dataset.projectId !== projectId) {
       throw new NotFoundException('Dataset artifact not found');
     }
-    const storageRoot = join(process.cwd(), 'storage', 'artifacts');
-    const datasetPath = join(storageRoot, dataset.storedName);
+    const datasetPath = this.storage.resolve('artifacts', dataset.storedName);
     const csvRaw = await fs.readFile(datasetPath, 'utf8');
     const rows = parseCsv(csvRaw);
     if (!rows.length) {
@@ -707,13 +710,12 @@ export class TrustService {
     if (!current || current.projectId !== projectId) {
       throw new NotFoundException('Current artifact not found');
     }
-    const storageRoot = join(process.cwd(), 'storage', 'artifacts');
     const bCsv = await fs.readFile(
-      join(storageRoot, baseline.storedName),
+      this.storage.resolve('artifacts', baseline.storedName),
       'utf8',
     );
     const cCsv = await fs.readFile(
-      join(storageRoot, current.storedName),
+      this.storage.resolve('artifacts', current.storedName),
       'utf8',
     );
     const bRows = parseCsv(bCsv);

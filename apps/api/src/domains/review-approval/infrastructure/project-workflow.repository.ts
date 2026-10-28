@@ -32,6 +32,9 @@ export interface ProjectWorkflowRepository {
     allSectionsApproved: boolean;
   } | null>;
   transitionProject(request: ProjectWorkflowTransitionRequest): Promise<void>;
+  submitProjectForReview(
+    request: ProjectWorkflowTransitionRequest,
+  ): Promise<ProjectWorkflowAggregate>;
   listProjectHistory(projectId: string): Promise<ProjectWorkflowHistoryEntry[]>;
   listAssignedReviews(
     userId: string,

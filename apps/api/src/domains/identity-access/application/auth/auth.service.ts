@@ -186,13 +186,9 @@ export class AuthService {
       };
     }
     if (dto.companyId) {
-      const existing = await (this.prisma as any).company.findUnique({
-        where: { id: dto.companyId },
-      });
-      if (!existing) {
-        throw new NotFoundException('Company not found');
-      }
-      return { companyId: existing.id, createdCompany: false };
+      throw new ConflictException(
+        'A valid invitation is required to join an existing company',
+      );
     }
     if (dto.companyName?.trim()) {
       const company = await (this.prisma as any).company.create({

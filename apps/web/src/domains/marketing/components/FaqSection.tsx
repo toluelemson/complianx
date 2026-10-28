@@ -1,31 +1,30 @@
 import { useState } from 'react';
-import { CircleHelp, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 const FAQ_ITEMS = [
   {
-    question: 'What is NeuralDocx?',
+    question: 'What is Neuraldocx?',
     answer:
-      'NeuralDocx is a done-for-you AI compliance documentation service. We create audit-ready documents for your AI systems so you do not have to.',
+      'Neuraldocx is a documentation and approval workspace for AI systems.',
   },
   {
     question: 'What exactly do you deliver?',
     answer:
-      'We deliver complete compliance documentation, including AI system descriptions, risk classification, data governance documentation, model transparency and explainability reports, risk and mitigation analysis, and audit-ready compliance reports.',
+      'An EU AI Act Documentation Package with system facts, evidence, review history, and approval status.',
   },
   {
     question: 'Who is this service for?',
-    answer:
-      'It is built for startups building AI products, SaaS companies using AI features, fintech and healthtech teams, companies preparing for EU AI Act compliance, and teams needing documentation for investors, audits, or regulators.',
+    answer: 'For SMEs, AI teams, and consultants managing client work.',
   },
   {
     question: "Why shouldn't we do this ourselves?",
     answer:
-      'You can, but it typically takes weeks of research, legal and technical alignment, and compliance expertise. We compress that into 24 to 72 hours with structured, high-quality output.',
+      'You can. Neuraldocx keeps intake, evidence, review, approval, and versions together.',
   },
   {
     question: 'How fast can we get our documentation?',
     answer:
-      'Basic package: 24 hours. Standard package: 48 hours. Advanced package: 72 hours.',
+      'It depends on your information and evidence. The workspace shows what is missing.',
   },
   {
     question: 'What do you need from us to start?',
@@ -35,7 +34,7 @@ const FAQ_ITEMS = [
   {
     question: 'Is this compliant with the EU AI Act?',
     answer:
-      'Yes. We structure documentation based on EU AI Act requirements and best practices so your records are audit-ready.',
+      'Neuraldocx supports documentation work. It does not replace legal or compliance review.',
   },
   {
     question: 'Will this help with investors or partnerships?',
@@ -55,7 +54,7 @@ const FAQ_ITEMS = [
   {
     question: 'How much does it cost?',
     answer:
-      'Typical ranges: Starter: EUR99 - EUR199. Standard: EUR299 - EUR599. Advanced: EUR999+. Custom pricing depends on complexity.',
+      'The classification questionnaire is free. Plans start at €49/month. Done-for-you support starts at €2,500.',
   },
   {
     question: 'Is this a one-time service or ongoing?',
@@ -65,7 +64,7 @@ const FAQ_ITEMS = [
   {
     question: 'What makes NeuralDocx different?',
     answer:
-      'NeuralDocx combines AI automation with real compliance structure. It is built for speed, clarity, and audit-readiness, and it is tailored to your actual system instead of relying on generic templates.',
+      'Structured intake, evidence mapping, human review, and version history in one place.',
   },
   {
     question: 'What happens after delivery?',
@@ -75,39 +74,28 @@ const FAQ_ITEMS = [
   {
     question: 'How do we get started?',
     answer:
-      "Send us your AI product description. We'll respond quickly and start immediately.",
+      'Start with the questionnaire. Request an invitation or submit your system for assisted support.',
   },
 ];
 
 export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [showAll, setShowAll] = useState(false);
-  const visibleItems = showAll ? FAQ_ITEMS : FAQ_ITEMS.slice(0, 5);
+  const visibleItems = showAll ? FAQ_ITEMS : FAQ_ITEMS.slice(0, 3);
 
   return (
     <section
       data-nav-theme="light"
-      className="relative overflow-hidden bg-[#f6f7fb] px-5 py-28 sm:px-8 lg:px-10"
+      className="relative overflow-hidden bg-[var(--cx-canvas)] px-5 py-20 sm:px-8 lg:px-10"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.14),_transparent_34%)]" />
       <div className="mx-auto max-w-3xl">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.14)]">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-600">
-              <CircleHelp className="h-3.5 w-3.5" />
-            </span>
-            <span>Common questions</span>
-          </div>
-          <h2 className="animate-enter-up mt-5 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl md:text-6xl">
-            Answers before your team commits time
+          <h2 className="animate-enter-up text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
+            Questions?
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            The service is built to remove ambiguity around scope, turnaround,
-            and what you actually receive at the end of the engagement.
-          </p>
         </div>
 
-        <div className="mt-16 space-y-3">
+        <div className="mt-10 space-y-3">
           {visibleItems.map((item, index) => {
             const isOpen = openIndex === index;
 
@@ -154,13 +142,13 @@ export function FaqSection() {
           })}
         </div>
 
-        <div className="mt-10 flex justify-center">
+        <div className="mt-8 flex justify-center">
           <button
             type="button"
             onClick={() => setShowAll((value) => !value)}
-            className="inline-flex items-center justify-center rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-black"
+            className="inline-flex items-center justify-center rounded-[var(--cx-radius)] bg-[var(--cx-brand)] px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[var(--cx-brand-hover)]"
           >
-            {showAll ? 'Show fewer answers' : 'Read all Answers'}
+            {showAll ? 'Show fewer' : 'More questions'}
           </button>
         </div>
       </div>

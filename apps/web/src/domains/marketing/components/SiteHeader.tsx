@@ -15,8 +15,8 @@ export function SiteHeader() {
     <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <BrandLink
-          brandClassName="text-lg font-semibold tracking-[-0.02em] text-slate-900"
-          iconClassName="flex h-8 w-8 items-center justify-center rounded-2xl border border-slate-900/10 bg-white shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)]"
+          brandClassName="text-lg font-semibold tracking-[-0.02em] text-[#383838]"
+          iconClassName="flex h-8 w-8 items-center justify-center rounded-lg border border-[#383838]/10 bg-white"
           imageClassName="h-8 w-8 rounded-2xl p-1"
         />
 
@@ -34,13 +34,13 @@ export function SiteHeader() {
             to="/eu-ai-act-checker"
             className="text-sm font-medium text-slate-900 transition-colors hover:text-black"
           >
-            Compliance check
+            View example package
           </Link>
           <MarketingEnterpriseDemoLink
             source="site_header"
             className="text-sm font-medium text-slate-900 transition-colors hover:text-black"
           >
-            Live demo
+            Example workflow
           </MarketingEnterpriseDemoLink>
         </nav>
 
@@ -56,10 +56,10 @@ export function SiteHeader() {
           <Button
             asChild
             size="sm"
-            className="hidden sm:inline-flex bg-slate-950 text-white hover:bg-black"
+            className="hidden sm:inline-flex bg-[#d40c2e] text-white hover:bg-[#e21236]"
           >
             <MarketingSubmitSystemLink source="site_header">
-              Submit your system
+              Start classification
             </MarketingSubmitSystemLink>
           </Button>
           <Button
@@ -112,14 +112,14 @@ export function SiteHeader() {
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
             >
-              Compliance check
+              View example package
             </Link>
             <MarketingEnterpriseDemoLink
               source="site_header"
               className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Live demo
+              Example workflow
             </MarketingEnterpriseDemoLink>
             <Link
               to="/login"
@@ -130,10 +130,10 @@ export function SiteHeader() {
             </Link>
             <MarketingSubmitSystemLink
               source="site_header"
-              className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-black"
+              className="rounded-lg bg-[#d40c2e] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e21236]"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Submit your system
+              Start classification
             </MarketingSubmitSystemLink>
           </div>
         </div>

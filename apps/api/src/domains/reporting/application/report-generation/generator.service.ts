@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../../../platform/database/prisma.service';
 import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
 import { LlmService } from '../../../../platform/ai/llm.service';
@@ -19,7 +24,7 @@ const DOCUMENT_SPECS: Record<
   { label: string; mode: GenerationMode; framework?: string }
 > = {
   technical_doc: {
-    label: 'EU AI Act Technical Documentation',
+    label: 'EU AI Act Documentation Package',
     mode: 'technical',
     framework: 'EU AI Act',
   },
@@ -43,6 +48,7 @@ const DOCUMENT_SPECS: Record<
 @Injectable()
 export class GeneratorService {
   private readonly storageBucket = 'documents';
+  private readonly logger = new Logger(GeneratorService.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -66,10 +72,30 @@ export class GeneratorService {
         },
       } as any,
     });
-    return this.readinessService.assess(sections);
+    const obligations = await this.prisma.aiSystemObligation.findMany({
+      where: { projectId },
+      include: {
+        obligation: { select: { title: true } },
+        _count: { select: { evidence: true } },
+      },
+    });
+    return this.readinessService.assess(
+      sections,
+      obligations.map((item) => ({
+        id: item.id,
+        title: item.obligation.title,
+        status: item.status,
+        evidenceCount: item._count.evidence,
+      })),
+    );
   }
 
-  async generate(projectId: string, userId: string, requestedTypes?: string[]) {
+  async generate(
+    projectId: string,
+    userId: string,
+    requestedTypes?: string[],
+    operationId?: string,
+  ) {
     await this.projectsService.assertOwnership(projectId, userId);
     const sections = await (this.prisma as any).section.findMany({
       where: { projectId },
@@ -95,7 +121,22 @@ export class GeneratorService {
     if (!sections.length) {
       throw new BadRequestException('Please complete at least one section.');
     }
-    const readiness = this.readinessService.assess(sections);
+    const obligations = await this.prisma.aiSystemObligation.findMany({
+      where: { projectId },
+      include: {
+        obligation: { select: { title: true } },
+        _count: { select: { evidence: true } },
+      },
+    });
+    const readiness = this.readinessService.assess(
+      sections,
+      obligations.map((item) => ({
+        id: item.id,
+        title: item.obligation.title,
+        status: item.status,
+        evidenceCount: item._count.evidence,
+      })),
+    );
     if (readiness.status === 'insufficient') {
       throw new BadRequestException({
         message:
@@ -106,6 +147,11 @@ export class GeneratorService {
     }
     const merged = this.composition.mergeSections(sections);
     const appendixMarkdown = this.buildEvidenceAppendix(sections);
+    const regulatoryPack = await this.prisma.compliancePackVersion?.findFirst({
+      where: { key: 'eu-ai-act', status: 'PUBLISHED' },
+      orderBy: { publishedAt: 'desc' },
+      select: { version: true },
+    });
     const orderedTypes = Object.keys(DOCUMENT_SPECS);
     const filteredSelection = (requestedTypes ?? [])
       .map((type) => type?.toString())
@@ -119,16 +165,20 @@ export class GeneratorService {
     const documents: Array<
       Awaited<ReturnType<DocumentsService['createRecord']>>
     > = [];
-    // Monetization: enforce doc generation quota based on number of documents
-    await this.monetization.checkAndConsumeForProject(
-      projectId,
-      'docgen',
-      typesToGenerate.length,
-    );
     for (const type of typesToGenerate) {
       const spec = DOCUMENT_SPECS[type];
       if (!spec) {
         continue;
+      }
+      const operationKey = operationId ? `${operationId}:${type}` : undefined;
+      if (operationKey) {
+        const existing = await this.prisma.document.findUnique({
+          where: { operationKey },
+        });
+        if (existing) {
+          documents.push(existing);
+          continue;
+        }
       }
       // Find previous document of this type to build a simple redline summary
       const previous = await this.prisma.document.findFirst({
@@ -136,34 +186,87 @@ export class GeneratorService {
         orderBy: { createdAt: 'desc' },
       });
 
-      const markdown = await this.llmService.generate(spec.mode, merged);
-      const readinessNotice =
-        readiness.status === 'partial'
-          ? this.buildReadinessNotice(readiness)
-          : '';
-      const changesSummary = previous
-        ? this.buildChangesSince(previous.createdAt, sections)
-        : '';
-      const assembled = [
-        readinessNotice,
-        changesSummary,
-        markdown,
-        appendixMarkdown,
-      ]
-        .filter(Boolean)
-        .join('\n\n');
-      const finalMarkdown = assembled;
-      const html = this.composition.renderHtml(spec.label, finalMarkdown);
-      const fileName = `${projectId}-${type}-${Date.now()}.pdf`;
-      await this.storage.ensure(this.storageBucket);
-      const filePath = this.storage.resolve(this.storageBucket, fileName);
-      await this.pdfService.htmlToPdf(html, filePath);
-      const record = await this.documentsService.createRecord(
+      const reservation = await this.monetization.reserveDocumentsForProject(
         projectId,
-        type,
-        fileName,
+        1,
+        operationKey,
       );
-      documents.push(record);
+      let fileName: string | undefined;
+      try {
+        const markdown = await this.llmService.generate(spec.mode, merged);
+        const readinessNotice =
+          readiness.status === 'partial'
+            ? this.buildReadinessNotice(readiness)
+            : '';
+        const changesSummary = previous
+          ? this.buildChangesSince(previous.createdAt, sections)
+          : '';
+        const finalMarkdown = [
+          this.buildProvenanceNotice(),
+          readinessNotice,
+          changesSummary,
+          markdown,
+          appendixMarkdown,
+        ]
+          .filter(Boolean)
+          .join('\n\n');
+        const html = this.composition.renderHtml(spec.label, finalMarkdown);
+        fileName = `${projectId}-${type}-${Date.now()}.pdf`;
+        const generatedFileName = fileName;
+        await this.storage.ensure(this.storageBucket);
+        const filePath = this.storage.resolve(this.storageBucket, fileName);
+        await this.pdfService.htmlToPdf(html, filePath);
+        const record = await this.prisma.$transaction(async (tx) => {
+          await this.monetization.commitDocumentReservation(reservation, tx);
+          await tx.document.updateMany({
+            where: {
+              projectId,
+              type,
+              lifecycleStatus: 'CURRENT',
+            },
+            data: { lifecycleStatus: 'SUPERSEDED' },
+          });
+          const latest = await tx.document.aggregate({
+            where: { projectId, type },
+            _max: { version: true },
+          });
+          return tx.document.create({
+            data: {
+              projectId,
+              type,
+              url: generatedFileName,
+              operationKey,
+              version: (latest._max.version ?? 0) + 1,
+              frameworkKey: 'eu-ai-act',
+              regulatoryContentVersion: regulatoryPack?.version,
+              approvalState: 'DRAFT',
+              lifecycleStatus: 'CURRENT',
+              provenanceStatus: 'PARTIAL',
+            },
+          });
+        });
+        documents.push(record);
+      } catch (error) {
+        if (fileName) {
+          try {
+            await this.storage.remove(this.storageBucket, fileName);
+          } catch (cleanupError) {
+            this.logger.error(
+              `Document file cleanup failed for ${projectId}/${type}`,
+              cleanupError as Error,
+            );
+          }
+        }
+        try {
+          await this.monetization.releaseDocumentReservation(reservation);
+        } catch (releaseError) {
+          this.logger.error(
+            `Document quota release failed for ${projectId}/${type}`,
+            releaseError as Error,
+          );
+        }
+        throw error;
+      }
     }
     return documents;
   }
@@ -215,6 +318,17 @@ export class GeneratorService {
       lines.push('');
     });
     return lines.join('\n');
+  }
+
+  private buildProvenanceNotice() {
+    return [
+      '## Provenance and review status',
+      '',
+      '- System facts and evidence are based on customer-provided workspace data.',
+      '- Classification references are derived from the configured regulatory pack and deterministic rules.',
+      '- Some wording may be AI-assisted and must be validated by a qualified human reviewer.',
+      '- This document is not legal advice and is not an automatic finding of regulatory compliance.',
+    ].join('\n');
   }
 
   private buildReadinessNotice(readiness: {

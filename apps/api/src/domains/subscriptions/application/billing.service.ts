@@ -24,14 +24,12 @@ export class BillingService {
   ) {
     const secret = this.config.get<string>('STRIPE_SECRET_KEY');
     const frontends = this.config.get<string>('FRONTEND_URL') ?? '';
-    console.log('Configured FRONTEND_URL:', frontends);
     this.frontendUrl =
       frontends
         .split(',')
         .map((entry) => entry.trim())
         .filter(Boolean)[0] ?? 'http://localhost:5173';
     this.webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
-    console.log('Stripe Webhook Secret:', this.webhookSecret);
     this.stripe = secret ? new Stripe(secret) : null;
     this.priceMap = {
       PRO: this.config.get<string>('STRIPE_PRICE_PRO'),
@@ -42,7 +40,7 @@ export class BillingService {
   isEnabled() {
     return Boolean(
       this.stripe &&
-      Object.values(this.priceMap).every((priceId) => Boolean(priceId)),
+        Object.values(this.priceMap).every((priceId) => Boolean(priceId)),
     );
   }
 
@@ -147,15 +145,11 @@ export class BillingService {
     }
     switch (event.type) {
       case 'checkout.session.completed':
-        await this.handleCheckoutCompleted(
-          event.data.object as Stripe.Checkout.Session,
-        );
+        await this.handleCheckoutCompleted(event.data.object);
         break;
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
-        await this.handleSubscriptionUpdated(
-          event.data.object as Stripe.Subscription,
-        );
+        await this.handleSubscriptionUpdated(event.data.object);
         break;
       default:
         break;
@@ -187,11 +181,6 @@ export class BillingService {
   }
 
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-    console.log(
-      '[Stripe] subscription update',
-      subscription.id,
-      subscription.status,
-    );
     const company = await this.prisma.company.findFirst({
       where: {
         OR: [
@@ -219,7 +208,6 @@ export class BillingService {
         nextPlan = mapped;
       }
     }
-    console.log('[Stripe] updating company', company.id, 'nextPlan', nextPlan);
     await this.prisma.company.update({
       where: { id: company.id },
       data: {

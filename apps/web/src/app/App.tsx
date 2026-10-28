@@ -25,7 +25,8 @@ const EuAiActGeneratorDemoPage = lazy(
   () => import('@/domains/reports/pages/EuAiActGeneratorDemoPage'),
 );
 const PublicEuAiActCheckerPage = lazy(
-  () => import('@/domains/regulatory-frameworks/pages/PublicEuAiActCheckerPage'),
+  () =>
+    import('@/domains/regulatory-frameworks/pages/PublicEuAiActCheckerPage'),
 );
 const PublicEuAiActResultPage = lazy(
   () => import('@/domains/regulatory-frameworks/pages/PublicEuAiActResultPage'),
@@ -33,7 +34,42 @@ const PublicEuAiActResultPage = lazy(
 const DashboardPage = lazy(
   () => import('@/domains/ai-systems/pages/DashboardPage'),
 );
-const ProjectPage = lazy(() => import('@/domains/ai-systems/pages/ProjectPage'));
+const ReviewsPage = lazy(
+  () => import('@/domains/ai-systems/pages/ReviewsPage'),
+);
+const DocumentsPage = lazy(
+  () => import('@/domains/ai-systems/pages/DocumentsPage'),
+);
+const CompliancePackagePage = lazy(
+  () => import('@/domains/ai-systems/pages/CompliancePackagePage'),
+);
+const ProjectPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectPage'),
+);
+const ProjectOverviewPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectOverviewPage'),
+);
+const ProjectMessagesPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectMessagesPage'),
+);
+const ProjectProfilePage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectProfilePage'),
+);
+const ProjectRequirementsPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectRequirementsPage'),
+);
+const ProjectEvidencePage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectEvidencePage'),
+);
+const ProjectReviewPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectReviewPage'),
+);
+const ProjectFindingsPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectFindingsPage'),
+);
+const ProjectQuestionnairePage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectQuestionnairePage'),
+);
 const ProjectTrustPage = lazy(
   () => import('@/domains/assessments/pages/ProjectTrustPage'),
 );
@@ -92,7 +128,127 @@ function App() {
           }
         />
         <Route
+          path="/reviews"
+          element={
+            <ProtectedRoute>
+              <ReviewsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <ProtectedRoute>
+              <DocumentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/projects/:projectId"
+          element={
+            <ProtectedRoute>
+              <ProjectOverviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/compliance-package"
+          element={
+            <ProtectedRoute>
+              <CompliancePackagePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/overview"
+          element={
+            <ProtectedRoute>
+              <ProjectOverviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/messages"
+          element={
+            <ProtectedRoute>
+              <ProjectMessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/organization-profile"
+          element={
+            <ProtectedRoute>
+              <ProjectProfilePage organization />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/ai-system-profile"
+          element={
+            <ProtectedRoute>
+              <ProjectProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/requirements"
+          element={
+            <ProtectedRoute>
+              <ProjectRequirementsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/evidence"
+          element={
+            <ProtectedRoute>
+              <ProjectEvidencePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/review-approval"
+          element={
+            <ProtectedRoute>
+              <ProjectReviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/findings"
+          element={
+            <ProtectedRoute>
+              <ProjectFindingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/classification"
+          element={
+            <ProtectedRoute>
+              <ProjectQuestionnairePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/compliance-workspace"
+          element={
+            <ProtectedRoute>
+              <ProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/:sectionKey"
+          element={
+            <ProtectedRoute>
+              <ProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-systems/:projectId"
           element={
             <ProtectedRoute>
               <ProjectPage />

@@ -1,8 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { BillingPlan, BillingUsage } from '@complianx/contracts/ai-systems';
+import type {
+  BillingPlan,
+  BillingUsage,
+} from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../platform/database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 type UsageType = 'docgen' | 'trust' | 'review';
+export type DocumentQuotaReservation = {
+  id: string;
+  companyId: string;
+  month: string;
+  amount: number;
+  status: 'ACTIVE' | 'COMMITTED' | 'RELEASED';
+} | null;
 
 @Injectable()
 export class MonetizationService {
@@ -18,6 +29,12 @@ export class MonetizationService {
         docs: Number.MAX_SAFE_INTEGER,
         trust: Number.MAX_SAFE_INTEGER,
         reviews: Number.MAX_SAFE_INTEGER,
+        activeAiSystems: Number.MAX_SAFE_INTEGER,
+        users: Number.MAX_SAFE_INTEGER,
+        clientWorkspaces: Number.MAX_SAFE_INTEGER,
+        versionHistory: true,
+        reviewApproval: true,
+        exports: true,
       };
     }
     const freeDocs = parseInt(process.env.FREE_DOCS_PER_MONTH || '3', 10);
@@ -31,22 +48,72 @@ export class MonetizationService {
     const proReviews = parseInt(process.env.PRO_REVIEWS_PER_MONTH || '250', 10);
     switch ((plan || 'FREE').toUpperCase()) {
       case 'PRO':
-        return { docs: proDocs, trust: proTrust, reviews: proReviews };
+        return {
+          docs: proDocs,
+          trust: proTrust,
+          reviews: proReviews,
+          activeAiSystems: Number.parseInt(
+            process.env.PRO_AI_SYSTEMS || '25',
+            10,
+          ),
+          users: Number.parseInt(process.env.PRO_USERS || '10', 10),
+          clientWorkspaces: 0,
+          versionHistory: true,
+          reviewApproval: true,
+          exports: true,
+        };
       case 'ENTERPRISE':
         return {
           docs: Number.MAX_SAFE_INTEGER,
           trust: Number.MAX_SAFE_INTEGER,
           reviews: Number.MAX_SAFE_INTEGER,
+          activeAiSystems: Number.MAX_SAFE_INTEGER,
+          users: Number.MAX_SAFE_INTEGER,
+          clientWorkspaces: Number.MAX_SAFE_INTEGER,
+          versionHistory: true,
+          reviewApproval: true,
+          exports: true,
         };
       case 'FREE':
       default:
-        return { docs: freeDocs, trust: freeTrust, reviews: freeReviews };
+        return {
+          docs: freeDocs,
+          trust: freeTrust,
+          reviews: freeReviews,
+          activeAiSystems: Number.parseInt(
+            process.env.FREE_AI_SYSTEMS || '3',
+            10,
+          ),
+          users: 1,
+          clientWorkspaces: 0,
+          versionHistory: false,
+          reviewApproval: false,
+          exports: true,
+        };
     }
   }
 
   private currentMonth() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  async assertCanAddAiSystem(companyId: string) {
+    if (!this.isEnabled()) return;
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { plan: true },
+    });
+    const limit = this.getLimits(company?.plan).activeAiSystems;
+    if (limit === undefined || limit >= Number.MAX_SAFE_INTEGER) return;
+    const active = await this.prisma.project.count({ where: { companyId } });
+    if (active >= limit) {
+      throw new BadRequestException({
+        code: 'PAYWALL',
+        message: 'AI-system limit reached for this plan',
+        limit,
+      });
+    }
   }
 
   async getCompanyForProject(projectId: string) {
@@ -124,34 +191,152 @@ export class MonetizationService {
       return; // allow
     }
     const month = this.currentMonth();
-    const usage = await this.getUsage(companyId, month);
     const key = this.pickLimitKey(type);
     const limit = (limits as any)[key] as number;
-    const usageAny = usage as any;
-    const current =
-      key === 'docs'
-        ? usage.docsGenerated
-        : key === 'trust'
-          ? usage.trustAnalyses
-          : (usageAny.reviewsLogged ?? 0);
-    if (current + amount > limit) {
+    await this.prisma.companyUsage.upsert({
+      where: { companyId_month: { companyId, month } },
+      create: { companyId, month, docsGenerated: 0 },
+      update: {},
+    });
+    const changed =
+      key === 'trust'
+        ? await this.prisma.$executeRaw(
+            Prisma.sql`UPDATE "CompanyUsage" SET "trustAnalyses" = "trustAnalyses" + ${amount} WHERE "companyId" = ${companyId} AND "month" = ${month} AND "trustAnalyses" + ${amount} <= ${limit}`,
+          )
+        : await this.prisma.$executeRaw(
+            Prisma.sql`UPDATE "CompanyUsage" SET "reviewsLogged" = "reviewsLogged" + ${amount} WHERE "companyId" = ${companyId} AND "month" = ${month} AND "reviewsLogged" + ${amount} <= ${limit}`,
+          );
+    if (changed !== 1) {
       throw new BadRequestException({
         code: 'PAYWALL',
         message: 'Monthly limit reached',
         plan,
         limit,
-        usage: current,
       });
     }
-    const dataUpdate =
-      key === 'docs'
-        ? { docsGenerated: { increment: amount } }
-        : key === 'trust'
-          ? { trustAnalyses: { increment: amount } }
-          : { reviewsLogged: { increment: amount } };
-    await this.prisma.companyUsage.update({
-      where: { companyId_month: { companyId, month } },
-      data: dataUpdate,
+  }
+
+  async reserveDocumentsForProject(
+    projectId: string,
+    amount = 1,
+    operationKey?: string,
+  ): Promise<DocumentQuotaReservation> {
+    if (!this.isEnabled() || amount <= 0) return null;
+    const { id: companyId, plan } = await this.getCompanyForProject(projectId);
+    if (!companyId) return null;
+    const limit = this.getLimits(plan).docs;
+    if (limit >= Number.MAX_SAFE_INTEGER) return null;
+    const month = this.currentMonth();
+    return this.prisma.$transaction(async (tx) => {
+      await tx.companyUsage.upsert({
+        where: { companyId_month: { companyId, month } },
+        create: { companyId, month, docsGenerated: 0 },
+        update: {},
+      });
+      const usage = await tx.$queryRaw<Array<{ docsGenerated: number }>>(
+        Prisma.sql`SELECT "docsGenerated" FROM "CompanyUsage" WHERE "companyId" = ${companyId} AND "month" = ${month} FOR UPDATE`,
+      );
+      const reserved = await tx.documentQuotaReservation.aggregate({
+        _sum: { amount: true },
+        where: {
+          companyId,
+          month,
+          status: 'ACTIVE',
+          expiresAt: { gt: new Date() },
+        },
+      });
+      const used = usage[0]?.docsGenerated ?? 0;
+      const active = reserved._sum.amount ?? 0;
+      if (operationKey) {
+        const existing = await tx.documentQuotaReservation.findFirst({
+          where: { operationKey, companyId, month },
+        });
+        if (
+          existing?.status === 'COMMITTED' ||
+          (existing?.status === 'ACTIVE' && existing.expiresAt > new Date())
+        ) {
+          return existing;
+        }
+        if (used + active + amount > limit) {
+          throw new BadRequestException({
+            code: 'PAYWALL',
+            message: 'Monthly document limit reached',
+            plan,
+            limit,
+          });
+        }
+        if (existing) {
+          return tx.documentQuotaReservation.update({
+            where: { id: existing.id },
+            data: {
+              status: 'ACTIVE',
+              expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+              releasedAt: null,
+              committedAt: null,
+            },
+          });
+        }
+      }
+      if (used + active + amount > limit) {
+        throw new BadRequestException({
+          code: 'PAYWALL',
+          message: 'Monthly document limit reached',
+          plan,
+          limit,
+        });
+      }
+      const reservation = await tx.documentQuotaReservation.create({
+        data: {
+          companyId,
+          month,
+          amount,
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          operationKey,
+        },
+      });
+      return reservation;
+    });
+  }
+
+  async commitDocumentReservation(
+    reservation: DocumentQuotaReservation,
+    client?: Prisma.TransactionClient,
+  ) {
+    if (!reservation || reservation.status === 'COMMITTED') return;
+    if (reservation.status === 'RELEASED')
+      throw new BadRequestException('Document quota reservation was released');
+    const commit = async (tx: Prisma.TransactionClient) => {
+      const changed = await tx.documentQuotaReservation.updateMany({
+        where: {
+          id: reservation.id,
+          status: 'ACTIVE',
+          expiresAt: { gt: new Date() },
+        },
+        data: { status: 'COMMITTED', committedAt: new Date() },
+      });
+      if (changed.count !== 1)
+        throw new BadRequestException(
+          'Document quota reservation is no longer valid',
+        );
+      await tx.companyUsage.update({
+        where: {
+          companyId_month: {
+            companyId: reservation.companyId,
+            month: reservation.month,
+          },
+        },
+        data: { docsGenerated: { increment: reservation.amount } },
+      });
+    };
+    if (client) await commit(client);
+    else await this.prisma.$transaction(commit);
+  }
+
+  async releaseDocumentReservation(reservation: DocumentQuotaReservation) {
+    if (!reservation || reservation.status !== 'ACTIVE') return;
+    await this.prisma.documentQuotaReservation.updateMany({
+      where: { id: reservation.id, status: 'ACTIVE' },
+      data: { status: 'RELEASED', releasedAt: new Date() },
     });
   }
 }

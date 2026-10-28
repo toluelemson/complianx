@@ -29,14 +29,15 @@ export class ApproveProjectUseCase {
     expectedVersion?: number;
   }) {
     if (!params.signature?.trim()) {
-      throw new IncompleteAssessmentError('Signature is required to approve');
+      throw new IncompleteAssessmentError(
+        'Enter your name to confirm approval.',
+      );
     }
     const context = await this.context.loadProjectContext(
       params.projectId,
       params.actorId,
     );
     this.policy.assertProjectPermission('APPROVE', context);
-    this.policy.assertApproverAssigned(context.project);
     this.policy.assertProjectTransition(
       context.project.workflowStatus,
       ProjectWorkflowStatus.APPROVED,

@@ -7,17 +7,29 @@ import { ResendVerificationDto } from '../dto/auth/resend-verification.dto';
 import { RequestPasswordResetDto } from '../dto/auth/request-password-reset.dto';
 import { ResetPasswordDto } from '../dto/auth/reset-password.dto';
 import { JwtAuthGuard } from '../../../../platform/auth/jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@Throttle({ default: { limit: 10, ttl: 60_000 } })
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
+  @ApiOperation({
+    summary: 'Create an account',
+    description: 'Creates a personal account or accepts a company invitation.',
+  })
   signup(@Body() dto: SignupDto) {
     return this.authService.signup(dto);
   }
 
   @Post('login')
+  @ApiOperation({
+    summary: 'Sign in',
+    description: 'Returns an access token and the authenticated user profile.',
+  })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
@@ -44,6 +56,11 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('accept-invitation')
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({
+    summary: 'Accept an invitation',
+    description: 'Adds the authenticated user to the invited workspace.',
+  })
   acceptInvitation(@Body('token') token: string, @Request() req) {
     return this.authService.acceptInvitation(token, req.user);
   }

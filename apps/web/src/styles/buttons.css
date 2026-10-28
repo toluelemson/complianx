@@ -1,0 +1,14 @@
+/* Shared button recipe based on the extracted Hetzner component tokens. */
+.hz-button { min-height: var(--hz-control-height); padding: 0 var(--hz-space-7); border: 0; border-radius: var(--hz-radius-card); color: var(--hz-color-text); font: var(--hz-font-weight-medium) var(--hz-font-size-base)/var(--hz-line-height-default) var(--hz-font-control); letter-spacing: var(--hz-letter-spacing-ui); cursor: pointer; transition: var(--cx-motion-interactive); }
+.hz-button--sm { min-height: var(--hz-control-compact); padding: 0 var(--hz-space-4); font-size: var(--hz-font-size-sm); }
+.hz-button--lg { min-height: var(--hz-control-floating); padding: 0 var(--hz-space-9); }
+.hz-button--primary { background: var(--hz-color-brand); color: var(--hz-color-text-inverse); box-shadow: var(--hz-shadow-card); }
+.hz-button--primary:hover, .hz-button--primary:focus-visible { background: var(--hz-color-brand-hover); }
+.hz-button--secondary { background: var(--hz-color-border-strong); color: var(--hz-color-text); }
+.hz-button--secondary:hover, .hz-button--secondary:focus-visible { background: var(--hz-color-border); }
+.hz-button--outline { border: var(--hz-border-control); background: var(--hz-color-surface); color: var(--hz-color-text); }
+.hz-button--outline:hover, .hz-button--outline:focus-visible { border-color: var(--hz-color-brand); background: var(--hz-color-surface-subtle); color: var(--hz-color-brand); }
+.hz-button--ghost { background: transparent; color: var(--hz-color-text); }
+.hz-button--ghost:hover, .hz-button--ghost:focus-visible { background: var(--hz-color-surface-subtle); color: var(--hz-color-brand); }
+.hz-button:focus-visible { outline: 2px solid var(--hz-color-brand); outline-offset: 2px; }
+.hz-button:disabled { background: var(--hz-color-brand-disabled); color: var(--hz-color-text-inverse); cursor: not-allowed; opacity: 1; }

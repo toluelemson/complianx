@@ -27,6 +27,7 @@ import type {
 } from '@complianx/contracts/assessments';
 import { STEP_CONFIG } from '@/domains/ai-systems/constants/steps';
 import { useAnimatedNumber } from '@/shared/hooks/useAnimatedNumber';
+import { Panel } from '@/shared/components/ui/panel';
 
 type ArtifactPurpose = 'GENERIC' | 'DATASET' | 'MODEL';
 
@@ -556,7 +557,7 @@ export default function ProjectTrustPage() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+          <Panel>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">
                 Trust metrics
@@ -589,9 +590,9 @@ export default function ProjectTrustPage() {
                 </p>
               )}
             </div>
-          </div>
+          </Panel>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+          <Panel className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">
                 Fairness controls
@@ -728,9 +729,9 @@ export default function ProjectTrustPage() {
                   : 'Run fairness analysis'}
               </button>
             </div>
-          </div>
+          </Panel>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-6">
+          <Panel className="space-y-6">
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -1097,7 +1098,7 @@ export default function ProjectTrustPage() {
                 ) : null}
               </div>
             )}
-          </div>
+          </Panel>
         </section>
 
         <aside className="space-y-6">

@@ -2,11 +2,14 @@ node_modules
 dist
 .env
 .env.*
+!apps/api/.env.example
 storage/
 storage/documents
 *.log
 logs/
 coverage
+playwright-report/
+test-results/
 .turbo/
 tmp
 .DS_Store

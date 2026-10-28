@@ -1,4 +1,5 @@
 // AI systems creation UI.
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
@@ -8,7 +9,15 @@ import { Select } from '@/shared/components/ui/select';
 export interface NewProjectFormValues {
   name: string;
   industry?: string;
-  riskLevel?: string;
+  description?: string;
+  businessPurpose?: string;
+  intendedUse?: string;
+  intendedUsers?: string;
+  affectedPersons?: string;
+  deploymentGeography?: string;
+  lifecycleStage?: string;
+  responsibleOwner?: string;
+  dueDate?: string;
 }
 
 interface NewProjectModalProps {
@@ -16,6 +25,10 @@ interface NewProjectModalProps {
   onClose: () => void;
   onSubmit: (values: NewProjectFormValues) => void;
   isSubmitting?: boolean;
+  organizationProfile?: {
+    legalName?: string | null;
+    industry?: string | null;
+  };
 }
 
 export function NewProjectModal({
@@ -23,21 +36,47 @@ export function NewProjectModal({
   onClose,
   onSubmit,
   isSubmitting,
+  organizationProfile,
 }: NewProjectModalProps) {
   const { register, handleSubmit, reset } = useForm<NewProjectFormValues>({
-    defaultValues: { name: '', industry: '', riskLevel: '' },
+    defaultValues: {
+      name: '',
+      industry: '',
+      description: '',
+      businessPurpose: '',
+      intendedUse: '',
+      intendedUsers: '',
+      affectedPersons: '',
+      deploymentGeography: '',
+      lifecycleStage: 'UNKNOWN',
+      dueDate: '',
+    },
   });
+
+  useEffect(() => {
+    if (isOpen && organizationProfile) {
+      reset((current) => ({
+        ...current,
+        industry: current.industry || organizationProfile.industry || '',
+      }));
+    }
+  }, [isOpen, organizationProfile, reset]);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-lg rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.45)]">
+      <Card className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl border-slate-200 bg-white shadow-2xl">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold tracking-[-0.02em] text-slate-900">
-              New AI System
-            </h2>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                Step 1 of 2
+              </p>
+              <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-slate-900">
+                Add your AI system
+              </h2>
+            </div>
             <button
               onClick={onClose}
               className="text-slate-500 transition hover:text-slate-900"
@@ -52,26 +91,95 @@ export function NewProjectModal({
               reset();
             })}
           >
-            <label className="block text-sm font-medium text-slate-700">
-              Project Name
+            <p className="max-w-md text-sm leading-6 text-slate-500">
+              Start with basic information. Next, we will ask how the system is
+              used to identify what may apply under the EU AI Act.
+            </p>
+            <label
+              htmlFor="new-project-name"
+              className="block text-sm font-medium text-slate-700"
+            >
+              <span className="flex items-center justify-between gap-2">
+                System name
+                <span className="text-xs font-normal text-slate-400">Required</span>
+              </span>
               <Input
+                id="new-project-name"
                 {...register('name', { required: true })}
                 className="mt-1"
               />
             </label>
-            <label className="block text-sm font-medium text-slate-700">
-              Industry
-              <Input {...register('industry')} className="mt-1" />
-            </label>
-            <label className="block text-sm font-medium text-slate-700">
-              Risk Level
-              <Select {...register('riskLevel')} className="mt-1">
-                <option value="">Select</option>
-                <option value="minimal">Minimal</option>
-                <option value="limited">Limited</option>
-                <option value="high">High</option>
-              </Select>
-            </label>
+            <details className="rounded-lg border border-slate-200 px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                Add context now (optional)
+              </summary>
+              <div className="mt-4 space-y-4">
+                <label className="block text-sm font-medium text-slate-700">
+                  Intended use
+                  <textarea
+                    {...register('intendedUse')}
+                    className="mt-1 min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                    placeholder="What does it do?"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Deployment
+                  <Input
+                    {...register('deploymentGeography')}
+                    className="mt-1"
+                    placeholder="Countries or region"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Lifecycle
+                  <Select {...register('lifecycleStage')} className="mt-1">
+                    <option value="UNKNOWN">Not set</option>
+                    <option value="DESIGN">Design</option>
+                    <option value="DEVELOPMENT">Development</option>
+                    <option value="PILOT">Pilot</option>
+                    <option value="PRODUCTION">Production</option>
+                    <option value="RETIRED">Retired</option>
+                  </Select>
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Operating domain
+                  <Input {...register('industry')} className="mt-1" />
+                </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Intended users
+                    <Input {...register('intendedUsers')} className="mt-1" />
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Affected persons
+                    <Input {...register('affectedPersons')} className="mt-1" />
+                  </label>
+                </div>
+                <label className="block text-sm font-medium text-slate-700">
+                  Due date
+                  <Input
+                    type="date"
+                    {...register('dueDate')}
+                    className="mt-1"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Business purpose
+                  <Input {...register('businessPurpose')} className="mt-1" />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Description
+                  <textarea
+                    {...register('description')}
+                    className="mt-1 min-h-16 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Responsible owner
+                  <Input {...register('responsibleOwner')} className="mt-1" />
+                </label>
+              </div>
+            </details>
             <div className="mt-6 flex justify-end gap-3">
               <Button type="button" onClick={onClose} variant="outline">
                 Cancel
@@ -79,9 +187,9 @@ export function NewProjectModal({
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-slate-950 text-white hover:bg-black"
+                className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
               >
-                {isSubmitting ? 'Creating...' : 'Create Project'}
+                {isSubmitting ? 'Saving...' : 'Continue to EU AI Act questions'}
               </Button>
             </div>
           </form>

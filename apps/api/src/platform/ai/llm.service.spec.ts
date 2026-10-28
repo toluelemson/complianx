@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { LlmService } from './llm.service';
+import { LlmAuthenticationError, LlmService } from './llm.service';
 import axios from 'axios';
 
 jest.mock('axios');
@@ -31,5 +31,20 @@ describe('LlmService', () => {
       '/v1/chat/completions',
       expect.anything(),
     );
+  });
+
+  it('throws a typed error when the provider rejects document credentials', async () => {
+    const post = jest.fn().mockRejectedValue({ response: { status: 401 } });
+    mockedAxios.create.mockReturnValue({ post } as any);
+
+    const config = new ConfigService({
+      LLM_BASE_URL: 'https://llm.local',
+      LLM_API_KEY: 'invalid-key',
+    });
+    const service = new LlmService(config);
+
+    await expect(
+      service.generate('model_card', { foo: 'bar' }),
+    ).rejects.toBeInstanceOf(LlmAuthenticationError);
   });
 });

@@ -6,16 +6,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Scale,
 } from 'lucide-react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { buildSubmitSystemHref } from '@/domains/marketing/lib/submit-system';
-import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui/card';
@@ -199,29 +196,18 @@ export default function PublicEuAiActCheckerPage() {
   return (
     <>
       <SiteHeader />
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <Badge
-                variant="outline"
-                className="w-fit border-slate-300 bg-white/80 text-slate-700"
-              >
-                Pre-quote check
-              </Badge>
-              <div>
-                <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Check your compliance fit first
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                  Answer a few questions to see which NeuralDocx service path
-                  fits your AI system before you request a quote.
-                </p>
-              </div>
-            </div>
-            <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-800 shadow-[0_20px_45px_-32px_rgba(120,53,15,0.25)]">
-              Not legal advice.
-            </div>
+      <main className="min-h-screen bg-[#f6f7f8] px-4 py-8 sm:px-6 lg:py-12">
+        <div className="mx-auto max-w-6xl space-y-8">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
+              EU AI Act readiness checker
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+              Answer a few questions to identify the obligations your system may need to address.
+            </p>
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Screening only — not legal advice.
+            </p>
           </div>
 
           {loading ? (
@@ -240,19 +226,18 @@ export default function PublicEuAiActCheckerPage() {
           ) : questionPack && currentStep ? (
             <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
               <Card className="border-slate-200/90 bg-white/95 xl:sticky xl:top-24 xl:h-fit">
-                <CardHeader>
-                  <CardTitle className="text-xl">Assessment Progress</CardTitle>
-                  <CardDescription>Short pre-quote check.</CardDescription>
+                <CardHeader className="border-b border-slate-100 pb-4">
+                  <CardTitle className="text-lg">Progress</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5">
+                <CardContent className="space-y-4 p-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      <span>Progress</span>
+                        <span>Completion</span>
                       <span>{Math.round(progress)}%</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className="h-full rounded-full bg-slate-900 transition-all duration-300"
+                        className="h-full rounded-full bg-[#d40c2e] transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -266,7 +251,7 @@ export default function PublicEuAiActCheckerPage() {
                           key={step.key}
                           type="button"
                           onClick={() => setCurrentIndex(index)}
-                          className={`w-full rounded-[1.25rem] border px-4 py-4 text-left transition ${
+                          className={`w-full rounded-lg border px-3 py-3 text-left transition ${
                             active
                               ? 'border-slate-900 bg-slate-900 text-white'
                               : complete
@@ -313,27 +298,14 @@ export default function PublicEuAiActCheckerPage() {
                   </Card>
                 ) : null}
 
-                <Card className="border-slate-200/90 bg-white/95">
+                <Card className="border-slate-200 bg-white shadow-sm">
                   <CardHeader>
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <Badge
-                          variant="outline"
-                          className="border-slate-200 bg-slate-50 text-slate-600"
-                        >
-                          Step {currentIndex + 1}
-                        </Badge>
-                        <CardTitle className="mt-3 text-2xl">
-                          {currentStep.title}
-                        </CardTitle>
-                      </div>
-                      <div className="hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 lg:block">
-                        <div className="flex items-center gap-2">
-                          <Scale className="h-4 w-4" />
-                          <span>Pack {packVersion}</span>
-                        </div>
-                      </div>
-                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Step {currentIndex + 1} of {visibleSteps.length}
+                    </p>
+                    <CardTitle className="mt-2 text-2xl">
+                      {currentStep.title}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-5">
                     {currentStep.questions.map((question) => (
@@ -354,8 +326,7 @@ export default function PublicEuAiActCheckerPage() {
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-slate-500">
-                    Finish the check, then submit your system for the right
-                    quote.
+                    {packVersion ? `Assessment version ${packVersion}` : null}
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <Button
@@ -372,9 +343,9 @@ export default function PublicEuAiActCheckerPage() {
                         type="button"
                         onClick={handleNext}
                         disabled={submitting}
-                        className="bg-slate-950 text-white hover:bg-black"
+                        className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
                       >
-                        Next step
+                        Continue
                         <ChevronRight className="ml-2 h-4 w-4" />
                       </Button>
                     ) : (
@@ -382,9 +353,9 @@ export default function PublicEuAiActCheckerPage() {
                         type="button"
                         onClick={handleFinalize}
                         disabled={submitting}
-                        className="bg-slate-950 text-white hover:bg-black"
+                        className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
                       >
-                        {submitting ? 'Finalizing...' : 'See my fit'}
+                        {submitting ? 'Preparing...' : 'View assessment'}
                       </Button>
                     )}
                   </div>
@@ -395,14 +366,14 @@ export default function PublicEuAiActCheckerPage() {
                     to={buildSubmitSystemHref({ source: 'checker_skip' })}
                     className="font-medium text-slate-700 transition-colors hover:text-slate-950"
                   >
-                    Skip the check and submit your system
+                    Continue without screening
                   </Link>
                 </div>
               </div>
             </div>
           ) : null}
         </div>
-      </div>
+      </main>
     </>
   );
 }
@@ -420,29 +391,24 @@ function QuestionField({
 }) {
   return (
     <div
-      className={`rounded-[1.5rem] border p-5 ${
+      className={`rounded-lg border p-4 sm:p-5 ${
         invalid
           ? 'border-rose-200 bg-rose-50/60'
-          : 'border-slate-200 bg-slate-50/70'
+          : 'border-slate-200 bg-white'
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-slate-900">
               {question.label}
             </h3>
             {invalid ? (
-              <Badge
-                variant="outline"
-                className="border-slate-200 bg-white text-slate-500"
-              >
-                Required
-              </Badge>
+              <span className="text-xs font-semibold text-rose-600">Required</span>
             ) : null}
           </div>
           {question.helperText ? (
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+            <p className="max-w-3xl text-xs leading-5 text-slate-500 sm:text-sm">
               {question.helperText}
             </p>
           ) : null}
@@ -453,13 +419,13 @@ function QuestionField({
           ) : null}
         </div>
         {question.legalReferenceIds?.length ? (
-          <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <div className="shrink-0 text-xs font-medium text-slate-400">
             {question.legalReferenceIds.join(', ')}
           </div>
         ) : null}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-3">
         {question.type === 'boolean' ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {[true, false].map((option) => {
@@ -469,7 +435,7 @@ function QuestionField({
                   key={String(option)}
                   type="button"
                   onClick={() => onChange(option)}
-                  className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${
+                    className={`rounded-md border px-3 py-3 text-left transition ${
                     active
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -483,7 +449,7 @@ function QuestionField({
             })}
           </div>
         ) : question.type === 'single' && question.options ? (
-          <div className="space-y-3">
+            <div className="space-y-2">
             {question.options.map((option) => {
               const active = value === option.value;
               return (
@@ -491,7 +457,7 @@ function QuestionField({
                   key={option.key}
                   type="button"
                   onClick={() => onChange(option.value)}
-                  className={`w-full rounded-[1.25rem] border px-4 py-4 text-left transition ${
+                  className={`w-full rounded-md border px-3 py-3 text-left transition ${
                     active
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -500,7 +466,7 @@ function QuestionField({
                   <p className="text-sm font-semibold">{option.label}</p>
                   {option.helperText ? (
                     <p
-                      className={`mt-1 text-sm ${active ? 'text-slate-300' : 'text-slate-500'}`}
+                        className={`mt-1 text-xs leading-5 ${active ? 'text-slate-300' : 'text-slate-500'}`}
                     >
                       {option.helperText}
                     </p>
@@ -510,7 +476,7 @@ function QuestionField({
             })}
           </div>
         ) : question.type === 'multi' && question.options ? (
-          <div className="space-y-3">
+            <div className="space-y-2">
             {question.options.map((option) => {
               const selected = Array.isArray(value)
                 ? value.includes(option.value)
@@ -518,7 +484,7 @@ function QuestionField({
               return (
                 <label
                   key={option.key}
-                  className={`flex cursor-pointer items-start gap-3 rounded-[1.25rem] border px-4 py-4 transition ${
+                  className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 transition ${
                     selected
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -543,7 +509,7 @@ function QuestionField({
                     <p className="text-sm font-semibold">{option.label}</p>
                     {option.helperText ? (
                       <p
-                        className={`mt-1 text-sm ${selected ? 'text-slate-300' : 'text-slate-500'}`}
+                        className={`mt-1 text-xs leading-5 ${selected ? 'text-slate-300' : 'text-slate-500'}`}
                       >
                         {option.helperText}
                       </p>

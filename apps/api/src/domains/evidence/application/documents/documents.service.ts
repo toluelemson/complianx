@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -17,6 +18,7 @@ import { LlmService } from '../../../../platform/ai/llm.service';
 import { PdfService } from '../../../../platform/pdf/pdf.service';
 import { ReadinessService } from '../../../reporting/application/readiness/readiness.service';
 import { ReportCompositionService } from '../../../reporting/application/report-generation/report-composition.service';
+import { AuditService } from '../../../audit/application/audit.service';
 import {
   FILE_STORAGE,
   type FileStorage,
@@ -62,6 +64,7 @@ export class DocumentsService {
     private readonly readinessService: ReadinessService,
     private readonly composition: ReportCompositionService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
+    private readonly audit: AuditService,
   ) {}
 
   async list(
@@ -75,17 +78,25 @@ export class DocumentsService {
       allowApprover: true,
       allowCompanyMember: true,
     });
-    return this.prisma.document.findMany({
-      where: { projectId },
-      orderBy: { createdAt: 'desc' },
-    }).then((documents) =>
-      documents.map((document) => ({
-        id: document.id,
-        type: document.type,
-        url: document.url,
-        createdAt: document.createdAt.toISOString(),
-      })),
-    );
+    return this.prisma.document
+      .findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'desc' },
+      })
+      .then((documents) =>
+        documents.map((document) => ({
+          id: document.id,
+          type: document.type,
+          url: document.url,
+          version: document.version,
+          frameworkKey: document.frameworkKey,
+          regulatoryContentVersion: document.regulatoryContentVersion,
+          approvalState: document.approvalState,
+          lifecycleStatus: document.lifecycleStatus,
+          provenanceStatus: document.provenanceStatus,
+          createdAt: document.createdAt.toISOString(),
+        })),
+      );
   }
 
   async createRecord(projectId: string, type: string, fileName: string) {
@@ -95,6 +106,52 @@ export class DocumentsService {
         url: fileName,
         projectId,
       },
+    });
+  }
+
+  async approve(id: string, userId: string, companyId: string) {
+    const document = await this.prisma.document.findUnique({
+      where: { id },
+      include: { project: true },
+    });
+    if (!document) throw new NotFoundException('Document not found');
+    const access = await this.projectsService.assertAccess(
+      document.projectId,
+      userId,
+      companyId,
+      {
+        allowOwner: false,
+        allowReviewer: true,
+        allowApprover: true,
+        allowAdministrator: true,
+      },
+    );
+    if (
+      !['REVIEWER', 'APPROVER'].includes(access.accessRole) &&
+      access.membershipRole !== 'ADMIN'
+    )
+      throw new ForbiddenException(
+        'Only an assigned reviewer or approver may approve documents',
+      );
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.document.update({
+        where: { id },
+        data: { approvalState: 'APPROVED' },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          projectId: document.projectId,
+          actorId: userId,
+          entityType: 'Document',
+          entityId: id,
+          action: 'APPROVED',
+          beforeSnapshot: { approvalState: document.approvalState },
+          afterSnapshot: { approvalState: updated.approvalState },
+        },
+        tx,
+      );
+      return updated;
     });
   }
 
@@ -139,9 +196,147 @@ export class DocumentsService {
       where: { projectId },
       orderBy: { createdAt: 'asc' },
     });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        statusEvents: {
+          include: { actor: { select: { id: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+        obligations: {
+          include: {
+            obligation: {
+              select: { key: true, title: true, legalReference: true },
+            },
+            evidence: {
+              select: { artifactId: true, documentId: true, linkType: true },
+            },
+          },
+        },
+        sections: {
+          select: {
+            id: true,
+            name: true,
+            updatedAt: true,
+            comments: {
+              select: {
+                id: true,
+                body: true,
+                createdAt: true,
+                resolvedAt: true,
+                linkedEntityType: true,
+                linkedEntityId: true,
+                mentions: true,
+                author: { select: { id: true, email: true } },
+                resolvedBy: { select: { id: true, email: true } },
+              },
+            },
+            artifacts: {
+              select: {
+                id: true,
+                originalName: true,
+                source: true,
+                expiresAt: true,
+                externalUrl: true,
+                provenanceNote: true,
+                version: true,
+                checksum: true,
+                citationKey: true,
+                status: true,
+              },
+            },
+          },
+        },
+        assessments: {
+          orderBy: { updatedAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            answers: true,
+            updatedAt: true,
+            classifications: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                category: true,
+                reviewStatus: true,
+                confidence: true,
+                missingInformation: true,
+                regulatoryContentVersion: true,
+                ruleSetVersion: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!project) throw new NotFoundException('Project not found');
     const archiveStream = archiver('zip', { zlib: { level: 9 } });
     const passThrough = new PassThrough();
     archiveStream.pipe(passThrough);
+
+    archiveStream.append(
+      JSON.stringify(
+        {
+          schemaVersion: '1.0',
+          generatedAt: new Date().toISOString(),
+          project: {
+            id: project.id,
+            name: project.name,
+            workflowStatus: project.workflowStatus,
+            dueDate: project.dueDate,
+          },
+          documents: docs.map((doc) => ({
+            id: doc.id,
+            type: doc.type,
+            version: doc.version,
+            approvalState: doc.approvalState,
+            lifecycleStatus: doc.lifecycleStatus,
+            provenanceStatus: doc.provenanceStatus,
+            createdAt: doc.createdAt,
+          })),
+          requirements: project.obligations.map((item) => ({
+            id: item.id,
+            key: item.obligation.key,
+            title: item.obligation.title,
+            legalReference: item.obligation.legalReference,
+            status: item.status,
+            priority: item.priority,
+            approvalState: item.approvalState,
+            dueAt: item.dueAt,
+            evidence: item.evidence,
+          })),
+          assessment: project.assessments[0]
+            ? {
+                id: project.assessments[0].id,
+                status: project.assessments[0].status,
+                answers: project.assessments[0].answers,
+                updatedAt: project.assessments[0].updatedAt,
+                classification:
+                  project.assessments[0].classifications[0] ?? null,
+              }
+            : null,
+          evidence: project.sections.flatMap((section) =>
+            section.artifacts.map((artifact) => ({
+              ...artifact,
+              sectionId: section.id,
+              sectionName: section.name,
+            })),
+          ),
+          sections: project.sections.map((section) => ({
+            id: section.id,
+            name: section.name,
+            updatedAt: section.updatedAt,
+            comments: section.comments,
+          })),
+          auditTrail: project.statusEvents,
+        },
+        null,
+        2,
+      ),
+      { name: 'manifest.json' },
+    );
 
     await Promise.all(
       docs.map(async (doc) => {

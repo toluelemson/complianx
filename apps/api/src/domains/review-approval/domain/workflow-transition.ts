@@ -8,6 +8,18 @@ export const PROJECT_TRANSITIONS: Record<
   ProjectWorkflowStatus[]
 > = {
   [ProjectWorkflowStatus.DRAFT]: [
+    ProjectWorkflowStatus.INFORMATION_REQUIRED,
+    ProjectWorkflowStatus.COLLECTING_EVIDENCE,
+    ProjectWorkflowStatus.READY_FOR_REVIEW,
+    ProjectWorkflowStatus.CANCELLED,
+  ],
+  [ProjectWorkflowStatus.INFORMATION_REQUIRED]: [
+    ProjectWorkflowStatus.DRAFT,
+    ProjectWorkflowStatus.COLLECTING_EVIDENCE,
+    ProjectWorkflowStatus.CANCELLED,
+  ],
+  [ProjectWorkflowStatus.COLLECTING_EVIDENCE]: [
+    ProjectWorkflowStatus.INFORMATION_REQUIRED,
     ProjectWorkflowStatus.READY_FOR_REVIEW,
     ProjectWorkflowStatus.CANCELLED,
   ],
@@ -26,7 +38,11 @@ export const PROJECT_TRANSITIONS: Record<
     ProjectWorkflowStatus.CANCELLED,
   ],
   [ProjectWorkflowStatus.RESUBMITTED]: [ProjectWorkflowStatus.IN_REVIEW],
-  [ProjectWorkflowStatus.APPROVED]: [ProjectWorkflowStatus.ARCHIVED],
+  [ProjectWorkflowStatus.APPROVED]: [
+    ProjectWorkflowStatus.MONITORING,
+    ProjectWorkflowStatus.ARCHIVED,
+  ],
+  [ProjectWorkflowStatus.MONITORING]: [ProjectWorkflowStatus.ARCHIVED],
   [ProjectWorkflowStatus.ARCHIVED]: [],
   [ProjectWorkflowStatus.REJECTED]: [],
   [ProjectWorkflowStatus.CANCELLED]: [],
@@ -39,11 +55,14 @@ export const PROJECT_SYSTEM_TRANSITIONS: Record<
   ProjectWorkflowStatus[]
 > = {
   [ProjectWorkflowStatus.DRAFT]: [],
+  [ProjectWorkflowStatus.INFORMATION_REQUIRED]: [],
+  [ProjectWorkflowStatus.COLLECTING_EVIDENCE]: [],
   [ProjectWorkflowStatus.READY_FOR_REVIEW]: [],
   [ProjectWorkflowStatus.IN_REVIEW]: [ProjectWorkflowStatus.CHANGES_REQUESTED],
   [ProjectWorkflowStatus.CHANGES_REQUESTED]: [],
   [ProjectWorkflowStatus.RESUBMITTED]: [],
   [ProjectWorkflowStatus.APPROVED]: [ProjectWorkflowStatus.CHANGES_REQUESTED],
+  [ProjectWorkflowStatus.MONITORING]: [],
   [ProjectWorkflowStatus.ARCHIVED]: [],
   [ProjectWorkflowStatus.REJECTED]: [],
   [ProjectWorkflowStatus.CANCELLED]: [],

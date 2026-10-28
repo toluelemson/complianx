@@ -97,8 +97,5 @@ describe('Marketing funnel flow', () => {
     expect(
       await screen.findByText('Share the AI system behind the workflow you just saw'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Book an enterprise demo').closest('p')).toHaveTextContent(
-      'Best first response: 48 hours.',
-    );
   });
 });

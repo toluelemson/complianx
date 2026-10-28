@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { BrandLink } from '@/shared/components/brand/BrandLink';
@@ -6,96 +6,31 @@ import {
   MarketingEnterpriseDemoLink,
   MarketingSubmitSystemLink,
 } from './MarketingTrackedLinks';
-import { CALENDLY_URL, MARKETING_NAV_LINKS } from '../lib/navigation';
+import { MARKETING_NAV_LINKS } from '../lib/navigation';
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLightSection, setIsLightSection] = useState(false);
-
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  useEffect(() => {
-    const updateTheme = () => {
-      const header = document.querySelector(
-        'header[data-landing-navbar="true"]',
-      );
-      const lightSections = document.querySelectorAll<HTMLElement>(
-        '[data-nav-theme="light"]',
-      );
+  const headerClassName = 'animate-enter-fade sticky top-0 z-30 border-b border-[#e8e8e8] bg-white';
 
-      if (!header || lightSections.length === 0) {
-        setIsLightSection(false);
-        return;
-      }
+  const logoShellClassName = 'flex h-8 w-8 items-center justify-center rounded-lg border border-[#383838]/10 bg-white';
 
-      const headerRect = header.getBoundingClientRect();
-      const probeY = headerRect.bottom - 8;
+  const brandTextClassName = 'text-base font-semibold tracking-tight text-[#383838]';
 
-      const shouldUseLightTheme = Array.from(lightSections).some((section) => {
-        const rect = section.getBoundingClientRect();
-        return rect.top <= probeY && rect.bottom >= probeY;
-      });
+  const navLinkClassName = 'text-sm font-medium text-[#383838] transition hover:text-[#5e5e5e]';
 
-      setIsLightSection(shouldUseLightTheme);
-    };
+  const utilityLinkClassName = navLinkClassName;
 
-    updateTheme();
-    window.addEventListener('scroll', updateTheme, { passive: true });
-    window.addEventListener('resize', updateTheme);
+  const loginButtonClassName = 'hidden text-[#383838] hover:text-[#5e5e5e] sm:inline-flex';
 
-    return () => {
-      window.removeEventListener('scroll', updateTheme);
-      window.removeEventListener('resize', updateTheme);
-    };
-  }, []);
+  const mobileToggleClassName = 'h-8 w-8 rounded-md border border-[#dbdbdb] bg-white p-0 text-[#383838] hover:bg-[#fafafa] hover:text-[#5e5e5e] lg:hidden';
 
-  const headerClassName = isLightSection
-    ? 'animate-enter-fade sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl'
-    : 'animate-enter-fade sticky top-0 z-30 border-b border-white/10 bg-[#0a0c10]/82 backdrop-blur-xl';
+  const mobilePanelClassName = 'border-t border-[#e8e8e8] bg-white px-5 py-4 sm:px-8 lg:hidden';
 
-  const logoShellClassName = isLightSection
-    ? 'flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white'
-    : 'flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]';
+  const mobileLinkClassName = 'rounded-md border border-[#e8e8e8] bg-[#fafafa] px-4 py-3 text-sm font-medium text-[#383838] transition hover:border-[#dbdbdb] hover:text-[#5e5e5e]';
 
-  const brandTextClassName = isLightSection
-    ? 'text-base font-semibold tracking-tight text-slate-950'
-    : 'text-base font-semibold tracking-tight text-white';
-
-  const navLinkClassName = isLightSection
-    ? 'text-sm font-medium text-slate-600 transition hover:text-slate-950'
-    : 'text-sm font-medium text-slate-300 transition hover:text-white';
-
-  const utilityLinkClassName = isLightSection
-    ? 'text-sm font-medium text-slate-900 transition hover:text-black'
-    : 'text-sm font-medium text-slate-200 transition hover:text-white';
-
-  const loginButtonClassName = isLightSection
-    ? 'hidden text-slate-700 hover:text-slate-950 sm:inline-flex'
-    : 'hidden text-slate-200 hover:text-white sm:inline-flex';
-
-  const enterpriseButtonClassName = isLightSection
-    ? 'hidden border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-black sm:inline-flex'
-    : 'hidden border-white/15 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08] hover:text-white sm:inline-flex';
-
-  const mobileToggleClassName = isLightSection
-    ? 'h-9 w-9 rounded-full border border-slate-200 bg-white p-0 text-slate-700 hover:bg-slate-50 hover:text-slate-950 lg:hidden'
-    : 'h-9 w-9 rounded-full border border-white/10 bg-white/[0.03] p-0 text-slate-100 hover:bg-white/[0.08] hover:text-white lg:hidden';
-
-  const mobilePanelClassName = isLightSection
-    ? 'border-t border-slate-200 bg-white/96 px-5 py-4 sm:px-8 lg:hidden'
-    : 'border-t border-white/10 bg-[#0a0c10]/96 px-5 py-4 sm:px-8 lg:hidden';
-
-  const mobileLinkClassName = isLightSection
-    ? 'rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-950'
-    : 'rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/[0.06] hover:text-white';
-
-  const mobileGhostClassName = isLightSection
-    ? 'justify-start rounded-2xl text-slate-700 hover:text-slate-950'
-    : 'justify-start rounded-2xl text-slate-200 hover:text-white';
-
-  const mobileEnterpriseClassName = isLightSection
-    ? 'justify-start rounded-2xl border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-black'
-    : 'justify-start rounded-2xl border-white/15 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08] hover:text-white';
+  const mobileGhostClassName = 'justify-start rounded-md text-slate-700 hover:text-slate-950';
 
   return (
     <header data-landing-navbar="true" className={headerClassName}>
@@ -114,14 +49,12 @@ export function Navbar() {
           <Link to="/eu-ai-act-checker" className={utilityLinkClassName}>
             Compliance check
           </Link>
-          <a
-            href={CALENDLY_URL}
-            target="_blank"
-            rel="noreferrer"
+          <MarketingEnterpriseDemoLink
+            source="navbar"
             className={utilityLinkClassName}
           >
             Live demo
-          </a>
+          </MarketingEnterpriseDemoLink>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -132,16 +65,6 @@ export function Navbar() {
             className={loginButtonClassName}
           >
             <Link to="/login">Log in</Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className={enterpriseButtonClassName}
-          >
-            <MarketingEnterpriseDemoLink source="navbar">
-              Enterprise demo
-            </MarketingEnterpriseDemoLink>
           </Button>
           <Button
             type="button"
@@ -175,7 +98,7 @@ export function Navbar() {
           <Button
             asChild
             size="sm"
-            className="bg-white text-black hover:bg-[#F3F6FF]"
+            className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
           >
             <MarketingSubmitSystemLink source="navbar">
               Submit your system
@@ -216,19 +139,7 @@ export function Navbar() {
             </Button>
             <Button
               asChild
-              variant="outline"
-              className={mobileEnterpriseClassName}
-            >
-              <MarketingEnterpriseDemoLink
-                source="navbar"
-                onClick={closeMobileMenu}
-              >
-                Enterprise demo
-              </MarketingEnterpriseDemoLink>
-            </Button>
-            <Button
-              asChild
-              className="justify-start rounded-2xl bg-white text-black hover:bg-[#F3F6FF]"
+              className="justify-start rounded-md bg-[#d40c2e] text-white hover:bg-[#e21236]"
             >
               <MarketingSubmitSystemLink
                 source="navbar"

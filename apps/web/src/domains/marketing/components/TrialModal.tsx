@@ -2,8 +2,6 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardCheck,
-  Clock3,
-  FolderKanban,
   ShieldCheck,
   X,
 } from 'lucide-react';
@@ -33,22 +31,10 @@ const FEATURE_LIST = [
     accent: 'bg-cyan-500/12 text-cyan-200 ring-cyan-400/20',
   },
   {
-    title: '48hr turnaround',
-    detail: 'First delivery can land in two days.',
-    icon: Clock3,
-    accent: 'bg-blue-500/12 text-blue-200 ring-blue-400/20',
-  },
-  {
     title: 'Risk + controls',
     detail: 'Built for real audit and review work.',
     icon: ShieldCheck,
     accent: 'bg-emerald-500/12 text-emerald-200 ring-emerald-400/20',
-  },
-  {
-    title: 'Clear workflow',
-    detail: 'Submit, scope, review, deliver.',
-    icon: FolderKanban,
-    accent: 'bg-violet-500/12 text-violet-200 ring-violet-400/20',
   },
 ];
 

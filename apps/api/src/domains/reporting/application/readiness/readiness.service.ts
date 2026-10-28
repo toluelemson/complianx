@@ -7,6 +7,13 @@ type SectionInput = {
   artifacts?: Array<unknown>;
 };
 
+type ObligationInput = {
+  id: string;
+  title: string;
+  status: string;
+  evidenceCount: number;
+};
+
 type Requirement = {
   section: string;
   field: string;
@@ -122,7 +129,10 @@ const REQUIREMENTS: Requirement[] = [
 
 @Injectable()
 export class ReadinessService {
-  assess(sections: SectionInput[]): GenerationReadiness {
+  assess(
+    sections: SectionInput[],
+    obligations: ObligationInput[] = [],
+  ): GenerationReadiness {
     const sectionMap = new Map(
       sections.map((section) => [section.name, section]),
     );
@@ -160,12 +170,35 @@ export class ReadinessService {
     }
 
     const normalizedScore = Math.round((score / maxScore) * 100);
-    const status =
+    const obligationReadiness = obligations.length
+      ? {
+          total: obligations.length,
+          evidenced: obligations.filter((item) => item.evidenceCount > 0)
+            .length,
+          complete: obligations.filter(
+            (item) => item.status === 'COMPLETE' && item.evidenceCount > 0,
+          ).length,
+          outstanding: obligations
+            .filter(
+              (item) => item.status !== 'COMPLETE' || item.evidenceCount === 0,
+            )
+            .map((item) => ({
+              id: item.id,
+              title: item.title,
+              status: item.status,
+              evidenceCount: item.evidenceCount,
+            })),
+        }
+      : undefined;
+    let status: GenerationReadiness['status'] =
       normalizedScore >= 75 && missingCriticalFields.length === 0
         ? 'ready'
         : normalizedScore >= 45
           ? 'partial'
           : 'insufficient';
+    if (status === 'ready' && obligationReadiness?.outstanding.length) {
+      status = 'partial';
+    }
     const generationMode =
       status === 'ready' ? 'full' : status === 'partial' ? 'draft' : 'gap_only';
 
@@ -175,6 +208,7 @@ export class ReadinessService {
       generationMode,
       missingCriticalFields,
       weakSections: Array.from(weakSections),
+      obligationReadiness,
       summary:
         status === 'ready'
           ? 'The project has enough structured information to generate a defensible document set.'

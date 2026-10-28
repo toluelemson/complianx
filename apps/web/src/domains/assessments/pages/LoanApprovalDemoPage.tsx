@@ -357,7 +357,7 @@ export default function LoanApprovalDemoPage() {
                       type="button"
                       onClick={handleRunDemo}
                       disabled={submitting}
-                      className="bg-slate-950 text-white hover:bg-black"
+                      className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                     >
                       {submitting ? 'Running demo...' : 'Run demo assessment'}
                       <ArrowRight className="ml-2 h-4 w-4" />

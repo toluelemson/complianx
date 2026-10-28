@@ -22,11 +22,6 @@ export class BillingWebhookController {
               ? req.body
               : JSON.stringify(req.body ?? {}),
           );
-    console.log('[Stripe Webhook] signature header:', signature);
-    console.log(
-      '[Stripe Webhook] raw payload (first 200 chars):',
-      payload.toString('utf8'),
-    );
     return this.billing.handleWebhook(signature, payload);
   }
 }

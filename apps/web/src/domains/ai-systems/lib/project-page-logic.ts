@@ -1,0 +1,103 @@
+export type DocumentOption = { type: string };
+
+type AttentionProject = {
+  workflowStatus?: string;
+  dueDate?: string | null;
+  sections?: Array<unknown>;
+  documents?: Array<{
+    lifecycleStatus?: string;
+  }>;
+};
+
+export type ProjectNextAction = {
+  label: string;
+  path: 'compliance-workspace' | 'review-approval' | 'overview';
+};
+
+export function getProjectAttentionReasons(project: AttentionProject) {
+  const reasons: string[] = [];
+  const sections = project.sections?.length ?? 0;
+  const status = project.workflowStatus ?? 'DRAFT';
+  const documents = project.documents ?? [];
+  const failedDocuments = documents.filter(
+    (document) => document.lifecycleStatus === 'FAILED',
+  );
+
+  if (status === 'CHANGES_REQUESTED') {
+    reasons.push('Address requested review changes');
+  } else if (status === 'DRAFT') {
+    if (sections === 0) reasons.push('Complete the system intake');
+    else if (sections < 8) {
+      const remaining = 8 - sections;
+      reasons.push(
+        `Complete ${remaining} more control area${remaining === 1 ? '' : 's'}`,
+      );
+    } else reasons.push('Submit the system for review');
+  }
+  if (project.dueDate && new Date(project.dueDate).getTime() < Date.now()) {
+    reasons.push('Project due date has passed');
+  }
+  if (failedDocuments.length) reasons.push('Retry failed package generation');
+  if (!documents.length)
+    reasons.push('Generate the EU AI Act Documentation Package');
+  return reasons;
+}
+
+export function getProjectNextAction(
+  project: AttentionProject,
+): ProjectNextAction | null {
+  const sections = project.sections?.length ?? 0;
+  const status = project.workflowStatus ?? 'DRAFT';
+  const hasFailedDocument = project.documents?.some(
+    (document) => document.lifecycleStatus === 'FAILED',
+  );
+
+  if (status === 'CHANGES_REQUESTED') {
+    return { label: 'Address review changes', path: 'review-approval' };
+  }
+  if (hasFailedDocument) {
+    return { label: 'Retry package generation', path: 'compliance-workspace' };
+  }
+  if (status === 'DRAFT' && sections < 8) {
+    return { label: 'Continue documentation', path: 'compliance-workspace' };
+  }
+  if (status === 'DRAFT') {
+    return { label: 'Submit for review', path: 'review-approval' };
+  }
+
+  return getProjectAttentionReasons(project).length
+    ? { label: 'Open system overview', path: 'overview' }
+    : null;
+}
+
+export function selectDocumentTypesForCredits(
+  options: DocumentOption[],
+  remainingCredits: number,
+) {
+  if (!Number.isFinite(remainingCredits)) {
+    return options.map((option) => option.type);
+  }
+
+  return options
+    .slice(0, Math.max(0, Math.floor(remainingCredits)))
+    .map((option) => option.type);
+}
+
+export function isValidApprovalSignature(signature: string) {
+  return signature.trim().length > 0;
+}
+
+export function canStartProjectReview(viewerRole: string, userRole?: string) {
+  return viewerRole === 'REVIEWER' || userRole === 'ADMIN';
+}
+
+export function canApproveProject(viewerRole: string, userRole?: string) {
+  return viewerRole === 'APPROVER' || userRole === 'ADMIN';
+}
+
+export function canRequestProjectChanges(
+  viewerRole: string,
+  userRole?: string,
+) {
+  return viewerRole === 'REVIEWER' || userRole === 'ADMIN';
+}

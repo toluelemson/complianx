@@ -1,6 +1,6 @@
-# Complianx
+# Neuraldocx
 
-Complianx helps teams document AI systems, assess compliance and trust, collect evidence, run review and approval workflows, and generate reports.
+Neuraldocx helps teams document AI systems, assess compliance and trust, collect evidence, run review and approval workflows, and generate reports.
 
 ## Repository structure
 
@@ -21,9 +21,11 @@ Review approval, assessments, evidence, reporting, identity access, organization
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22.16+
 - pnpm 10+
 - PostgreSQL
+
+Use Node 22.16+ (`.nvmrc`) and pnpm 10.13.1. Keep development and test databases separate; set a test-only `DATABASE_URL` when running API integration/e2e tests.
 
 ## Setup
 
@@ -44,6 +46,10 @@ pnpm dev:api      # Nest API
 pnpm build
 pnpm test
 pnpm lint
+pnpm verify:fast
+pnpm verify
+pnpm db:validate
+pnpm db:generate
 pnpm build:web
 pnpm build:api
 pnpm test:web
@@ -59,10 +65,12 @@ pnpm --filter api prisma:migrate
 
 Use `pnpm --dir apps/api exec prisma migrate deploy` in controlled deployment environments.
 
+For local development, `prisma:migrate` targets the configured development database. Do not run it against production. The repository does not currently include a Docker Compose database service; provide PostgreSQL separately.
+
 ## Architecture
 
-Complianx uses a domain-oriented monorepo and a modular-monolith API. Important domains may use application/domain/infrastructure/presentation layers; simple CRUD modules should remain simple. Domain code must not depend on framework or vendor implementations. See [the architecture documentation](docs/architecture/system-context.md) and [decision records](docs/decisions/ADR-001-modular-monolith.md).
+Neuraldocx uses a domain-oriented monorepo and a modular-monolith API. Important domains may use application/domain/infrastructure/presentation layers; simple CRUD modules should remain simple. Domain code must not depend on framework or vendor implementations. See [the architecture documentation](docs/architecture/system-context.md), [frontend API-layer guide](docs/architecture/frontend-api-layer.md), and [decision records](docs/decisions/ADR-001-modular-monolith.md).
 
 ## Testing and deployment
 
-App-specific tests can be run with `pnpm test:api` and `pnpm test:web`. Deployment paths changed from `/backend` and `/frontend` to `/apps/api` and `/apps/web`; see [deployment operations](docs/operations/deployment.md) and [DigitalOcean guidance](DEPLOYMENT_DIGITAL_OCEAN.md).
+App-specific tests can be run with `pnpm test:api` and `pnpm test:web`. Deployment paths use `/apps/api` and `/apps/web`; see the active [deployment operations](docs/operations/deployment.md). The legacy DigitalOcean guide is retained for historical reference only.

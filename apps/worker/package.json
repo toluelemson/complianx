@@ -2,5 +2,28 @@
   "name": "worker",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "build": "echo 'Worker is a documented placeholder'", "test": "echo 'No worker tests yet'", "lint": "echo 'No worker lint yet'", "format": "echo 'No worker format yet'" }
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "start:dev": "tsx watch src/index.ts",
+    "aiki:migrate": "aiki-server migrate apply",
+    "test": "echo 'No worker tests yet'",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "@aikirun/client": "^0.45.1",
+    "@aikirun/memory": "^0.45.1",
+    "@aikirun/server": "^0.45.1",
+    "@aikirun/worker": "^0.45.1",
+    "@aikirun/workflow": "^0.45.1",
+    "postgres": "^3.4.9",
+    "srvx": "^1.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.3"
+  }
 }

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './platform/database/prisma.module';
 import { IdentityAccessModule } from './domains/identity-access/identity-access.module';
 import { AiSystemsModule } from './domains/ai-systems/ai-systems.module';
@@ -15,10 +17,24 @@ import { SubscriptionsModule } from './domains/subscriptions/subscriptions.modul
 import { NotificationsModule } from './domains/notifications/notifications.module';
 import { ContactModule } from './domains/marketing/contact.module';
 import { ReviewApprovalModule } from './domains/review-approval/review-approval.module';
+import { AuditModule } from './domains/audit/audit.module';
+import { validateEnvironment } from './platform/config/environment';
+import { HealthController } from './platform/health.controller';
 
 @Module({
+  controllers: [HealthController],
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.getOrThrow<number>('RATE_LIMIT_TTL_MS'),
+          limit: config.getOrThrow<number>('RATE_LIMIT_REQUESTS'),
+        },
+      ],
+    }),
     PrismaModule,
     IdentityAccessModule,
     AiSystemsModule,
@@ -33,7 +49,9 @@ import { ReviewApprovalModule } from './domains/review-approval/review-approval.
     NotificationsModule,
     ContactModule,
     ReviewApprovalModule,
+    AuditModule,
     SubscriptionsModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

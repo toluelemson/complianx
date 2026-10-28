@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, ProjectStatus, SectionStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import {
   ProjectWorkflowStatus,
@@ -15,6 +15,7 @@ import {
   WorkflowMembership,
 } from '../domain/workflow.types';
 import { WorkflowVersionConflictError } from '../domain/workflow-errors';
+import { ReviewerNotAssignedError } from '../domain/workflow-errors';
 import { ProjectWorkflowRepository } from './project-workflow.repository';
 import { SectionWorkflowRepository } from './section-workflow.repository';
 
@@ -33,6 +34,7 @@ const projectWorkflowSelect = Prisma.validator<Prisma.ProjectSelect>()({
     select: {
       id: true,
       name: true,
+      content: true,
       workflowStatus: true,
     },
   },
@@ -57,6 +59,7 @@ const assignedReviewSelect = Prisma.validator<Prisma.ProjectSelect>()({
   workflowStatus: true,
   workflowVersion: true,
   updatedAt: true,
+  owner: { select: { email: true } },
 });
 
 const sectionWorkflowSelect = Prisma.validator<Prisma.SectionSelect>()({
@@ -118,44 +121,6 @@ function toSectionWorkflowStatus(
   status: `${SectionWorkflowStatus}`,
 ): SectionWorkflowStatus {
   return status as SectionWorkflowStatus;
-}
-
-function toProjectEventStatus(
-  status: ProjectWorkflowStatus,
-): ProjectStatus {
-  switch (status) {
-    case ProjectWorkflowStatus.APPROVED:
-    case ProjectWorkflowStatus.ARCHIVED:
-      return ProjectStatus.APPROVED;
-    case ProjectWorkflowStatus.CHANGES_REQUESTED:
-    case ProjectWorkflowStatus.REJECTED:
-    case ProjectWorkflowStatus.CANCELLED:
-      return ProjectStatus.CHANGES_REQUESTED;
-    case ProjectWorkflowStatus.IN_REVIEW:
-    case ProjectWorkflowStatus.READY_FOR_REVIEW:
-    case ProjectWorkflowStatus.RESUBMITTED:
-      return ProjectStatus.IN_REVIEW;
-    case ProjectWorkflowStatus.DRAFT:
-    default:
-      return ProjectStatus.DRAFT;
-  }
-}
-
-function toSectionEventStatus(
-  status: SectionWorkflowStatus,
-): SectionStatus {
-  switch (status) {
-    case SectionWorkflowStatus.APPROVED:
-      return SectionStatus.APPROVED;
-    case SectionWorkflowStatus.CHANGES_REQUESTED:
-      return SectionStatus.CHANGES_REQUESTED;
-    case SectionWorkflowStatus.COMPLETE:
-    case SectionWorkflowStatus.IN_REVIEW:
-      return SectionStatus.IN_REVIEW;
-    case SectionWorkflowStatus.DRAFT:
-    default:
-      return SectionStatus.DRAFT;
-  }
 }
 
 @Injectable()
@@ -265,6 +230,31 @@ export class PrismaWorkflowRepository
 
   async transitionProject(request: ProjectWorkflowTransitionRequest) {
     await this.prisma.$transaction(async (tx) => {
+      const current = await tx.project.findUnique({
+        where: { id: request.projectId },
+        select: {
+          workflowStatus: true,
+          workflowVersion: true,
+          reviewerId: true,
+          sections: {
+            select: {
+              id: true,
+              name: true,
+              content: true,
+              workflowStatus: true,
+            },
+          },
+        },
+      });
+      if (!current) throw new NotFoundException('Project not found');
+      if (
+        typeof request.expectedVersion === 'number' &&
+        current.workflowVersion !== request.expectedVersion
+      )
+        throw new WorkflowVersionConflictError();
+      const reviewerId = request.reviewerId ?? current.reviewerId;
+      if (!reviewerId) throw new ReviewerNotAssignedError();
+
       const updateResult = await tx.project.updateMany({
         where: {
           id: request.projectId,
@@ -275,7 +265,7 @@ export class PrismaWorkflowRepository
         data: {
           workflowStatus: request.toStatus,
           workflowVersion: { increment: 1 },
-          reviewerId: request.reviewerId ?? undefined,
+          reviewerId,
           approverId: request.approverId ?? undefined,
         },
       });
@@ -285,13 +275,73 @@ export class PrismaWorkflowRepository
       await tx.projectStatusEvent.create({
         data: {
           projectId: request.projectId,
-          status: toProjectEventStatus(request.toStatus),
+          status: request.toStatus,
           note: encodeWorkflowNote(request.toStatus, request.note),
           signature: request.signature?.trim(),
           actorId: request.actorId,
         },
       });
     });
+  }
+
+  async submitProjectForReview(request: ProjectWorkflowTransitionRequest) {
+    await this.prisma.$transaction(async (tx) => {
+      const updateResult = await tx.project.updateMany({
+        where: {
+          id: request.projectId,
+          workflowStatus: ProjectWorkflowStatus.DRAFT,
+          ...(typeof request.expectedVersion === 'number'
+            ? { workflowVersion: request.expectedVersion }
+            : {}),
+        },
+        data: {
+          workflowStatus: ProjectWorkflowStatus.READY_FOR_REVIEW,
+          workflowVersion: { increment: 1 },
+          reviewerId: request.reviewerId ?? undefined,
+          approverId: request.approverId ?? undefined,
+        },
+      });
+      if (updateResult.count !== 1) throw new WorkflowVersionConflictError();
+
+      const draftSections = await tx.section.findMany({
+        where: {
+          projectId: request.projectId,
+          workflowStatus: SectionWorkflowStatus.DRAFT,
+        },
+        select: { id: true },
+      });
+      if (draftSections.length) {
+        await tx.section.updateMany({
+          where: { id: { in: draftSections.map((section) => section.id) } },
+          data: { workflowStatus: SectionWorkflowStatus.COMPLETE },
+        });
+        await tx.sectionStatusEvent.createMany({
+          data: draftSections.map((section) => ({
+            sectionId: section.id,
+            status: SectionWorkflowStatus.COMPLETE,
+            note: encodeWorkflowNote(
+              SectionWorkflowStatus.COMPLETE,
+              request.note ?? 'Completed during project submission',
+            ),
+            actorId: request.actorId,
+          })),
+        });
+      }
+      await tx.projectStatusEvent.create({
+        data: {
+          projectId: request.projectId,
+          status: ProjectWorkflowStatus.READY_FOR_REVIEW,
+          note: encodeWorkflowNote(
+            ProjectWorkflowStatus.READY_FOR_REVIEW,
+            request.note,
+          ),
+          actorId: request.actorId,
+        },
+      });
+    });
+    const project = await this.getProject(request.projectId);
+    if (!project) throw new NotFoundException('Project not found');
+    return project;
   }
 
   async listProjectHistory(
@@ -333,6 +383,7 @@ export class PrismaWorkflowRepository
     });
     return projects.map((project) => ({
       ...project,
+      ownerEmail: project.owner.email,
       workflowStatus: toProjectWorkflowStatus(project.workflowStatus),
     }));
   }
@@ -373,7 +424,7 @@ export class PrismaWorkflowRepository
       await tx.sectionStatusEvent.create({
         data: {
           sectionId: request.sectionId,
-          status: toSectionEventStatus(request.toStatus),
+          status: request.toStatus,
           note: encodeWorkflowNote(request.toStatus, request.note),
           signature: request.signature?.trim(),
           actorId: request.actorId,
@@ -390,9 +441,7 @@ export class PrismaWorkflowRepository
         await tx.projectStatusEvent.create({
           data: {
             projectId: section.projectId,
-            status: toProjectEventStatus(
-              ProjectWorkflowStatus.CHANGES_REQUESTED,
-            ),
+            status: ProjectWorkflowStatus.CHANGES_REQUESTED,
             note: encodeWorkflowNote(
               ProjectWorkflowStatus.CHANGES_REQUESTED,
               request.note ?? 'Section changes requested',

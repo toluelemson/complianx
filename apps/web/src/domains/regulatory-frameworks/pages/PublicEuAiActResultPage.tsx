@@ -1,8 +1,8 @@
 // Regulatory frameworks public result route.
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import jsPDF from 'jspdf';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowRight,
   AlertTriangle,
@@ -10,7 +10,6 @@ import {
   Download,
   FileText,
   Mail,
-  Scale,
   ShieldCheck,
 } from 'lucide-react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
@@ -25,6 +24,8 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { getPublicResult } from '../api';
+import { importPublicResult } from '../api';
+import { useAuth } from '@/app/providers/AuthContext';
 import type { PublicResultResponse } from '../types';
 
 const DOCUMENT_LABELS: Record<string, string> = {
@@ -50,11 +51,17 @@ const FRAMEWORK_LABELS: Record<string, string> = {
 
 export default function PublicEuAiActResultPage() {
   const { resultId } = useParams<{ resultId: string }>();
+  const navigate = useNavigate();
+  const { token } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
   const resultQuery = useQuery({
     queryKey: ['publicEuAiActResult', resultId],
     enabled: Boolean(resultId),
     queryFn: () => getPublicResult(resultId!),
+  });
+  const importMutation = useMutation({
+    mutationFn: () => importPublicResult({ publicResultId: resultId! }),
+    onSuccess: ({ projectId }) => navigate(`/ai-systems/${projectId}`),
   });
 
   const result = resultQuery.data?.result;
@@ -63,13 +70,13 @@ export default function PublicEuAiActResultPage() {
     result?.result_kind === 'out_of_scope';
   const showStatusBadges = Boolean(
     result &&
-    (result.in_scope ||
-      result.excluded ||
-      result.prohibited ||
-      result.high_risk ||
-      result.gpai ||
-      result.gpai_systemic_risk ||
-      result.transparency_obligations?.length),
+      (result.in_scope ||
+        result.excluded ||
+        result.prohibited ||
+        result.high_risk ||
+        result.gpai ||
+        result.gpai_systemic_risk ||
+        result.transparency_obligations?.length),
   );
   const showOperatorRoles = Boolean(
     result?.operator_roles?.length && !compactResult,
@@ -83,35 +90,29 @@ export default function PublicEuAiActResultPage() {
   const showFrameworks = Boolean(
     result?.other_frameworks?.length && !compactResult,
   );
-  const showTopActions = Boolean(
-    result &&
-    ((buildTopActions(result).length > 0 && !compactResult) ||
-      result.result_kind === 'not_applicable' ||
-      result.result_kind === 'out_of_scope'),
-  );
   const showEvidenceSection = Boolean(
     result?.missing_evidence?.length && !compactResult,
   );
-  const showNeuralDocxNextStep = Boolean(
+  const showNeuraldocxNextStep = Boolean(
     result &&
-    !compactResult &&
-    (result.next_required_documents?.length ||
-      result.missing_evidence?.length ||
-      result.high_risk ||
-      result.prohibited ||
-      result.ambiguity_flags?.length),
+      !compactResult &&
+      (result.next_required_documents?.length ||
+        result.missing_evidence?.length ||
+        result.high_risk ||
+        result.prohibited ||
+        result.ambiguity_flags?.length),
   );
   const showLegalDetails = Boolean(
     result &&
-    ((result.reasoning_trace?.length ?? 0) > 0 ||
-      (result.obligations?.length ?? 0) > 0 ||
-      (result.next_required_documents?.length ?? 0) > 0 ||
-      (resultQuery.data?.legalReferences?.length ?? 0) > 0),
+      ((result.reasoning_trace?.length ?? 0) > 0 ||
+        (result.obligations?.length ?? 0) > 0 ||
+        (result.next_required_documents?.length ?? 0) > 0 ||
+        (resultQuery.data?.legalReferences?.length ?? 0) > 0),
   );
 
   const handleEmailResult = () => {
     if (!result) return;
-    const subject = encodeURIComponent(`NeuralDocx audit check result`);
+    const subject = encodeURIComponent(`Neuraldocx audit check result`);
     const body = encodeURIComponent(
       buildEmailBody(result, resultQuery.data?.packVersion),
     );
@@ -142,7 +143,7 @@ export default function PublicEuAiActResultPage() {
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(15, 23, 42);
     pdf.setFontSize(11);
-    pdf.text('NeuralDocx', margin + 48, y + 12);
+    pdf.text('Neuraldocx', margin + 48, y + 12);
     pdf.setFontSize(24);
     pdf.text('Audit Check Result', margin + 48, y + 34);
 
@@ -365,7 +366,7 @@ export default function PublicEuAiActResultPage() {
         drawInfoCard(
           'Recommended Documents',
           splitLines(
-            'These are the documents NeuralDocx would typically prepare next based on this result.',
+            'These are the deliverables typically prepared next based on this result.',
           ),
         );
         drawBulletList(
@@ -426,7 +427,7 @@ export default function PublicEuAiActResultPage() {
     }
 
     drawSectionHeading(
-      'Continue with NeuralDocx',
+      'Continue with Neuraldocx',
       'If you want us to turn this result into actual documents, use the path below.',
     );
     drawInfoCard(
@@ -452,7 +453,7 @@ export default function PublicEuAiActResultPage() {
     pdf.setFontSize(10);
     pdf.setTextColor(100, 116, 139);
     const disclaimerLines = pdf.splitTextToSize(
-      'This summary is provided by NeuralDocx to support documentation and compliance preparation. It is not legal advice.',
+      'This summary is provided by Neuraldocx to support documentation and compliance preparation. It is not legal advice.',
       contentWidth,
     ) as string[];
     disclaimerLines.forEach((line) => {
@@ -462,7 +463,7 @@ export default function PublicEuAiActResultPage() {
     y += 12;
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(15, 23, 42);
-    pdf.text('Prepared by NeuralDocx', margin, y);
+    pdf.text('Prepared by Neuraldocx', margin, y);
     y += 16;
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(100, 116, 139);
@@ -484,29 +485,18 @@ export default function PublicEuAiActResultPage() {
   return (
     <>
       <SiteHeader />
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_26%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <Badge
-                variant="outline"
-                className="w-fit border-slate-300 bg-white/80 text-slate-700"
-              >
-                Pre-quote result
-              </Badge>
-              <div>
-                <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Your compliance fit result
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                  A clear answer, the likely service path, and the best next
-                  step based on your answers.
-                </p>
-              </div>
-            </div>
-            <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-800 shadow-[0_20px_45px_-32px_rgba(120,53,15,0.25)]">
-              Not legal advice.
-            </div>
+      <div className="min-h-screen bg-[#f6f7f8] px-4 py-8 sm:px-6 lg:py-10">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-4xl">
+              Your EU AI Act screening result
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+              A clear starting point and the most useful next step for your system.
+            </p>
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Screening only — not legal advice.
+            </p>
           </div>
 
           {resultQuery.isLoading ? (
@@ -533,11 +523,14 @@ export default function PublicEuAiActResultPage() {
                       <CardDescription className="mt-3 max-w-3xl text-sm leading-7">
                         {buildVerdict(result).description}
                       </CardDescription>
+                      <p className="mt-3 text-sm font-medium text-slate-700">
+                        {buildVerdict(result).action}
+                      </p>
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                         <Button
                           type="button"
                           onClick={handleDownloadPdf}
-                          className="bg-slate-950 text-white hover:bg-black"
+                          className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                         >
                           <Download className="mr-2 h-4 w-4" />
                           Download PDF
@@ -552,72 +545,23 @@ export default function PublicEuAiActResultPage() {
                         </Button>
                       </div>
                     </div>
-                    <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <Scale className="h-4 w-4" />
-                        <span>Pack {resultQuery.data!.packVersion}</span>
-                      </div>
-                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <div className="rounded-[1.6rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_24px_50px_-34px_rgba(15,23,42,0.18)]">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                          Result
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${buildVerdict(result).badgeClass}`}
-                          >
-                            {buildVerdict(result).label}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                        {buildVerdict(result).action}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div className="border-l-2 border-[#d40c2e] pl-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                       Plain-English Explanation
                     </p>
-                    <p className="mt-3 text-sm leading-7 text-slate-700">
+                    <p className="mt-2 text-sm leading-7 text-slate-700">
                       {buildResultExplanation(result)}
                     </p>
                   </div>
 
-                  {showStatusBadges ? (
-                    <div className="flex flex-wrap gap-2">
-                      {result.in_scope ? (
-                        <Badge variant="success">In Scope</Badge>
-                      ) : (
-                        <Badge variant="outline">Out of Scope</Badge>
-                      )}
-                      {result.excluded ? (
-                        <Badge variant="warning">Excluded</Badge>
-                      ) : null}
-                      {result.prohibited ? (
-                        <Badge variant="danger">Prohibited</Badge>
-                      ) : null}
-                      {result.high_risk ? (
-                        <Badge variant="warning">High-Risk</Badge>
-                      ) : null}
-                      {result.gpai ? (
-                        <Badge variant="outline">GPAI</Badge>
-                      ) : null}
-                      {result.gpai_systemic_risk ? (
-                        <Badge variant="danger">GPAI with Systemic Risk</Badge>
-                      ) : null}
-                      {result.transparency_obligations?.length ? (
-                        <Badge variant="outline">
-                          Transparency Obligations
-                        </Badge>
-                      ) : null}
-                    </div>
-                  ) : null}
+                  <details className="border-t border-slate-100 pt-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4">
+                      View supporting details
+                    </summary>
+                    <div className="mt-5 space-y-5">
                   {showOperatorRoles ||
                   showDocuments ||
                   showEvidenceGaps ||
@@ -634,7 +578,6 @@ export default function PublicEuAiActResultPage() {
                       {showOperatorRoles ? (
                         <ResultStat
                           label="Operator Roles"
-
                           value={
                             result.operator_roles?.join(', ') ??
                             'Not identified'
@@ -669,31 +612,19 @@ export default function PublicEuAiActResultPage() {
                       </div>
                     </div>
                   ) : null}
-                  {showTopActions ? (
-                    <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                        Next Steps
-                      </p>
-                      <div className="mt-3 space-y-3">
-                        {buildTopActions(result).map((entry: string) => (
-                          <div
-                            key={entry}
-                            className="flex items-start gap-3 text-sm text-slate-800"
-                          >
-                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                            <span>{entry}</span>
-                          </div>
-                        ))}
-                      </div>
                     </div>
-                  ) : null}
+                  </details>
                 </CardContent>
               </Card>
 
-              {showEvidenceSection || showNeuralDocxNextStep ? (
-                <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+              {showEvidenceSection || showNeuraldocxNextStep ? (
+                <details className="border-t border-slate-200 pt-5">
+                  <summary className="cursor-pointer text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4">
+                    View recommended actions and evidence
+                  </summary>
+                  <div className="mt-5 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                   {showEvidenceSection ? (
-                    <Card className="border-slate-200/90 bg-white/95">
+                    <Card className="border-slate-200 bg-white">
                       <CardHeader>
                         <CardTitle className="text-2xl">
                           Missing evidence checklist
@@ -707,7 +638,7 @@ export default function PublicEuAiActResultPage() {
                         {result.missing_evidence?.map((entry) => (
                           <div
                             key={entry}
-                            className="flex items-start gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-4"
+                            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
                           >
                             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                             <span className="text-sm text-slate-800">
@@ -719,8 +650,8 @@ export default function PublicEuAiActResultPage() {
                     </Card>
                   ) : null}
 
-                  {showNeuralDocxNextStep ? (
-                    <Card className="border-slate-200/90 bg-white/95">
+                  {showNeuraldocxNextStep ? (
+                    <Card className="border-slate-200 bg-white">
                       <CardHeader>
                         <CardTitle className="text-2xl">
                           Move to the Right Service
@@ -731,7 +662,7 @@ export default function PublicEuAiActResultPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-5 py-5">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
                           <div className="flex items-start gap-3">
                             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-slate-900" />
                             <div>
@@ -742,9 +673,21 @@ export default function PublicEuAiActResultPage() {
                           </div>
                         </div>
                         <div className="flex flex-col gap-3 sm:flex-row">
+                          {token ? (
+                            <Button
+                              type="button"
+                              onClick={() => importMutation.mutate()}
+                              disabled={importMutation.isPending}
+                              className="bg-emerald-700 text-white hover:bg-emerald-800"
+                            >
+                              {importMutation.isPending
+                                ? 'Creating plan...'
+                                : 'Add to my workspace'}
+                            </Button>
+                          ) : null}
                           <Button
                             asChild
-                            className="bg-slate-950 text-white hover:bg-black"
+                            className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                           >
                             <Link
                               to={buildSubmitSystemHref({
@@ -773,10 +716,17 @@ export default function PublicEuAiActResultPage() {
                             </Button>
                           )}
                         </div>
+                        {importMutation.isError ? (
+                          <p className="text-sm text-rose-600">
+                            Unable to add this result to your workspace. Please
+                            try again.
+                          </p>
+                        ) : null}
                       </CardContent>
                     </Card>
                   ) : null}
-                </div>
+                  </div>
+                </details>
               ) : null}
 
               {showLegalDetails ? (
@@ -944,9 +894,6 @@ export default function PublicEuAiActResultPage() {
                   ) : null}
                 </Card>
               ) : null}
-              <div className="rounded-[1.5rem] border border-slate-200 bg-white/90 px-5 py-4 text-sm leading-7 text-slate-700 shadow-[0_20px_40px_-34px_rgba(15,23,42,0.2)]">
-                {buildClosingSummary(result)}
-              </div>
             </>
           )}
         </div>
@@ -1005,7 +952,7 @@ function buildEmailBody(
   packVersion?: string,
 ) {
   const lines = [
-    'NeuralDocx audit check result',
+    'Neuraldocx audit check result',
     '',
     `Verdict: ${buildVerdict(result).label}`,
     `Summary: ${buildClosingSummary(result).replace(/^Summary:\s*/, '')}`,
@@ -1040,7 +987,7 @@ function buildEmailBody(
     '',
     `Pack: ${packVersion ?? 'current'}`,
     '',
-    'Prepared by NeuralDocx',
+    'Prepared by Neuraldocx',
     'https://neuraldocx.com',
   );
 
@@ -1073,7 +1020,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
         'Based on your answers, this does not appear to be an AI system for the purpose of this check.',
       action:
         'You do not need to continue this check unless the product changes.',
-      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
     };
   }
   if (result.result_kind === 'out_of_scope') {
@@ -1084,7 +1030,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
         'Based on your answers, there is no EU use or market connection in this case.',
       action:
         'Run this check again if the system is later used in the EU or placed on the EU market.',
-      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
     };
   }
   if (result.prohibited) {
@@ -1094,7 +1039,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
       description:
         'One of your answers matched a prohibited or clearly unacceptable use case.',
       action: 'Stop and review this use case immediately.',
-      badgeClass: 'bg-rose-100 text-rose-700 border border-rose-200',
     };
   }
   if (result.high_risk || (result.missing_evidence?.length ?? 0) > 0) {
@@ -1104,7 +1048,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
       description:
         'Your answers show missing controls, missing evidence, or a higher-risk use case that still needs work.',
       action: 'Fix the open gaps before treating this system as compliant.',
-      badgeClass: 'bg-amber-100 text-amber-800 border border-amber-200',
     };
   }
   if ((result.ambiguity_flags?.length ?? 0) > 0) {
@@ -1115,7 +1058,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
         'The answers do not support a clear conclusion, so someone should review this manually.',
       action:
         'Do not rely on this result until the unclear points are resolved.',
-      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
     };
   }
   return {
@@ -1125,7 +1067,6 @@ function buildVerdict(result: PublicResultResponse['result']) {
       'Based on your answers, this check did not find a major compliance problem.',
     action:
       'Keep your documents current and review again when the system changes.',
-    badgeClass: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
   };
 }
 

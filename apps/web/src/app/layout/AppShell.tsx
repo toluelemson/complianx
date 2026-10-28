@@ -1,9 +1,14 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/platform/api/client';
+import {
+  getUnreadNotificationCount,
+  listUnreadNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@/domains/notifications/api';
 import BillingModal from '@/domains/billing/components/BillingModal';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -17,32 +22,42 @@ interface Notification {
   body: string;
   createdAt: string;
   read?: boolean;
+  readAt?: string | null;
+  type?: string;
+  meta?: { projectId?: string } | null;
 }
 
 interface AppShellProps {
   title?: string;
   children: ReactNode;
+  initialBillingOpen?: boolean;
+  projectId?: string;
 }
 
-export function AppShell({ title, children }: AppShellProps) {
+export function AppShell({
+  title,
+  children,
+  initialBillingOpen = false,
+  projectId,
+}: AppShellProps) {
   const { logout, user, activeCompanyId, setActiveCompany } = useAuth();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const countQuery = useQuery<{ count: number }>({
     queryKey: ['notifications', 'count'],
     enabled: Boolean(user?.id),
-    queryFn: () => api.get('/notifications/count').then((r) => r.data),
+    queryFn: getUnreadNotificationCount,
     refetchInterval: 15000,
   });
   const [open, setOpen] = useState(false);
   const listQuery = useQuery<Notification[]>({
     queryKey: ['notifications', 'list'],
     enabled: Boolean(user?.id),
-    queryFn: () =>
-      api.get('/notifications?unreadOnly=true&limit=5').then((r) => r.data),
+    queryFn: listUnreadNotifications,
     refetchInterval: open ? 15000 : false,
   });
   const markAllMutation = useMutation({
-    mutationFn: () => api.post('/notifications/read-all').then((r) => r.data),
+    mutationFn: markAllNotificationsRead,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications', 'count'] });
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] });
@@ -50,8 +65,7 @@ export function AppShell({ title, children }: AppShellProps) {
   });
   const [markingId, setMarkingId] = useState<string | null>(null);
   const markSingleMutation = useMutation({
-    mutationFn: (id: string) =>
-      api.post(`/notifications/${id}/read`).then((r) => r.data),
+    mutationFn: markNotificationRead,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications', 'count'] });
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] });
@@ -61,8 +75,10 @@ export function AppShell({ title, children }: AppShellProps) {
     },
   });
   const unread = countQuery.data?.count ?? 0;
-  const [billingOpen, setBillingOpen] = useState(false);
+  const [billingOpen, setBillingOpen] = useState(initialBillingOpen);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const activeProjectId = projectId;
+
   useEffect(() => {
     const handler = (event: Event) => {
       if (event.type === 'paywall') {
@@ -74,43 +90,117 @@ export function AppShell({ title, children }: AppShellProps) {
   }, []);
   const navSections = useMemo(() => {
     const primary = [
-      { label: 'Dashboard', to: '/dashboard', show: true },
-      { label: 'Demo Tool', to: '/demo/eu-ai-act-report', show: true },
-      { label: 'Company', to: '/company', show: Boolean(user) },
-      { label: 'Profile', to: '/settings/profile', show: true },
+      {
+        label: activeProjectId ? '← Back to dashboard' : 'Dashboard',
+        to: '/dashboard',
+        show: true,
+      },
+      { label: 'Reviews', to: '/reviews', show: true },
+      { label: 'Document library', to: '/documents', show: true },
+      { label: 'Organization', to: '/company', show: Boolean(user) },
+      { label: 'Settings', to: '/settings/profile', show: true },
     ].filter((link) => link.show);
-    const admin = [
-      { label: 'Roles', to: '/admin/roles', show: user?.role === 'ADMIN' },
-    ].filter((link) => link.show);
-    const sections = primary.length
-      ? [{ title: 'Navigation', links: primary }]
-      : [];
-    if (admin.length) {
-      sections.push({ title: 'Admin', links: admin });
+    const sections: Array<{
+      title: string;
+      links: typeof primary;
+    }> = primary.length ? [{ title: 'Navigation', links: primary }] : [];
+    if (activeProjectId) {
+      sections.push({
+        title: 'Project',
+        links: [
+          {
+            label: 'Overview',
+            to: `/projects/${activeProjectId}/overview`,
+            show: true,
+          },
+          {
+            label: 'AI system profile',
+            to: `/projects/${activeProjectId}/ai-system-profile`,
+            show: true,
+          },
+          {
+            label: 'Project details',
+            to: `/projects/${activeProjectId}/compliance-workspace`,
+            show: true,
+          },
+          {
+            label: 'Classification',
+            to: `/projects/${activeProjectId}/classification`,
+            show: true,
+          },
+          {
+            label: 'Requirements',
+            to: `/projects/${activeProjectId}/requirements`,
+            show: true,
+          },
+          {
+            label: 'Evidence',
+            to: `/projects/${activeProjectId}/evidence`,
+            show: true,
+          },
+          {
+            label: 'Findings & actions',
+            to: `/projects/${activeProjectId}/findings`,
+            show: true,
+          },
+          {
+            label: 'Review & approval',
+            to: `/projects/${activeProjectId}/review-approval`,
+            show: true,
+          },
+          {
+            label: 'Documents',
+            to: `/projects/${activeProjectId}/compliance-package`,
+            show: true,
+          },
+          {
+            label: 'Messages',
+            to: `/projects/${activeProjectId}/messages`,
+            show: true,
+          },
+        ],
+      });
     }
     return sections;
-  }, [user]);
+  }, [activeProjectId, user]);
   const closeMobileMenu = () => setMobileMenuOpen(false);
-  const renderDesktopNav = () =>
-    navSections.map((section, idx) => (
-      <div key={section.title} className="flex items-center gap-4">
-        {idx > 0 && (
-          <span
-            className="hidden h-5 w-px bg-slate-200 lg:block"
-            aria-hidden="true"
-          />
-        )}
-        {section.links.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            onClick={closeMobileMenu}
-            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-          >
-            {link.label}
-          </Link>
-        ))}
-      </div>
+  const primaryNav = navSections.find(
+    (section) => section.title === 'Navigation',
+  );
+  const sidebarSections = navSections.filter(
+    (section) => section.title !== 'Navigation',
+  );
+  const renderSidebarNav = () =>
+    sidebarSections.map((section) => (
+        <div key={section.title} className="hz-sidebar__section">
+          <p className="hz-sidebar__label">{section.title}</p>
+          {section.links.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className="hz-sidebar__link"
+                end={link.to.endsWith('/overview')}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+        </div>
+      ));
+  const renderDesktopPrimaryNav = () =>
+    primaryNav?.links.map((link) => (
+      <NavLink
+        key={link.to}
+        to={link.to}
+        className={({ isActive }) =>
+          `whitespace-nowrap border-b-2 px-2 py-3 text-sm font-medium transition-colors ${
+            isActive
+              ? 'border-[#c8102e] text-slate-950'
+              : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-950'
+          }`
+        }
+      >
+        {link.label}
+      </NavLink>
     ));
   const renderMobileNav = () =>
     navSections.map((section) => (
@@ -119,16 +209,22 @@ export function AppShell({ title, children }: AppShellProps) {
           {section.title}
         </p>
         <div className="flex flex-col gap-1">
-          {section.links.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              onClick={closeMobileMenu}
-              className="rounded-md px-2 py-1 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              {link.label}
-            </Link>
-          ))}
+            {section.links.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                onClick={closeMobileMenu}
+                className={({ isActive }) =>
+                  `rounded-md px-2 py-1 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-slate-100 text-slate-950'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
         </div>
       </div>
     ));
@@ -165,9 +261,12 @@ export function AppShell({ title, children }: AppShellProps) {
             </div>
             <div className="mt-2 space-y-2">
               {listQuery.data?.length ? (
-                listQuery.data.map((n) => (
-                  <Card key={n.id} className="rounded-xl shadow-none">
-                    <CardContent className="px-3 py-2">
+                listQuery.data.map((n) => {
+                  const isRead = Boolean(n.readAt ?? n.read);
+                  const destination = getNotificationDestination(n);
+                  return (
+                    <Card key={n.id} className="rounded-xl shadow-none">
+                      <CardContent className="px-3 py-2">
                       <p className="text-sm font-medium text-slate-900">
                         {n.title}
                       </p>
@@ -175,8 +274,26 @@ export function AppShell({ title, children }: AppShellProps) {
                       <p className="text-[11px] text-slate-400">
                         {new Date(n.createdAt).toLocaleString()}
                       </p>
-                      <div className="mt-2 flex justify-end">
-                        {n.read ? (
+                      <div className="mt-2 flex justify-end gap-2">
+                        {destination ? (
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              if (!isRead) {
+                                setMarkingId(n.id);
+                                markSingleMutation.mutate(n.id);
+                              }
+                              navigate(destination);
+                              setOpen(false);
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                          >
+                            Open
+                          </Button>
+                        ) : null}
+                        {isRead ? (
                           <span className="text-[11px] font-semibold text-slate-400">
                             Read
                           </span>
@@ -200,9 +317,10 @@ export function AppShell({ title, children }: AppShellProps) {
                           </Button>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
+                      </CardContent>
+                    </Card>
+                  );
+                })
               ) : (
                 <p className="text-sm text-slate-500">No new notifications.</p>
               )}
@@ -214,7 +332,7 @@ export function AppShell({ title, children }: AppShellProps) {
                 size="sm"
                 className="h-8 px-2 text-xs font-semibold text-sky-600 hover:text-sky-500"
               >
-                Mark all read
+                Mark all as read
               </Button>
               <Button
                 onClick={() => setOpen(false)}
@@ -232,16 +350,24 @@ export function AppShell({ title, children }: AppShellProps) {
     </div>
   );
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.08),_transparent_24%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-          <div className="flex items-center justify-between gap-3 py-4">
-            <BrandLink
-              className="flex items-center gap-3"
-              brandClassName="whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-slate-900"
-              iconClassName="flex h-8 w-8 items-center justify-center rounded-2xl border border-slate-900/10 bg-white shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)]"
-              imageClassName="h-8 w-8 rounded-2xl p-1"
-            />
+    <div className="hz-shell">
+      <header className="hz-top-header">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10 hz-top-header__inner">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-5">
+              <BrandLink
+                className="flex shrink-0 items-center gap-3"
+                brandClassName="whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-[#383838]"
+                iconClassName="flex h-8 w-8 items-center justify-center rounded-lg border border-[#383838]/10 bg-white"
+                imageClassName="h-8 w-8 rounded-lg p-1"
+              />
+              <nav
+                aria-label="Primary navigation"
+                className="hidden min-w-0 items-center gap-1 lg:flex"
+              >
+                {renderDesktopPrimaryNav()}
+              </nav>
+            </div>
             <div className="flex items-center gap-3 lg:hidden">
               <Button
                 onClick={() => setBillingOpen(true)}
@@ -279,28 +405,8 @@ export function AppShell({ title, children }: AppShellProps) {
               </Button>
             </div>
           </div>
-          <div className="hidden items-center justify-between gap-6 border-t border-slate-200/70 py-3 lg:flex">
-            <nav className="min-w-0 overflow-x-auto">
-              <div className="flex min-w-max items-center gap-6">
-                {renderDesktopNav()}
-              </div>
-            </nav>
+          <div className="hidden items-center justify-end gap-6 border-t border-slate-200/70 py-3 lg:flex">
             <div className="flex shrink-0 items-center gap-3">
-              <Button asChild variant="outline" size="sm">
-                <Link to="/">Home</Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <a
-                  href="https://calendly.com/neuraldocx"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Book demo
-                </a>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/contact">Contact</Link>
-              </Button>
               {user?.companies && user.companies.length > 1 && (
                 <Select
                   value={activeCompanyId ?? user.companies[0]?.companyId ?? ''}
@@ -343,15 +449,6 @@ export function AppShell({ title, children }: AppShellProps) {
               <CardContent className="space-y-4 px-4 py-4 sm:px-6">
                 <div className="space-y-4">{renderMobileNav()}</div>
                 <div className="flex flex-col gap-2">
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="justify-start rounded-xl"
-                  >
-                    <Link to="/" onClick={closeMobileMenu}>
-                      Home
-                    </Link>
-                  </Button>
                   {user?.companies && user.companies.length > 1 && (
                     <Select
                       value={
@@ -373,28 +470,6 @@ export function AppShell({ title, children }: AppShellProps) {
                       ))}
                     </Select>
                   )}
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="justify-start rounded-xl"
-                  >
-                    <a
-                      href="https://calendly.com/neuraldocx"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Book demo
-                    </a>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="justify-start rounded-xl"
-                  >
-                    <Link to="/contact" onClick={closeMobileMenu}>
-                      Contact
-                    </Link>
-                  </Button>
                   <Button
                     onClick={() => setBillingOpen(true)}
                     variant="outline"
@@ -421,20 +496,37 @@ export function AppShell({ title, children }: AppShellProps) {
           </div>
         )}
       </header>
-      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-        <BillingModal
-          isOpen={billingOpen}
-          onClose={() => setBillingOpen(false)}
-        />
-        {title && (
-          <div className="mb-6 rounded-[1.75rem] border border-slate-200/90 bg-white/92 px-6 py-5 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.25)] backdrop-blur">
-            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
-              {title}
-            </h1>
-          </div>
-        )}
-        {children}
-      </main>
+      <div
+        className={`hz-shell__body${sidebarSections.length ? '' : ' hz-shell__body--no-sidebar'}`}
+      >
+        {sidebarSections.length ? (
+          <aside className="hz-sidebar">
+            <nav aria-label="Workspace navigation">{renderSidebarNav()}</nav>
+          </aside>
+        ) : null}
+        <main className={`hz-main${projectId ? ' hz-main--project' : ''}`}>
+          <BillingModal
+            isOpen={billingOpen}
+            onClose={() => setBillingOpen(false)}
+          />
+          {title && (
+            <div className="hz-page-title">
+              <h1 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
+                {title}
+              </h1>
+            </div>
+          )}
+          {children}
+        </main>
+      </div>
     </div>
   );
+}
+
+function getNotificationDestination(notification: Notification) {
+  if (notification.meta?.projectId) {
+    return `/projects/${notification.meta.projectId}`;
+  }
+  if (notification.type === 'role_request') return '/company';
+  return null;
 }

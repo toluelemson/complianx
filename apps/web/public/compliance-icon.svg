@@ -1,22 +1,22 @@
 <svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" fill="none">
   <defs>
     <linearGradient id="ndx-shell" x1="14" y1="10" x2="112" y2="118" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#07111F" />
-      <stop offset="0.52" stop-color="#13233A" />
-      <stop offset="1" stop-color="#0D1729" />
+      <stop stop-color="#383838" />
+      <stop offset="0.52" stop-color="#505050" />
+      <stop offset="1" stop-color="#2A2A2A" />
     </linearGradient>
     <linearGradient id="ndx-core" x1="31" y1="26" x2="99" y2="99" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F8FBFF" />
       <stop offset="1" stop-color="#DBE7F7" />
     </linearGradient>
     <linearGradient id="ndx-signal" x1="33" y1="86" x2="99" y2="41" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#38BDF8" />
-      <stop offset="0.5" stop-color="#818CF8" />
-      <stop offset="1" stop-color="#22C55E" />
+      <stop stop-color="#D40C2E" />
+      <stop offset="0.5" stop-color="#E21236" />
+      <stop offset="1" stop-color="#17A64E" />
     </linearGradient>
     <linearGradient id="ndx-rail" x1="36" y1="92" x2="95" y2="38" gradientUnits="userSpaceOnUse">
       <stop stop-color="#8AB4FF" stop-opacity="0.2" />
-      <stop offset="1" stop-color="#E2EEFF" stop-opacity="0.85" />
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.85" />
     </linearGradient>
   </defs>
 
@@ -27,9 +27,9 @@
     d="M33 36C33 31.5817 36.5817 28 41 28H70.5L95 52.5V87C95 91.4183 91.4183 95 87 95H41C36.5817 95 33 91.4183 33 87V36Z"
     fill="url(#ndx-core)"
   />
-  <path d="M70.5 28V48.5C70.5 50.7091 72.2909 52.5 74.5 52.5H95" fill="#C8D8EC" />
+  <path d="M70.5 28V48.5C70.5 50.7091 72.2909 52.5 74.5 52.5H95" fill="#DBDBDB" />
 
-  <rect x="44" y="42" width="21" height="5" rx="2.5" fill="#A2B4C9" />
+  <rect x="44" y="42" width="21" height="5" rx="2.5" fill="#8A8A8A" />
 
   <path
     d="M44 57H54L59.5 51.5L65 57H70.5L76.5 51L82.5 57H89"
@@ -47,18 +47,18 @@
   />
 
   <circle cx="59.5" cy="51.5" r="3.5" fill="#0F172A" />
-  <circle cx="59.5" cy="51.5" r="2" fill="#38BDF8" />
+  <circle cx="59.5" cy="51.5" r="2" fill="#D40C2E" />
   <circle cx="76.5" cy="51" r="3.5" fill="#0F172A" />
-  <circle cx="76.5" cy="51" r="2" fill="#818CF8" />
+  <circle cx="76.5" cy="51" r="2" fill="#E21236" />
   <circle cx="89" cy="57" r="3.5" fill="#0F172A" />
-  <circle cx="89" cy="57" r="2" fill="#22C55E" />
+  <circle cx="89" cy="57" r="2" fill="#17A64E" />
 
-  <rect x="44" y="67" width="24" height="5" rx="2.5" fill="#C0CEDC" />
-  <rect x="44" y="77" width="16" height="5" rx="2.5" fill="#D3DEEA" />
+  <rect x="44" y="67" width="24" height="5" rx="2.5" fill="#C8C8C8" />
+  <rect x="44" y="77" width="16" height="5" rx="2.5" fill="#DBDBDB" />
 
   <path
     d="M84.5 72.5C84.5 69.4624 86.9624 67 90 67H95.5C98.5376 67 101 69.4624 101 72.5V79.1162C101 84.544 97.4871 89.3516 92.3073 91.0474L90 91.8027L87.6927 91.0474C82.5129 89.3516 79 84.544 79 79.1162V72.5C79 69.4624 81.4624 67 84.5 67Z"
-    fill="#0F172A"
+    fill="#383838"
     fill-opacity="0.92"
   />
   <path d="M85.5 79L89 82.5L95.5 75.5" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />

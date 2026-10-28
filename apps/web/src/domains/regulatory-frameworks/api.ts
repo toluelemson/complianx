@@ -31,6 +31,17 @@ export async function getPublicResult(resultId: string) {
   return data;
 }
 
+export async function importPublicResult(payload: {
+  publicResultId: string;
+  name?: string;
+}) {
+  const { data } = await api.post<{ projectId: string; created: boolean }>(
+    '/ai-systems/import-public-result',
+    payload,
+  );
+  return data;
+}
+
 export async function generateDemoReport(payload: {
   systemName: string;
   companyName: string;

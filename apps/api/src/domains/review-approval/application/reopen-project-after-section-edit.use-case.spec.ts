@@ -68,7 +68,9 @@ describe('ReopenProjectAfterSectionEditUseCase', () => {
         expectedVersion: 4,
       }),
     );
-    expect(result!.workflowStatus).toBe(ProjectWorkflowStatus.CHANGES_REQUESTED);
+    expect(result!.workflowStatus).toBe(
+      ProjectWorkflowStatus.CHANGES_REQUESTED,
+    );
   });
 
   it('rejects reopening from draft', async () => {

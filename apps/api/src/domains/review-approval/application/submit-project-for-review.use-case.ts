@@ -46,7 +46,7 @@ export class SubmitProjectForReviewUseCase {
       reviewerId,
       approverId: params.approverId ?? context.project.approverId,
     });
-    await this.projects.transitionProject({
+    const project = await this.projects.submitProjectForReview({
       projectId: params.projectId,
       actorId: params.actorId,
       toStatus: ProjectWorkflowStatus.READY_FOR_REVIEW,
@@ -57,11 +57,11 @@ export class SubmitProjectForReviewUseCase {
       note: params.note,
     });
     await this.sideEffects.onProjectTransition({
-      project: { ...context.project, reviewerId },
+      project,
       toStatus: ProjectWorkflowStatus.READY_FOR_REVIEW,
       actorId: params.actorId,
       note: params.note,
     });
-    return this.projects.getProject(params.projectId);
+    return project;
   }
 }

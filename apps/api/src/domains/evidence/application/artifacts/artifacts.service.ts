@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   StreamableFile,
 } from '@nestjs/common';
 import { PrismaService } from '../../../../platform/database/prisma.service';
@@ -19,6 +20,14 @@ import type {
   EvidenceReviewStatus,
   EvidenceUpload,
 } from './artifact.commands';
+import { AuditService } from '../../../audit/application/audit.service';
+import {
+  FileScannerUnavailableError,
+  type FileScanner,
+  type ScanResult,
+} from './file-scanner';
+import { FILE_SCANNER } from '../../infrastructure/file-scanner.provider';
+import { validateEvidenceFileType } from './evidence-file-type';
 
 @Injectable()
 export class ArtifactsService {
@@ -28,6 +37,8 @@ export class ArtifactsService {
     private readonly prisma: PrismaService,
     private readonly projectsService: ProjectsService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
+    private readonly audit: AuditService,
+    @Inject(FILE_SCANNER) private readonly scanner: FileScanner,
   ) {}
 
   private async ensureSection(projectId: string, sectionId: string) {
@@ -40,10 +51,14 @@ export class ArtifactsService {
     return section;
   }
 
-  private buildCitationKey(sectionName: string, version: number) {
+  private buildCitationKey(
+    projectId: string,
+    sectionName: string,
+    version: number,
+  ) {
     const normalized = sectionName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
     const versionSegment = String(version).padStart(2, '0');
-    return `${normalized}-A${versionSegment}`;
+    return `${projectId.slice(0, 8).toUpperCase()}-${normalized}-A${versionSegment}`;
   }
 
   async list(
@@ -85,10 +100,39 @@ export class ArtifactsService {
     file: EvidenceUpload | undefined,
     description?: string,
     purpose?: EvidencePurpose,
+    metadata?: {
+      source?: string;
+      validFrom?: string;
+      expiresAt?: string;
+      externalUrl?: string;
+      provenanceNote?: string;
+    },
   ) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
+    if (/[/\\]/.test(file.originalname) || file.originalname.includes('..')) {
+      throw new BadRequestException('Invalid evidence filename');
+    }
+    const fileType = validateEvidenceFileType(file);
+    if (!fileType.valid) {
+      throw new BadRequestException(fileType.reason);
+    }
+    let scan: ScanResult;
+    try {
+      scan = await this.scanner.scan(file);
+    } catch (error) {
+      if (error instanceof FileScannerUnavailableError) {
+        throw new ServiceUnavailableException(
+          'Evidence upload is unavailable because malware scanning could not be completed',
+        );
+      }
+      throw error;
+    }
+    if (!scan.safe)
+      throw new BadRequestException(
+        scan.reason ?? 'File rejected by malware scanner',
+      );
     await this.projectsService.assertOwnership(projectId, userId, companyId);
     const section = await this.ensureSection(projectId, sectionId);
     const storedName = `${sectionId}-${Date.now()}-${randomBytes(8).toString('hex')}${extname(file.originalname)}`;
@@ -98,17 +142,22 @@ export class ArtifactsService {
       orderBy: { version: 'desc' },
     });
     const version = (latest?.version ?? 0) + 1;
-    const citationKey = this.buildCitationKey(section.name, version);
+    const citationKey = this.buildCitationKey(projectId, section.name, version);
     await this.storage.write(this.storageBucket, storedName, file.buffer);
     const normalizedPurpose =
       purpose === 'DATASET' || purpose === 'MODEL' ? purpose : 'GENERIC';
-    return this.prisma.sectionArtifact.create({
+    const artifact = await this.prisma.sectionArtifact.create({
       data: {
         originalName: file.originalname,
         storedName,
         mimeType: file.mimetype || 'application/octet-stream',
         size: file.size,
         description: description?.trim() ? description.trim() : null,
+        source: metadata?.source?.trim() || null,
+        validFrom: metadata?.validFrom ? new Date(metadata.validFrom) : null,
+        expiresAt: metadata?.expiresAt ? new Date(metadata.expiresAt) : null,
+        externalUrl: metadata?.externalUrl?.trim() || null,
+        provenanceNote: metadata?.provenanceNote?.trim() || null,
         sectionId,
         projectId,
         uploadedById: userId,
@@ -131,6 +180,21 @@ export class ArtifactsService {
         },
       },
     });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'SectionArtifact',
+      entityId: artifact.id,
+      action: latest ? 'REPLACED' : 'CREATED',
+      afterSnapshot: {
+        checksum: artifact.checksum,
+        version: artifact.version,
+        validFrom: artifact.validFrom?.toISOString() ?? null,
+        expiresAt: artifact.expiresAt?.toISOString() ?? null,
+      },
+    });
+    return artifact;
   }
 
   async remove(artifactId: string, userId: string, companyId: string) {
@@ -145,6 +209,21 @@ export class ArtifactsService {
       userId,
       companyId,
     );
+    const finalizedPackage = await this.prisma.compliancePackage.findFirst({
+      where: {
+        projectId: artifact.projectId,
+        companyId,
+        status: { not: 'INCOMPLETE' },
+        // Finalized package manifests are immutable provenance snapshots.
+        manifest: { string_contains: artifact.id },
+      },
+      select: { id: true, version: true },
+    });
+    if (finalizedPackage) {
+      throw new BadRequestException(
+        `Evidence is retained because it is referenced by finalized package v${finalizedPackage.version}`,
+      );
+    }
     const newerCount = await this.prisma.sectionArtifact.count({
       where: { previousArtifactId: artifactId },
     });
@@ -153,6 +232,20 @@ export class ArtifactsService {
         'Cannot delete an artifact that has newer versions',
       );
     }
+    await this.audit.record({
+      companyId,
+      projectId: artifact.projectId,
+      actorId: userId,
+      entityType: 'SectionArtifact',
+      entityId: artifact.id,
+      action: 'DELETED',
+      beforeSnapshot: {
+        originalName: artifact.originalName,
+        version: artifact.version,
+        checksum: artifact.checksum,
+        citationKey: artifact.citationKey,
+      },
+    });
     await this.prisma.sectionArtifact.delete({
       where: { id: artifactId },
     });
@@ -192,6 +285,7 @@ export class ArtifactsService {
     reviewerId: string,
     status: EvidenceReviewStatus,
     comment?: string,
+    companyId?: string,
   ) {
     const artifact = await this.prisma.sectionArtifact.findUnique({
       where: { id: artifactId },
@@ -203,16 +297,25 @@ export class ArtifactsService {
     const access = await this.projectsService.assertAccess(
       artifact.projectId,
       reviewerId,
-      artifact.project.companyId ?? undefined,
-      { allowOwner: false, allowReviewer: true, allowApprover: true },
+      companyId,
+      {
+        allowOwner: false,
+        allowReviewer: true,
+        allowApprover: true,
+        allowAdministrator: true,
+      },
     );
     const membershipRole = access.membershipRole;
-    if (membershipRole !== 'REVIEWER' && membershipRole !== 'ADMIN') {
+    if (
+      access.accessRole !== 'REVIEWER' &&
+      access.accessRole !== 'APPROVER' &&
+      membershipRole !== 'ADMIN'
+    ) {
       throw new ForbiddenException(
-        'Only workspace reviewers may approve evidence',
+        'Only the assigned reviewer, approver, or an admin can review files',
       );
     }
-    return this.prisma.sectionArtifact.update({
+    const updated = await this.prisma.sectionArtifact.update({
       where: { id: artifactId },
       data: {
         status,
@@ -233,5 +336,24 @@ export class ArtifactsService {
         },
       },
     });
+    if (companyId) {
+      await this.audit.record({
+        companyId,
+        projectId: artifact.projectId,
+        actorId: reviewerId,
+        entityType: 'SectionArtifact',
+        entityId: artifactId,
+        action: 'REVIEWED',
+        beforeSnapshot: {
+          status: artifact.status,
+          reviewComment: artifact.reviewComment,
+        },
+        afterSnapshot: {
+          status: updated.status,
+          reviewComment: updated.reviewComment,
+        },
+      });
+    }
+    return updated;
   }
 }

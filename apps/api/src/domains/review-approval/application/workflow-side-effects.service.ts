@@ -55,8 +55,7 @@ export class WorkflowSideEffectsService {
 
     if (
       toStatus === ProjectWorkflowStatus.READY_FOR_REVIEW &&
-      project.reviewerId &&
-      project.reviewerId !== actorId
+      project.reviewerId
     ) {
       await this.notifications.create({
         userId: project.reviewerId,

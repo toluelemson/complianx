@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '@/platform/api/client';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
+import { Panel } from '@/shared/components/ui/panel';
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
@@ -14,6 +15,7 @@ export default function VerifyEmailPage() {
 
   useEffect(() => {
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus('error');
       setMessage('Missing verification token.');
       return;
@@ -25,7 +27,7 @@ export default function VerifyEmailPage() {
         setStatus('success');
         setMessage('Email verified! You can now log in.');
       })
-      .catch((err: any) => {
+      .catch((err: { response?: { data?: { message?: string } } }) => {
         setStatus('error');
         setMessage(
           err?.response?.data?.message ??
@@ -38,7 +40,7 @@ export default function VerifyEmailPage() {
     <>
       <SiteHeader />
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center">
+        <Panel className="w-full max-w-md p-8 text-center shadow-sm">
           <h1 className="text-2xl font-semibold text-slate-900">
             Email verification
           </h1>
@@ -55,7 +57,7 @@ export default function VerifyEmailPage() {
               Return to login
             </Link>
           )}
-        </div>
+        </Panel>
       </div>
     </>
   );

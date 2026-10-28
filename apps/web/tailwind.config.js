@@ -11,6 +11,18 @@ export default {
     },
     extend: {
       colors: {
+        sky: {
+          50: '#fdf3f4',
+          100: '#fbe5e8',
+          200: '#f3c4cb',
+          300: '#ee9ba8',
+          400: '#e85c70',
+          500: '#e21236',
+          600: '#d40c2e',
+          700: '#b50a27',
+          800: '#8f0920',
+          900: '#6f081a',
+        },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -49,6 +61,11 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        control: ['Montserrat', 'Inter', 'sans-serif'],
+        mono: ['Hack', 'monospace'],
       },
     },
   },

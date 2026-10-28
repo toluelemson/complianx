@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import api from '@/platform/api/client';
+import { getInvitation, signUp } from '@/domains/auth/api';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useEffect, useState } from 'react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
@@ -21,7 +21,11 @@ interface SignupFormValues {
 
 export default function SignupPage() {
   const { token } = useAuth();
-  const signupsPaused = true;
+  const signupMode = (import.meta.env.VITE_SIGNUP_MODE ?? 'invite_only') as
+    | 'open'
+    | 'invite_only'
+    | 'assisted';
+  const signupsPaused = signupMode !== 'open';
   const [error, setError] = useState<string | undefined>();
   const [successMessage, setSuccessMessage] = useState<string | undefined>();
   const [showPassword, setShowPassword] = useState(false);
@@ -45,9 +49,7 @@ export default function SignupPage() {
     const tokenParam = searchParams.get('invitation');
     if (tokenParam) {
       setValue('invitationToken', tokenParam);
-      api
-        .get(`/invitations/${tokenParam}`)
-        .then((res) => res.data)
+      getInvitation(tokenParam)
         .then((data) => {
           setInviteInfo({ email: data.email, company: data.company });
           if (data.email) {
@@ -64,10 +66,12 @@ export default function SignupPage() {
 
   const mutation = useMutation({
     mutationFn: (values: SignupFormValues) =>
-      api.post('/auth/signup', values).then((res) => res.data),
+      signUp(values),
     onSuccess: () => {
       setSuccessMessage(
-        'Check your inbox for a verification link before you can log in.',
+        isCompanyFlow
+          ? 'Check your inbox to verify your email. Then sign in to see the work your team shared with you.'
+          : 'Check your inbox for a verification link before you can log in.',
       );
       setError(undefined);
     },
@@ -83,7 +87,7 @@ export default function SignupPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (signupsPaused) {
+  if (signupsPaused && !isCompanyFlow) {
     return (
       <>
         <SiteHeader />
@@ -97,18 +101,21 @@ export default function SignupPage() {
                 New accounts are closed for now
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                We&apos;re pausing new signups while we onboard current teams.
-                Please log in or reach out for access.
+                {signupMode === 'invite_only'
+                  ? 'Use your team invitation to create an account, or ask our team for help.'
+                  : 'Our team can help you get started with your first assessment.'}
               </p>
               <div className="mt-6 space-y-3">
                 <Button
                   asChild
-                  className="w-full bg-slate-950 text-white hover:bg-black"
+                  className="w-full bg-primary text-primary-foreground hover:bg-[#e21236]"
                 >
                   <Link to="/login">Go to login</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
-                  <Link to="/contact">Contact us</Link>
+                  <Link to="/contact?source=assisted_onboarding">
+                    Request assisted setup
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -128,7 +135,7 @@ export default function SignupPage() {
               Create an account
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              Start generating AI compliance documentation.
+              Keep your AI system information, files, and approvals together.
             </p>
             <form
               className="mt-8 space-y-5"
@@ -197,21 +204,26 @@ export default function SignupPage() {
                 <p className="text-sm text-emerald-600">{successMessage}</p>
               )}
               {isCompanyFlow && inviteInfo && (
-                <div className="rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                  Joining <strong>{inviteInfo.company.name}</strong> as{' '}
-                  <strong>{inviteInfo.email || watch('email')}</strong>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+                  <p className="font-semibold">
+                    You’re joining {inviteInfo.company.name}
+                  </p>
+                  <p className="mt-1 text-emerald-900">
+                    Invitation for <strong>{inviteInfo.email || watch('email')}</strong>.
+                    Create your account, verify your email, then open My work to see the actions assigned to you.
+                  </p>
                 </div>
               )}
               {!isCompanyFlow && (
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                  Personal workspaces spin up instantly. To join a company
-                  workspace, accept an invitation after signup.
+                  Your personal account is ready right away. To join a company,
+                  accept an invitation after signing up.
                 </div>
               )}
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full bg-slate-950 text-white hover:bg-black"
+                className="w-full bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 {mutation.isPending ? 'Creating account...' : 'Sign Up'}
               </Button>

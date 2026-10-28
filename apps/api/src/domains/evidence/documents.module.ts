@@ -7,6 +7,7 @@ import { LlmModule } from '../../platform/ai/llm.module';
 import { PdfModule } from '../../platform/pdf/pdf.module';
 import { FilesModule } from '../../platform/files/files.module';
 import { ReportingFoundationModule } from '../reporting/reporting-foundation.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ReportingFoundationModule } from '../reporting/reporting-foundation.mod
     PdfModule,
     FilesModule,
     ReportingFoundationModule,
+    AuditModule,
   ],
   providers: [DocumentsService],
   controllers: [DocumentsController],

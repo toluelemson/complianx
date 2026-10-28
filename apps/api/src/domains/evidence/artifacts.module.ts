@@ -5,10 +5,18 @@ import { PrismaModule } from '../../platform/database/prisma.module';
 import { AiSystemsModule } from '../ai-systems/ai-systems.module';
 import { CompanyModule } from '../organizations/company.module';
 import { FilesModule } from '../../platform/files/files.module';
+import { AuditModule } from '../audit/audit.module';
+import { fileScannerProvider } from './infrastructure/file-scanner.provider';
 
 @Module({
-  imports: [PrismaModule, AiSystemsModule, CompanyModule, FilesModule],
-  providers: [ArtifactsService],
+  imports: [
+    PrismaModule,
+    AiSystemsModule,
+    CompanyModule,
+    FilesModule,
+    AuditModule,
+  ],
+  providers: [ArtifactsService, fileScannerProvider],
   controllers: [ArtifactsController],
   exports: [ArtifactsService],
 })

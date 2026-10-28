@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { GeneratorService } from './application/report-generation/generator.service';
 import { GeneratorController } from './presentation/controllers/generator.controller';
+import { AikiReportGenerationController } from './presentation/controllers/aiki-report-generation.controller';
+import { ReportGenerationQueueService } from './application/report-generation/report-generation-queue.service';
 import { AiSystemsModule } from '../ai-systems/ai-systems.module';
 import { LlmModule } from '../../platform/ai/llm.module';
 import { DocumentsModule } from '../evidence/documents.module';
@@ -9,6 +11,10 @@ import { MonetizationService } from '../subscriptions/application/monetization.s
 import { FilesModule } from '../../platform/files/files.module';
 import { ReportingFoundationModule } from './reporting-foundation.module';
 import { AnalyticsModule } from './analytics.module';
+import { ReadinessReportController } from './presentation/controllers/readiness-report.controller';
+import { ReadinessReportService } from './application/readiness-report/readiness-report.service';
+import { CompanyModule } from '../organizations/company.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -19,8 +25,19 @@ import { AnalyticsModule } from './analytics.module';
     FilesModule,
     ReportingFoundationModule,
     AnalyticsModule,
+    CompanyModule,
+    AuditModule,
   ],
-  controllers: [GeneratorController],
-  providers: [GeneratorService, MonetizationService],
+  controllers: [
+    GeneratorController,
+    AikiReportGenerationController,
+    ReadinessReportController,
+  ],
+  providers: [
+    GeneratorService,
+    ReportGenerationQueueService,
+    ReadinessReportService,
+    MonetizationService,
+  ],
 })
 export class ReportingModule {}

@@ -8,16 +8,68 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: complianx_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d complianx_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Gitleaks compares the pull request's commit range, including its base commit.
+          fetch-depth: 0
+      - name: Scan repository for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: pnpm/action-setup@v4
         with:
           version: 10.13.1
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.16.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level high
+      - run: pnpm db:validate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+      - run: pnpm db:generate
+      - run: bash test/compliance/migrate-populated.sh
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+      - run: pnpm --filter api test:compliance
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+      - run: pnpm --filter api seed:eu-ai-act
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+      - run: pnpm --filter api exec ts-node -r ts-node/register test/e2e/prepare-fixtures.ts
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+      - run: pnpm --filter api exec jest --config test/jest-e2e.json --runInBand
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+          JWT_SECRET: ci-test-secret
+      # The Vite server used by Playwright resolves contracts from its build output.
+      - run: pnpm --filter @complianx/contracts build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e:ui
+        env:
+          E2E_DATABASE_URL: postgresql://ci:ci@localhost:5432/complianx_test
+          JWT_SECRET: ci-test-secret
+      - run: pnpm --filter api exec tsc -p tsconfig.json --noEmit --pretty false
+      - run: pnpm --filter web exec tsc -p tsconfig.app.json --noEmit --pretty false
       - run: pnpm build
       - run: pnpm test
       - run: pnpm lint

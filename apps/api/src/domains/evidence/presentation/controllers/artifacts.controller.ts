@@ -53,7 +53,9 @@ export class ArtifactsController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multer.memoryStorage(),
-      limits: { fileSize: 25 * 1024 * 1024 },
+      limits: {
+        fileSize: Number(process.env.UPLOAD_MAX_BYTES ?? 25 * 1024 * 1024),
+      },
     }),
   )
   upload(
@@ -63,6 +65,11 @@ export class ArtifactsController {
     @UploadedFile() file: Express.Multer.File,
     @Body('description') description?: string,
     @Body('purpose') purpose?: 'DATASET' | 'MODEL' | 'GENERIC',
+    @Body('source') source?: string,
+    @Body('validFrom') validFrom?: string,
+    @Body('expiresAt') expiresAt?: string,
+    @Body('externalUrl') externalUrl?: string,
+    @Body('provenanceNote') provenanceNote?: string,
   ) {
     const companyId = this.resolveCompanyId(req);
     return this.artifactsService.upload(
@@ -73,6 +80,7 @@ export class ArtifactsController {
       file,
       description,
       purpose,
+      { source, validFrom, expiresAt, externalUrl, provenanceNote },
     );
   }
 
@@ -109,6 +117,7 @@ export class ArtifactsController {
       req.user.userId,
       dto.status,
       dto.comment,
+      this.resolveCompanyId(req),
     );
   }
 }

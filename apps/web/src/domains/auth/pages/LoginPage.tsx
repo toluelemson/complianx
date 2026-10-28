@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import api from '@/platform/api/client';
+import { logIn, resendVerification } from '@/domains/auth/api';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useState } from 'react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
@@ -47,7 +47,7 @@ export default function LoginPage() {
     setResendStatus('pending');
     setResendMessage(undefined);
     try {
-      await api.post('/auth/resend-verification', { email: emailValue });
+      await resendVerification(emailValue);
       setResendStatus('sent');
       setResendMessage('Check your inbox for a fresh verification link.');
     } catch (err) {
@@ -62,7 +62,7 @@ export default function LoginPage() {
 
   const mutation = useMutation({
     mutationFn: (values: LoginFormValues) =>
-      api.post('/auth/login', values).then((res) => res.data),
+      logIn(values),
     onSuccess: (data) => {
       login(data.user, data.token);
       setError(undefined);
@@ -174,7 +174,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full bg-slate-950 text-white hover:bg-black"
+                className="w-full bg-primary text-primary-foreground hover:bg-[#e21236]"
               >
                 {mutation.isPending ? 'Signing in...' : 'Sign In'}
               </Button>

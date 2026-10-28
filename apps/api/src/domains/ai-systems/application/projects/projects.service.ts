@@ -14,7 +14,7 @@ import type {
 } from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../../platform/database/prisma.service';
 import type { CreateAiSystemCommand } from './project.commands';
-import { Prisma, Project } from '@prisma/client';
+import { LifecycleStage, Prisma, Project } from '@prisma/client';
 import type {
   ProjectAccessOptions,
   ProjectAccessRole,
@@ -27,7 +27,10 @@ const projectDetailInclude = Prisma.validator<Prisma.ProjectInclude>()({
     include: {
       lastEditor: { select: { id: true, email: true } },
       comments: {
-        include: { author: { select: { id: true, email: true } } },
+        include: {
+          author: { select: { id: true, email: true } },
+          resolvedBy: { select: { id: true, email: true } },
+        },
         orderBy: { createdAt: 'asc' },
       },
       statusEvents: {
@@ -64,7 +67,17 @@ const projectListInclude = Prisma.validator<Prisma.ProjectInclude>()({
     select: { id: true, name: true, updatedAt: true },
   },
   documents: {
-    select: { id: true, type: true, createdAt: true },
+    select: {
+      id: true,
+      type: true,
+      createdAt: true,
+      version: true,
+      frameworkKey: true,
+      regulatoryContentVersion: true,
+      approvalState: true,
+      lifecycleStatus: true,
+      provenanceStatus: true,
+    },
     orderBy: { createdAt: 'desc' },
   },
 });
@@ -92,12 +105,26 @@ function mapSectionComment(comment: {
   body: string;
   createdAt: Date;
   author?: { id: string; email: string } | null;
+  resolvedAt?: Date | null;
+  resolvedBy?: { id: string; email: string } | null;
+  linkedEntityType?: string | null;
+  linkedEntityId?: string | null;
+  mentions?: Prisma.JsonValue;
 }): SectionComment {
   return {
     id: comment.id,
     body: comment.body,
     createdAt: comment.createdAt.toISOString(),
     author: comment.author ?? undefined,
+    resolvedAt: toIso(comment.resolvedAt),
+    resolvedBy: comment.resolvedBy ?? undefined,
+    linkedEntityType: comment.linkedEntityType,
+    linkedEntityId: comment.linkedEntityId,
+    mentions: Array.isArray(comment.mentions)
+      ? comment.mentions.filter(
+          (value): value is string => typeof value === 'string',
+        )
+      : undefined,
   };
 }
 
@@ -123,6 +150,10 @@ function mapArtifact(artifact: {
   id: string;
   originalName: string;
   description?: string | null;
+  source?: string | null;
+  expiresAt?: Date | null;
+  externalUrl?: string | null;
+  provenanceNote?: string | null;
   createdAt: Date;
   size: number;
   mimeType: string;
@@ -145,6 +176,10 @@ function mapArtifact(artifact: {
     id: artifact.id,
     originalName: artifact.originalName,
     description: artifact.description ?? undefined,
+    source: artifact.source ?? undefined,
+    expiresAt: toIso(artifact.expiresAt),
+    externalUrl: artifact.externalUrl ?? undefined,
+    provenanceNote: artifact.provenanceNote ?? undefined,
     createdAt: artifact.createdAt.toISOString(),
     size: artifact.size,
     mimeType: artifact.mimeType,
@@ -202,12 +237,26 @@ function mapDocument(document: {
   id: string;
   type: string;
   url: string;
+  version?: number;
+  frameworkKey?: string;
+  regulatoryContentVersion?: string | null;
+  approvalState?: string;
+  lifecycleStatus?: string;
+  provenanceStatus?: string;
   createdAt: Date;
 }): DocumentItem {
   return {
     id: document.id,
     type: document.type,
     url: document.url,
+    version: document.version,
+    frameworkKey: document.frameworkKey,
+    regulatoryContentVersion: document.regulatoryContentVersion,
+    approvalState: document.approvalState as DocumentItem['approvalState'],
+    lifecycleStatus:
+      document.lifecycleStatus as DocumentItem['lifecycleStatus'],
+    provenanceStatus:
+      document.provenanceStatus as DocumentItem['provenanceStatus'],
     createdAt: document.createdAt.toISOString(),
   };
 }
@@ -222,6 +271,24 @@ function mapProjectDetail(
     workflowStatus: string;
     industry: string | null;
     riskLevel: string | null;
+    description: string | null;
+    businessPurpose: string | null;
+    intendedUse: string | null;
+    intendedUsers: string | null;
+    affectedPersons: string | null;
+    deploymentGeography: string | null;
+    operatorRoles: Prisma.JsonValue | null;
+    lifecycleStage: string | null;
+    responsibleOwner: string | null;
+    providerOrDeveloper: string | null;
+    deployerOrUser: string | null;
+    importer: string | null;
+    distributor: string | null;
+    authorizedRepresentative: string | null;
+    generatesContent: boolean | null;
+    useCaseIndicators: Prisma.JsonValue | null;
+    sourcePublicResultId: string | null;
+    dueDate: Date | null;
     reviewerId: string | null;
     approverId: string | null;
     workflowVersion: number;
@@ -229,7 +296,12 @@ function mapProjectDetail(
     reviewer?: { id: string; email: string; role: string } | null;
     approver?: { id: string; email: string; role: string } | null;
     sections?: Array<Parameters<typeof mapSection>[0]>;
-    documents?: Array<{ id: string; type: string; url: string; createdAt: Date }>;
+    documents?: Array<{
+      id: string;
+      type: string;
+      url: string;
+      createdAt: Date;
+    }>;
     statusEvents?: Array<Parameters<typeof mapStatusEvent>[0]>;
   },
   viewerRole?: ProjectDetail['viewerRole'],
@@ -243,6 +315,32 @@ function mapProjectDetail(
     workflowStatus: project.workflowStatus as ProjectDetail['workflowStatus'],
     industry: project.industry,
     riskLevel: project.riskLevel,
+    description: project.description,
+    businessPurpose: project.businessPurpose,
+    intendedUse: project.intendedUse,
+    intendedUsers: project.intendedUsers,
+    affectedPersons: project.affectedPersons,
+    deploymentGeography: project.deploymentGeography,
+    operatorRoles: Array.isArray(project.operatorRoles)
+      ? project.operatorRoles.filter(
+          (value): value is string => typeof value === 'string',
+        )
+      : [],
+    lifecycleStage: project.lifecycleStage,
+    responsibleOwner: project.responsibleOwner,
+    providerOrDeveloper: project.providerOrDeveloper,
+    deployerOrUser: project.deployerOrUser,
+    importer: project.importer,
+    distributor: project.distributor,
+    authorizedRepresentative: project.authorizedRepresentative,
+    generatesContent: project.generatesContent,
+    useCaseIndicators: Array.isArray(project.useCaseIndicators)
+      ? project.useCaseIndicators.filter(
+          (value): value is string => typeof value === 'string',
+        )
+      : [],
+    sourcePublicResultId: project.sourcePublicResultId,
+    dueDate: project.dueDate?.toISOString() ?? null,
     reviewerId: project.reviewerId,
     approverId: project.approverId,
     workflowVersion: project.workflowVersion,
@@ -259,6 +357,42 @@ function mapProjectDetail(
 @Injectable()
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async updateForUser(
+    projectId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateAiSystemCommand,
+  ) {
+    await this.assertOwnership(projectId, userId, companyId);
+    return this.prisma.project
+      .update({
+        where: { id: projectId },
+        data: {
+          name: dto.name,
+          industry: dto.industry,
+          description: dto.description,
+          businessPurpose: dto.businessPurpose,
+          intendedUse: dto.intendedUse,
+          intendedUsers: dto.intendedUsers,
+          affectedPersons: dto.affectedPersons,
+          deploymentGeography: dto.deploymentGeography,
+          operatorRoles: dto.operatorRoles as Prisma.InputJsonValue,
+          lifecycleStage: dto.lifecycleStage as LifecycleStage,
+          responsibleOwner: dto.responsibleOwner,
+          providerOrDeveloper: dto.providerOrDeveloper,
+          deployerOrUser: dto.deployerOrUser,
+          importer: dto.importer,
+          distributor: dto.distributor,
+          authorizedRepresentative: dto.authorizedRepresentative,
+          generatesContent: dto.generatesContent,
+          useCaseIndicators: dto.useCaseIndicators as Prisma.InputJsonValue,
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+        },
+        include: projectDetailInclude,
+      })
+      .then((project) => mapProjectDetail(project, 'OWNER'));
+  }
 
   private async resolveAccess(
     projectId: string,
@@ -277,7 +411,7 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
     if (companyId && project.companyId && project.companyId !== companyId) {
-      throw new ForbiddenException('Project belongs to a different workspace');
+      throw new ForbiddenException('Access denied');
     }
     const membership = project.companyId
       ? await this.prisma.userCompany.findUnique({
@@ -305,6 +439,13 @@ export class ProjectsService {
     }
     if (!membership || (companyId && membership.companyId !== companyId)) {
       throw new ForbiddenException('Not a member of the workspace');
+    }
+    if (opts?.allowAdministrator && membership.role === 'ADMIN') {
+      return {
+        project,
+        accessRole: accessRole ?? 'MEMBER',
+        membershipRole: membership.role,
+      };
     }
     if (allowCompanyMember) {
       return {
@@ -344,6 +485,32 @@ export class ProjectsService {
       name: project.name,
       industry: project.industry,
       riskLevel: project.riskLevel,
+      description: project.description,
+      businessPurpose: project.businessPurpose,
+      intendedUse: project.intendedUse,
+      intendedUsers: project.intendedUsers,
+      affectedPersons: project.affectedPersons,
+      deploymentGeography: project.deploymentGeography,
+      operatorRoles: Array.isArray(project.operatorRoles)
+        ? project.operatorRoles.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : [],
+      lifecycleStage: project.lifecycleStage,
+      responsibleOwner: project.responsibleOwner,
+      providerOrDeveloper: project.providerOrDeveloper,
+      deployerOrUser: project.deployerOrUser,
+      importer: project.importer,
+      distributor: project.distributor,
+      authorizedRepresentative: project.authorizedRepresentative,
+      generatesContent: project.generatesContent,
+      useCaseIndicators: Array.isArray(project.useCaseIndicators)
+        ? project.useCaseIndicators.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : [],
+      sourcePublicResultId: project.sourcePublicResultId,
+      dueDate: project.dueDate?.toISOString() ?? null,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
       workflowStatus: project.workflowStatus,
@@ -364,6 +531,15 @@ export class ProjectsService {
         id: document.id,
         type: document.type,
         createdAt: document.createdAt.toISOString(),
+        version: document.version,
+        frameworkKey: document.frameworkKey,
+        regulatoryContentVersion: document.regulatoryContentVersion,
+        approvalState:
+          document.approvalState as ProjectListItemContract['documents'][number]['approvalState'],
+        lifecycleStatus:
+          document.lifecycleStatus as ProjectListItemContract['documents'][number]['lifecycleStatus'],
+        provenanceStatus:
+          document.provenanceStatus as ProjectListItemContract['documents'][number]['provenanceStatus'],
       })),
     }));
   }
@@ -375,13 +551,24 @@ export class ProjectsService {
   ): Promise<ProjectDetail> {
     return this.prisma.project
       .create({
-      data: {
-        ...dto,
-        ownerId: userId,
-        companyId,
-      },
+        data: {
+          ...dto,
+          lifecycleStage: dto.lifecycleStage
+            ? (dto.lifecycleStage as LifecycleStage)
+            : undefined,
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+          ownerId: userId,
+          companyId,
+          sections: {
+            create: {
+              name: 'Evidence',
+              content: {},
+            },
+          },
+        },
+        include: projectDetailInclude,
       })
-      .then((project) => mapProjectDetail(project));
+      .then((project) => mapProjectDetail(project, 'OWNER'));
   }
 
   async getOwnedProject(
@@ -470,6 +657,24 @@ export class ProjectsService {
           name: cloneName,
           industry: source.industry,
           riskLevel: source.riskLevel,
+          description: source.description,
+          businessPurpose: source.businessPurpose,
+          intendedUse: source.intendedUse,
+          intendedUsers: source.intendedUsers,
+          affectedPersons: source.affectedPersons,
+          deploymentGeography: source.deploymentGeography,
+          operatorRoles: source.operatorRoles ?? undefined,
+          lifecycleStage: source.lifecycleStage ?? undefined,
+          responsibleOwner: source.responsibleOwner,
+          providerOrDeveloper: source.providerOrDeveloper,
+          deployerOrUser: source.deployerOrUser,
+          importer: source.importer,
+          distributor: source.distributor,
+          authorizedRepresentative: source.authorizedRepresentative,
+          generatesContent: source.generatesContent,
+          useCaseIndicators: source.useCaseIndicators ?? undefined,
+          sourcePublicResultId: source.sourcePublicResultId,
+          dueDate: source.dueDate ?? undefined,
           ownerId: userId,
           companyId,
         },

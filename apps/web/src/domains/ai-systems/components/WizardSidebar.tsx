@@ -3,10 +3,7 @@ import {
   TRACKABLE_STEP_COUNT,
   type StepField,
 } from '@/domains/ai-systems/constants/steps';
-import type {
-  ProjectDetail,
-  SectionWithMeta,
-} from '@complianx/contracts/ai-systems';
+import type { SectionWithMeta } from '@complianx/contracts/ai-systems';
 import { useAnimatedNumber } from '@/shared/hooks/useAnimatedNumber';
 
 interface WizardSidebarProps {
@@ -17,7 +14,8 @@ interface WizardSidebarProps {
   incompleteFieldsByStep: Map<string, StepField[]>;
   activeStepId: string;
   setActiveStepId: (id: string) => void;
-  projectQuery: { data?: ProjectDetail };
+  /** Kept for story/test compatibility; workspace navigation lives in AppShell. */
+  projectQuery?: unknown;
 }
 
 export function WizardSidebar({
@@ -27,7 +25,6 @@ export function WizardSidebar({
   incompleteFieldsByStep,
   activeStepId,
   setActiveStepId,
-  projectQuery,
 }: WizardSidebarProps) {
   const animatedCompletionRate = useAnimatedNumber(completionRate, {
     duration: 700,
@@ -63,19 +60,6 @@ export function WizardSidebar({
             />
           ))}
         </ul>
-      </div>
-      <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-        <p className="font-semibold text-slate-900">Project metadata</p>
-        <p className="mt-2">Industry: {projectQuery.data?.industry ?? '—'}</p>
-        <p className="mt-1">
-          Risk level: {projectQuery.data?.riskLevel ?? '—'}
-        </p>
-        <p className="mt-1">
-          Created:{' '}
-          {projectQuery.data
-            ? new Date(projectQuery.data.createdAt).toLocaleDateString()
-            : '—'}
-        </p>
       </div>
     </aside>
   );

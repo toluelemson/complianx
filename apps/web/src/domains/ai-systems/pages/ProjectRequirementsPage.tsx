@@ -1,0 +1,281 @@
+import { useState } from 'react';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { AppShell } from '@/app/layout/AppShell';
+import { useAuth } from '@/app/providers/AuthContext';
+import {
+  listObligationEvidence,
+  listProjectReviewers,
+  listProjectObligations,
+  updateProjectObligation,
+} from '../api';
+import { RequirementTraceability } from '../components/RequirementTraceability';
+
+const requirementStatusLabel = (status: string) =>
+  ({
+    NOT_STARTED: 'Not started',
+    IN_PROGRESS: 'In progress',
+    READY_FOR_REVIEW: 'Ready for review',
+    SATISFIED: 'Complete',
+    NOT_APPLICABLE: 'Not applicable',
+  })[status] ?? status.replaceAll('_', ' ').toLowerCase();
+
+const reviewStageLabel = (status: string) =>
+  ({
+    DRAFT: 'Not sent for review',
+    READY_FOR_REVIEW: 'Ready for review',
+    APPROVED: 'Approved',
+    CHANGES_REQUESTED: 'Changes requested',
+  })[status] ?? status.replaceAll('_', ' ').toLowerCase();
+
+export default function ProjectRequirementsPage() {
+  const { projectId = '' } = useParams<{ projectId: string }>();
+  const { token, initializing, activeCompanyId } = useAuth();
+  const client = useQueryClient();
+  const [filter, setFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [ownerFilter, setOwnerFilter] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const query = useQuery({
+    queryKey: ['obligations', projectId, activeCompanyId],
+    enabled: Boolean(token && projectId && activeCompanyId),
+    queryFn: () => listProjectObligations(projectId),
+  });
+  const update = useMutation({
+    mutationFn: (input: {
+      id: string;
+      priority?: string;
+      ownerId?: string;
+      dueAt?: string;
+    }) =>
+      updateProjectObligation(projectId, input.id, {
+        priority: input.priority,
+        ownerId: input.ownerId,
+        dueAt: input.dueAt,
+      }),
+    onSuccess: () =>
+      void client.invalidateQueries({ queryKey: ['obligations', projectId] }),
+  });
+  const membersQuery = useQuery({
+    queryKey: ['projectReviewers', projectId, activeCompanyId],
+    enabled: Boolean(token && projectId && activeCompanyId),
+    queryFn: () => listProjectReviewers(projectId),
+  });
+  const allItems = query.data ?? [];
+  const evidenceQueries = useQueries({
+    queries: allItems.map((item) => ({
+      queryKey: ['obligationEvidence', projectId, item.id, activeCompanyId],
+      enabled: Boolean(token && projectId && activeCompanyId),
+      queryFn: () => listObligationEvidence(projectId, item.id),
+    })),
+  });
+  const evidenceByRequirement = new Map(
+    allItems.map((item, index) => [
+      item.id,
+      evidenceQueries[index]?.data ?? [],
+    ]),
+  );
+  if (!initializing && !token) return <Navigate to="/login" replace />;
+  const items = (query.data ?? []).filter(
+    (item) =>
+      (filter === 'ALL' || item.approvalState === filter) &&
+      (statusFilter === 'ALL' || item.status === statusFilter) &&
+      (ownerFilter === 'ALL' || item.owner?.id === ownerFilter) &&
+      (priorityFilter === 'ALL' || item.priority === priorityFilter) &&
+      (categoryFilter === 'ALL' ||
+        (item.obligation.key ?? '').split('-')[0] === categoryFilter),
+  );
+  const categories = Array.from(
+    new Set(
+      allItems
+        .map((item) => (item.obligation.key ?? '').split('-')[0])
+        .filter(Boolean),
+    ),
+  );
+  return (
+    <AppShell title="Requirements" projectId={projectId}>
+      <div className="hz-console-content space-y-6">
+        <div>
+          <Link
+            to={`/projects/${projectId}/overview`}
+            className="text-sm text-slate-500 hover:text-sky-600"
+          >
+            ← Project overview
+          </Link>
+          <h1 className="mt-3 text-2xl font-semibold text-slate-900">
+            Requirements
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            See who owns each job, what matters most, the supporting files, and review progress.
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <select
+            aria-label="Filter requirement status"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          >
+            <option value="ALL">All statuses</option>
+            <option value="NOT_STARTED">Not started</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="READY_FOR_REVIEW">Ready for review</option>
+            <option value="SATISFIED">Satisfied</option>
+          </select>
+          <details className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+            <summary className="cursor-pointer text-slate-600">
+              More filters
+            </summary>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <select
+                aria-label="Filter requirement owner"
+                value={ownerFilter}
+                onChange={(event) => setOwnerFilter(event.target.value)}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="ALL">All owners</option>
+                {Array.from(
+                  new Map(
+                    allItems
+                      .filter((item) => item.owner)
+                      .map((item) => [item.owner!.id, item.owner!.email]),
+                  ),
+                ).map(([id, email]) => (
+                  <option key={id} value={id}>
+                    {email}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Filter requirement priority"
+                value={priorityFilter}
+                onChange={(event) => setPriorityFilter(event.target.value)}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="ALL">All priorities</option>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+              </select>
+              <select
+                aria-label="Filter obligation category"
+                value={categoryFilter}
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="ALL">All categories</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category.replaceAll('_', ' ')}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Filter requirement approval state"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="ALL">All review stages</option>
+                <option value="DRAFT">Draft</option>
+                <option value="READY_FOR_REVIEW">Ready for review</option>
+                <option value="APPROVED">Approved</option>
+                <option value="CHANGES_REQUESTED">Changes requested</option>
+              </select>
+            </div>
+          </details>
+        </div>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="space-y-3">
+            {items.map((item) => (
+              <article
+                key={item.id}
+                id={`requirement-${item.id}`}
+                className="rounded-xl border border-slate-100 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold text-slate-900">
+                      {item.obligation.title}
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {requirementStatusLabel(item.status)} · Review:{' '}
+                      {reviewStageLabel(item.approvalState)} ·{' '}
+                      {item.owner?.email ?? 'Unassigned'}
+                    </p>
+                  </div>
+                  <select
+                    aria-label={`Priority for ${item.obligation.title}`}
+                    value={item.priority}
+                    onChange={(event) =>
+                      update.mutate({
+                        id: item.id,
+                        priority: event.target.value,
+                      })
+                    }
+                    className="rounded-md border border-slate-200 px-2 py-1 text-xs"
+                  >
+                    <option value="LOW">Low priority</option>
+                    <option value="MEDIUM">Medium priority</option>
+                    <option value="HIGH">High priority</option>
+                    <option value="CRITICAL">Critical priority</option>
+                  </select>
+                  <input
+                    type="date"
+                    aria-label={`Due date for ${item.obligation.title}`}
+                    value={item.dueAt ? item.dueAt.slice(0, 10) : ''}
+                    onChange={(event) =>
+                      update.mutate({ id: item.id, dueAt: event.target.value })
+                    }
+                    className="rounded-md border border-slate-200 px-2 py-1 text-xs"
+                  />
+                  <select
+                    aria-label={`Owner for ${item.obligation.title}`}
+                    value={item.owner?.id ?? ''}
+                    onChange={(event) => {
+                      if (event.target.value) {
+                        update.mutate({ id: item.id, ownerId: event.target.value });
+                      }
+                    }}
+                    disabled={update.isPending || !membersQuery.data?.length}
+                    className="rounded-md border border-slate-200 px-2 py-1 text-xs"
+                  >
+                    <option value="">Unassigned</option>
+                    {(membersQuery.data ?? []).map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="mt-2 text-xs text-slate-400">
+                  {item.obligation.legalReference ?? 'No legal reference'}
+                  {item.dueAt
+                    ? ` · Due ${new Date(item.dueAt).toLocaleDateString()}`
+                    : ''}
+                </p>
+                <RequirementTraceability
+                  projectId={projectId}
+                  requirement={item}
+                  evidence={evidenceByRequirement.get(item.id) ?? []}
+                />
+              </article>
+            ))}
+            {!items.length ? (
+              <p className="py-8 text-center text-sm text-slate-500">
+                No requirements match this filter.
+              </p>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    </AppShell>
+  );
+}

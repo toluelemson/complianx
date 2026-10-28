@@ -35,17 +35,17 @@ export function CloneProjectModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-md rounded-[1.75rem] border-slate-200/90 bg-white/95 shadow-[0_35px_100px_-40px_rgba(15,23,42,0.45)]">
+      <Card className="w-full max-w-md rounded-xl border-slate-200 bg-white shadow-2xl">
         <CardContent className="p-6">
           <h2 className="text-lg font-semibold tracking-[-0.02em] text-slate-900">
-            Duplicate “{projectName}”
+            Create a system from “{projectName}”
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Create a new project pre-filled with the same section data so you
-            can reuse templates across teams.
+            Reuse the existing control structure as a starting point for
+            another AI system.
           </p>
           <label className="mt-6 block text-sm font-medium text-slate-700">
-            New project name
+            New system name
             <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -59,9 +59,9 @@ export function CloneProjectModal({
             <Button
               onClick={() => onSubmit(name)}
               disabled={!name || isSubmitting}
-              className="bg-slate-950 text-white hover:bg-black"
+              className="bg-[#d40c2e] text-white hover:bg-[#e21236]"
             >
-              {isSubmitting ? 'Cloning...' : 'Create Copy'}
+              {isSubmitting ? 'Creating...' : 'Create system'}
             </Button>
           </div>
         </CardContent>

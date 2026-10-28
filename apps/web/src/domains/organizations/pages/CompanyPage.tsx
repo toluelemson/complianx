@@ -1,7 +1,16 @@
 // Organizations domain route.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import api from '@/platform/api/client';
+import {
+  createCompany,
+  createInvitation,
+  getCompany,
+  leaveCompany,
+  listInvitations,
+  removeCompanyMember,
+  renameCompany,
+  updateCompanyProfile,
+} from '@/domains/organizations/api';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import toast from 'react-hot-toast';
@@ -9,11 +18,15 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
+import { Panel } from '@/shared/components/ui/panel';
 
 export default function CompanyPage() {
   const { user, activeCompanyId, setActiveCompany } = useAuth();
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
+  const [profile, setProfile] = useState({
+    legalName: '', website: '', industry: '', address: '', contactEmail: '',
+  });
   const [createName, setCreateName] = useState('');
   const [leftCompany, setLeftCompany] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -40,21 +53,27 @@ export default function CompanyPage() {
   const companyQuery = useQuery({
     queryKey: ['company', activeCompanyId],
     enabled: Boolean(hasWorkspaceContext),
-    queryFn: () => api.get('/company').then((res) => res.data),
+    queryFn: getCompany,
   });
 
   const renameMutation = useMutation({
-    mutationFn: (name: string) =>
-      api.patch('/company', { name }).then((res) => res.data),
+    mutationFn: renameCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
       setNewName('');
     },
   });
+  const profileMutation = useMutation({
+    mutationFn: () => updateCompanyProfile(profile),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      toast.success('Organization profile saved');
+    },
+    onError: () => toast.error('Unable to save organization profile'),
+  });
 
   const removeMemberMutation = useMutation({
-    mutationFn: (memberId: string) =>
-      api.patch(`/company/members/${memberId}/remove`).then((res) => res.data),
+    mutationFn: removeCompanyMember,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
     },
@@ -64,7 +83,7 @@ export default function CompanyPage() {
   });
 
   const leaveCompanyMutation = useMutation({
-    mutationFn: () => api.post('/company/leave').then((res) => res.data),
+    mutationFn: leaveCompany,
     onSuccess: () => {
       toast.success('You have left the company');
       queryClient.invalidateQueries({ queryKey: ['company'] });
@@ -82,22 +101,20 @@ export default function CompanyPage() {
   const invitationsQuery = useQuery({
     queryKey: ['invitations'],
     enabled: Boolean(isCompanyAdmin && hasWorkspaceContext),
-    queryFn: () => api.get('/invitations').then((res) => res.data),
+    queryFn: listInvitations,
   });
   const inviteMutation = useMutation({
-    mutationFn: (payload: { email: string }) =>
-      api.post('/invitations', payload).then((res) => res.data),
+    mutationFn: createInvitation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
       setInviteEmail('');
+      toast.success('Invitation created. Copy the link below to share it.');
     },
+    onError: () => toast.error('Unable to create the invitation. Try again.'),
   });
 
   const createCompanyMutation = useMutation({
-    mutationFn: (name?: string) =>
-      api
-        .post('/company/create', { name: name?.trim() || undefined })
-        .then((res) => res.data),
+    mutationFn: createCompany,
     onSuccess: (data) => {
       const companyId = data?.companyId;
       if (companyId) {
@@ -118,6 +135,19 @@ export default function CompanyPage() {
     }
   }, [companyQuery.isSuccess, companyQuery.data]);
 
+  useEffect(() => {
+    const company = companyQuery.data?.company;
+    if (company) {
+      setProfile({
+        legalName: company.legalName ?? '',
+        website: company.website ?? '',
+        industry: company.industry ?? '',
+        address: company.address ?? '',
+        contactEmail: company.contactEmail ?? '',
+      });
+    }
+  }, [companyQuery.data?.company]);
+
   const renderCreateWorkspace = (message: { title: string; body: string }) => (
     <Card className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-2xl border-slate-200/90 bg-white/90 p-6 text-center shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
       <CardContent className="flex flex-col items-center gap-4 p-0">
@@ -134,7 +164,7 @@ export default function CompanyPage() {
             type="button"
             onClick={() => createCompanyMutation.mutate(createName)}
             disabled={createCompanyMutation.isPending}
-            className="bg-slate-950 text-white hover:bg-black"
+            className="bg-primary text-primary-foreground hover:bg-[#e21236]"
           >
             {createCompanyMutation.isPending
               ? 'Creating...'
@@ -194,11 +224,7 @@ export default function CompanyPage() {
         <>
           <Card className="rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
             <CardContent className="p-6">
-              <p className="text-sm text-slate-500">Company ID</p>
-              <p className="text-lg font-semibold text-slate-900">
-                {company?.id}
-              </p>
-              <p className="mt-4 text-sm text-slate-500">Company Name</p>
+              <p className="text-sm text-slate-500">Company name</p>
               <p className="text-lg font-semibold text-slate-900">
                 {company?.name}
               </p>
@@ -220,12 +246,64 @@ export default function CompanyPage() {
                   <Button
                     type="submit"
                     disabled={renameMutation.isPending}
-                    className="bg-slate-950 text-white hover:bg-black"
+                    className="bg-primary text-primary-foreground hover:bg-[#e21236]"
                   >
                     Rename
                   </Button>
                 </form>
               )}
+              <form
+                className="mt-6 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  profileMutation.mutate();
+                }}
+              >
+                <p className="sm:col-span-2 text-sm font-semibold text-slate-900">
+                  Organization profile
+                </p>
+                <p className="-mt-1 sm:col-span-2 text-sm text-slate-500">
+                  Add only the details that help describe your organization. All fields are optional.
+                </p>
+                {([
+                  ['legalName', 'Legal name'],
+                  ['website', 'Website'],
+                  ['industry', 'Industry'],
+                  ['contactEmail', 'Contact email'],
+                ] as const).map(([key, label]) => (
+                  <label key={key} className="text-xs font-semibold text-slate-500">
+                    <span className="flex items-center justify-between gap-2">
+                      {label}
+                      <span className="font-normal text-slate-400">Optional</span>
+                    </span>
+                    <Input
+                      value={profile[key]}
+                      onChange={(event) => setProfile((current) => ({ ...current, [key]: event.target.value }))}
+                      className="mt-1"
+                      disabled={!isCompanyAdmin}
+                    />
+                  </label>
+                ))}
+                <label className="sm:col-span-2 text-xs font-semibold text-slate-500">
+                  <span className="flex items-center justify-between gap-2">
+                    Address
+                    <span className="font-normal text-slate-400">Optional</span>
+                  </span>
+                  <Input
+                    value={profile.address}
+                    onChange={(event) => setProfile((current) => ({ ...current, address: event.target.value }))}
+                    className="mt-1"
+                    disabled={!isCompanyAdmin}
+                  />
+                </label>
+                {isCompanyAdmin ? (
+                  <div className="sm:col-span-2 flex justify-end">
+                    <Button type="submit" disabled={profileMutation.isPending}>
+                      {profileMutation.isPending ? 'Saving...' : 'Save profile'}
+                    </Button>
+                  </div>
+                ) : null}
+              </form>
               {company && (
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-sm font-semibold text-slate-700">
@@ -270,7 +348,17 @@ export default function CompanyPage() {
           </Card>
           <Card className="mt-6 rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
             <CardContent className="p-6">
-              <p className="text-sm font-semibold text-slate-900">Members</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-900">Team</p>
+                {user?.role === 'ADMIN' ? (
+                  <Link
+                    to="/admin/roles"
+                    className="text-sm font-semibold text-sky-700 hover:text-sky-600"
+                  >
+                    Manage team roles →
+                  </Link>
+                ) : null}
+              </div>
               <div className="mt-4">
                 <div className="hidden lg:block">
                   <div className="overflow-x-auto">
@@ -376,9 +464,12 @@ export default function CompanyPage() {
             </CardContent>
           </Card>
           {isCompanyAdmin && (
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+            <Panel className="mt-6">
               <p className="text-sm font-semibold text-slate-900">
-                Invitations
+                Invite a teammate
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                They will get a link to join this workspace as a member. You can manage roles after they join.
               </p>
               <form
                 className="mt-4 flex gap-3"
@@ -388,7 +479,13 @@ export default function CompanyPage() {
                   inviteMutation.mutate({ email: inviteEmail.trim() });
                 }}
               >
+                <label className="sr-only" htmlFor="invite-email">
+                  Teammate email address
+                </label>
                 <input
+                  id="invite-email"
+                  type="email"
+                  required
                   value={inviteEmail}
                   onChange={(event) => setInviteEmail(event.target.value)}
                   placeholder="new.member@example.com"
@@ -438,7 +535,7 @@ export default function CompanyPage() {
                   ))
                 )}
               </div>
-            </div>
+            </Panel>
           )}
         </>
       )}
