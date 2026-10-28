@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import api from '@/platform/api/client';
+import { getInvitation, signUp } from '@/domains/auth/api';
 import { useAuth } from '@/app/providers/AuthContext';
 import { useEffect, useState } from 'react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
@@ -49,9 +49,7 @@ export default function SignupPage() {
     const tokenParam = searchParams.get('invitation');
     if (tokenParam) {
       setValue('invitationToken', tokenParam);
-      api
-        .get(`/invitations/${tokenParam}`)
-        .then((res) => res.data)
+      getInvitation(tokenParam)
         .then((data) => {
           setInviteInfo({ email: data.email, company: data.company });
           if (data.email) {
@@ -68,7 +66,7 @@ export default function SignupPage() {
 
   const mutation = useMutation({
     mutationFn: (values: SignupFormValues) =>
-      api.post('/auth/signup', values).then((res) => res.data),
+      signUp(values),
     onSuccess: () => {
       setSuccessMessage(
         isCompanyFlow

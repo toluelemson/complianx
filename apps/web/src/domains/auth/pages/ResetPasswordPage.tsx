@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
-import api from '@/platform/api/client';
+import { resetPassword } from '@/domains/auth/api';
 import { useState } from 'react';
 import { SiteHeader } from '@/domains/marketing/components/SiteHeader';
 import { Button } from '@/shared/components/ui/button';
@@ -27,11 +27,10 @@ export default function ResetPasswordPage() {
     });
   const passwordValue = watch('password');
   const mutation = useMutation({
-    mutationFn: (values: ResetPasswordForm) =>
-      api.post('/auth/reset-password', {
-        token,
-        password: values.password,
-      }),
+    mutationFn: (values: ResetPasswordForm) => {
+      if (!token) throw new Error('A reset token is required.');
+      return resetPassword(token, values.password);
+    },
     onSuccess: () => {
       setResetComplete(true);
       setMessage('Your password has been reset. You can now sign in.');

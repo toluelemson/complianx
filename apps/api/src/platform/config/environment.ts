@@ -15,6 +15,7 @@ export function validateEnvironment(input: Environment): Environment {
   integer(environment, 'RATE_LIMIT_TTL_MS', 60_000, 1000, 3_600_000);
   integer(environment, 'RATE_LIMIT_REQUESTS', 300, 1, 100_000);
   integer(environment, 'TRUST_PROXY_HOPS', production ? 1 : 0, 0, 10);
+  boolean(environment, 'SWAGGER_ENABLED', !production);
 
   if (!production) {
     environment.FRONTEND_URL =
@@ -81,6 +82,12 @@ export function validateEnvironment(input: Environment): Environment {
   secureSecret(environment, 'SMTP_PASS');
   requiredOneOf(environment, ['SMTP_FROM', 'EMAIL_FROM']);
 
+  validUrl('AIKI_WORKER_URL', required(environment, 'AIKI_WORKER_URL'), [
+    'http:',
+    'https:',
+  ]);
+  secureSecret(environment, 'AIKI_SERVICE_TOKEN');
+
   if (stringValue(environment, 'MONETIZATION_ENABLED') !== 'false') {
     secureSecret(environment, 'STRIPE_SECRET_KEY');
     secureSecret(environment, 'STRIPE_WEBHOOK_SECRET');
@@ -133,6 +140,20 @@ function integer(
       `${key} must be an integer between ${minimum} and ${maximum}`,
     );
   }
+  environment[key] = value;
+  return value;
+}
+
+function boolean(environment: Environment, key: string, fallback: boolean) {
+  const configured = stringValue(environment, key);
+  if (!configured) {
+    environment[key] = fallback;
+    return fallback;
+  }
+  if (configured !== 'true' && configured !== 'false') {
+    throw new Error(`${key} must be true or false`);
+  }
+  const value = configured === 'true';
   environment[key] = value;
   return value;
 }

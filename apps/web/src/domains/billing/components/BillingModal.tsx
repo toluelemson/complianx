@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import api from '@/platform/api/client';
+import {
+  createBillingPortal,
+  createCheckout,
+  getBillingPlan,
+  getBillingUsage,
+} from '@/domains/billing/api';
 import { useAuth } from '@/app/providers/AuthContext';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
@@ -16,17 +21,17 @@ export default function BillingModal({ isOpen, onClose }: Props) {
   const planQuery = useQuery({
     queryKey: ['billing', 'plan'],
     enabled: isOpen,
-    queryFn: () => api.get('/billing/plan').then((r) => r.data),
+    queryFn: getBillingPlan,
   });
   const usageQuery = useQuery({
     queryKey: ['billing', 'usage'],
     enabled: isOpen,
-    queryFn: () => api.get('/billing/usage').then((r) => r.data),
+    queryFn: getBillingUsage,
   });
 
   const checkoutMutation = useMutation({
     mutationFn: (payload: { plan: 'PRO' | 'ENTERPRISE' }) =>
-      api.post('/billing/checkout', payload).then((r) => r.data),
+      createCheckout(payload),
     onSuccess: (data) => {
       setStatusMessage(data?.message ?? null);
       if (data?.url) {
@@ -36,7 +41,7 @@ export default function BillingModal({ isOpen, onClose }: Props) {
   });
 
   const portalMutation = useMutation({
-    mutationFn: () => api.post('/billing/portal').then((r) => r.data),
+    mutationFn: createBillingPortal,
     onSuccess: (data) => {
       setStatusMessage(data?.message ?? null);
       if (data?.url) {

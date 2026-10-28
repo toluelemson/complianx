@@ -1,7 +1,16 @@
 // Organizations domain route.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import api from '@/platform/api/client';
+import {
+  createCompany,
+  createInvitation,
+  getCompany,
+  leaveCompany,
+  listInvitations,
+  removeCompanyMember,
+  renameCompany,
+  updateCompanyProfile,
+} from '@/domains/organizations/api';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import toast from 'react-hot-toast';
@@ -44,19 +53,18 @@ export default function CompanyPage() {
   const companyQuery = useQuery({
     queryKey: ['company', activeCompanyId],
     enabled: Boolean(hasWorkspaceContext),
-    queryFn: () => api.get('/company').then((res) => res.data),
+    queryFn: getCompany,
   });
 
   const renameMutation = useMutation({
-    mutationFn: (name: string) =>
-      api.patch('/company', { name }).then((res) => res.data),
+    mutationFn: renameCompany,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
       setNewName('');
     },
   });
   const profileMutation = useMutation({
-    mutationFn: () => api.patch('/company/profile', profile).then((res) => res.data),
+    mutationFn: () => updateCompanyProfile(profile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
       toast.success('Organization profile saved');
@@ -65,8 +73,7 @@ export default function CompanyPage() {
   });
 
   const removeMemberMutation = useMutation({
-    mutationFn: (memberId: string) =>
-      api.patch(`/company/members/${memberId}/remove`).then((res) => res.data),
+    mutationFn: removeCompanyMember,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company'] });
     },
@@ -76,7 +83,7 @@ export default function CompanyPage() {
   });
 
   const leaveCompanyMutation = useMutation({
-    mutationFn: () => api.post('/company/leave').then((res) => res.data),
+    mutationFn: leaveCompany,
     onSuccess: () => {
       toast.success('You have left the company');
       queryClient.invalidateQueries({ queryKey: ['company'] });
@@ -94,11 +101,10 @@ export default function CompanyPage() {
   const invitationsQuery = useQuery({
     queryKey: ['invitations'],
     enabled: Boolean(isCompanyAdmin && hasWorkspaceContext),
-    queryFn: () => api.get('/invitations').then((res) => res.data),
+    queryFn: listInvitations,
   });
   const inviteMutation = useMutation({
-    mutationFn: (payload: { email: string }) =>
-      api.post('/invitations', payload).then((res) => res.data),
+    mutationFn: createInvitation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
       setInviteEmail('');
@@ -108,10 +114,7 @@ export default function CompanyPage() {
   });
 
   const createCompanyMutation = useMutation({
-    mutationFn: (name?: string) =>
-      api
-        .post('/company/create', { name: name?.trim() || undefined })
-        .then((res) => res.data),
+    mutationFn: createCompany,
     onSuccess: (data) => {
       const companyId = data?.companyId;
       if (companyId) {

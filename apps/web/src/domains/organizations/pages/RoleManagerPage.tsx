@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';
-import api from '@/platform/api/client';
+import { listUsers, updateUserRole } from '@/domains/organizations/api';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import { Card, CardContent } from '@/shared/components/ui/card';
@@ -27,14 +27,12 @@ export default function RoleManagerPage() {
   const usersQuery = useQuery({
     queryKey: ['users'],
     enabled: user?.role === 'ADMIN',
-    queryFn: () => api.get('/users').then((res) => res.data),
+    queryFn: listUsers,
   });
 
   const mutation = useMutation({
     mutationFn: (payload: { id: string; role: string }) =>
-      api
-        .patch(`/users/${payload.id}/role`, { role: payload.role })
-        .then((res) => res.data),
+      updateUserRole(payload.id, payload.role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },

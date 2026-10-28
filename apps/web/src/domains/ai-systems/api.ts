@@ -481,7 +481,7 @@ export async function generateProjectDocuments(
   projectId: string,
   payload: { documentTypes: string[]; operationId?: string },
 ) {
-  const { data } = await api.post<DocumentItem[]>(
+  const { data } = await api.post<{ runId: string; operationId: string }>(
     `/projects/${projectId}/generate`,
     payload,
   );
@@ -776,4 +776,36 @@ export async function updateRemediationAction(
     payload,
   );
   return data;
+}
+
+export async function downloadDocument(documentId: string) {
+  const { data } = await api.get(`/documents/${documentId}/download`, {
+    responseType: 'blob',
+  });
+  return data as Blob;
+}
+
+export async function downloadProjectDocuments(projectId: string) {
+  const { data } = await api.get(`/projects/${projectId}/documents.zip`, {
+    responseType: 'blob',
+  });
+  return data as Blob;
+}
+
+export async function downloadArtifact(artifactId: string) {
+  const { data } = await api.get(`/artifacts/${artifactId}/download`, {
+    responseType: 'blob',
+  });
+  return data as Blob;
+}
+
+export async function downloadCompliancePackage(
+  projectId: string,
+  packageId: string,
+) {
+  const { data } = await api.get(
+    `/ai-systems/${projectId}/reports/packages/${packageId}/download`,
+    { responseType: 'blob' },
+  );
+  return data as Blob;
 }

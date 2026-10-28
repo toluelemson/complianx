@@ -1,13 +1,17 @@
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import api from '@/platform/api/client';
 import type {
   ArtifactStatus,
   SectionArtifactItem,
   SectionWithMeta,
 } from '@complianx/contracts/ai-systems';
-import { deleteArtifact, reviewArtifact, uploadArtifact } from '../api';
+import {
+  deleteArtifact,
+  downloadArtifact,
+  reviewArtifact,
+  uploadArtifact,
+} from '../api';
 
 type EvidencePurpose = 'GENERIC' | 'DATASET' | 'MODEL';
 
@@ -107,12 +111,7 @@ export function useProjectEvidence(
   const handleArtifactDownload = async (artifact: SectionArtifactItem) => {
     try {
       if (!token) throw new Error('Not authenticated');
-      const response = await fetch(
-        `${api.defaults.baseURL}/artifacts/${artifact.id}/download`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!response.ok) throw new Error('Request failed');
-      const url = URL.createObjectURL(await response.blob());
+      const url = URL.createObjectURL(await downloadArtifact(artifact.id));
       const link = document.createElement('a');
       link.href = url;
       link.download = artifact.originalName;
