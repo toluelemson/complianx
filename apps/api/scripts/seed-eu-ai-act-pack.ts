@@ -1,15 +1,12 @@
 import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { PrismaClient } from '@prisma/client';
 import { createHash } from 'node:crypto';
 
 const prisma = new PrismaClient();
-const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 const seedDir = join(
-  scriptDir,
-  '..',
+  process.cwd(),
   'src',
   'domains',
   'regulatory-frameworks',
