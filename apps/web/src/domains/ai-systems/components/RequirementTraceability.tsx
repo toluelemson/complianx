@@ -41,35 +41,23 @@ export function RequirementTraceability({
 
   return (
     <>
-      <div className="mt-4 grid gap-2 sm:grid-cols-4">
-        <Stage
-          label="Requirement"
-          value={
-            requirement.status === 'NOT_APPLICABLE'
-              ? 'Not applicable'
-              : 'Applies'
-          }
-        />
-        <Stage label="Evidence" value={summary.evidenceLabel} />
-        <Stage label="Review" value={summary.reviewLabel} />
-        <Stage
-          label="Export"
-          value={
-            includedPackages.length
-              ? `Included in export ${includedPackages[0].version}`
-              : open && trace.data
-                ? 'Not included'
-                : 'Check export'
-          }
-        />
-      </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-slate-600">
+          Evidence:{' '}
+          <span className="font-semibold text-slate-800">
+            {summary.evidenceLabel}
+          </span>{' '}
+          · Review:{' '}
+          <span className="font-semibold text-slate-800">
+            {summary.reviewLabel}
+          </span>
+        </p>
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
           className="text-sm font-semibold text-slate-600 hover:text-sky-700"
         >
-          {open ? 'Hide details' : 'See why this matters and the proof'}
+          {open ? 'Hide audit trail' : 'See audit trail'}
         </button>
         <Link
           to={actionHref}
@@ -81,7 +69,9 @@ export function RequirementTraceability({
       {evidence.length === 0 ? (
         <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50 p-3 text-sm text-sky-950">
           <p className="font-semibold">Suggested evidence</p>
-          <p className="mt-1">{getEvidenceSuggestion(requirement.obligation.title)}</p>
+          <p className="mt-1">
+            {getEvidenceSuggestion(requirement.obligation.title)}
+          </p>
         </div>
       ) : null}
       {open ? (
@@ -109,9 +99,7 @@ export function RequirementTraceability({
                 </p>
               </div>
               <div>
-                <p className="font-semibold text-slate-800">
-                  Files and review
-                </p>
+                <p className="font-semibold text-slate-800">Files and review</p>
                 {trace.data.evidence.length ? (
                   <ul className="mt-2 space-y-2">
                     {trace.data.evidence.map((link) => (

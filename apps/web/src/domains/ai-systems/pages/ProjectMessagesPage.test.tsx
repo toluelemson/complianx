@@ -63,8 +63,9 @@ describe('Project messages', () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText('Posting to system overview')).toBeVisible();
-    fireEvent.change(screen.getByRole('combobox'), {
+    const discussionArea = await screen.findByLabelText('Discussion area');
+    expect(discussionArea).toHaveValue('overview');
+    fireEvent.change(discussionArea, {
       target: { value: 'risk' },
     });
     fireEvent.change(screen.getByLabelText('Message'), {

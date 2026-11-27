@@ -1,6 +1,6 @@
 {
   "key": "eu-ai-act",
-  "version": "2026.03.v2",
+  "version": "2026.10.v3",
   "title": "AI Compliance Questionnaire",
   "description": "A short compliance questionnaire for companies that want a fast readiness check.",
   "steps": [
@@ -88,9 +88,14 @@
             ]
           },
           "options": [
-            { "key": "emotion_recognition_workplace", "label": "Emotion recognition in the workplace", "value": "emotion_recognition_workplace" },
-            { "key": "social_scoring", "label": "Social scoring or equivalent prohibited practice", "value": "social_scoring" },
-            { "key": "manipulative_subliminal", "label": "Manipulative or deceptive AI causing material distortion", "value": "manipulative_subliminal" }
+            { "key": "harmful_manipulation", "label": "Harmful manipulation or deception (Art. 5(1)(a))", "value": "harmful_manipulation" },
+            { "key": "vulnerability_exploitation", "label": "Exploiting vulnerabilities due to age, disability or social/economic situation (Art. 5(1)(b))", "value": "vulnerability_exploitation" },
+            { "key": "social_scoring", "label": "Social scoring (Art. 5(1)(c))", "value": "social_scoring" },
+            { "key": "predictive_policing", "label": "Individual criminal-risk prediction based solely on profiling (Art. 5(1)(d))", "value": "predictive_policing" },
+            { "key": "facial_scraping", "label": "Untargeted facial-image scraping for recognition databases (Art. 5(1)(e))", "value": "facial_scraping" },
+            { "key": "emotion_recognition_workplace", "label": "Emotion recognition in workplace or education (Art. 5(1)(f))", "value": "emotion_recognition_workplace" },
+            { "key": "biometric_categorisation", "label": "Biometric categorisation inferring sensitive attributes (Art. 5(1)(g))", "value": "biometric_categorisation" },
+            { "key": "real_time_remote_biometric", "label": "Real-time remote biometric identification in publicly accessible spaces for law enforcement (Art. 5(1)(h))", "value": "real_time_remote_biometric" }
           ]
         },
         {
@@ -106,11 +111,37 @@
             ]
           },
           "options": [
-            { "key": "employment", "label": "Hiring, worker management, or employment decisions", "value": "employment" },
-            { "key": "education", "label": "Education or training decisions", "value": "education" },
-            { "key": "essential_services", "label": "Access to essential services, credit, insurance, or benefits", "value": "essential_services" },
-            { "key": "law_enforcement", "label": "Law enforcement, migration, or similar public authority context", "value": "law_enforcement" }
+            { "key": "biometrics", "label": "Biometric identification or categorisation (Annex III(1))", "value": "biometrics" },
+            { "key": "critical_infrastructure", "label": "Critical infrastructure safety management (Annex III(2))", "value": "critical_infrastructure" },
+            { "key": "education", "label": "Education or vocational training (Annex III(3))", "value": "education" },
+            { "key": "employment", "label": "Employment, workers management or access to self-employment (Annex III(4))", "value": "employment" },
+            { "key": "essential_services", "label": "Essential private/public services and benefits (Annex III(5))", "value": "essential_services" },
+            { "key": "law_enforcement", "label": "Law enforcement (Annex III(6))", "value": "law_enforcement" },
+            { "key": "migration_asylum", "label": "Migration, asylum or border control (Annex III(7))", "value": "migration_asylum" },
+            { "key": "justice_democracy", "label": "Administration of justice or democratic processes (Annex III(8))", "value": "justice_democracy" }
           ]
+        },
+        {
+          "key": "annex_i_safety_component",
+          "type": "boolean",
+          "label": "Is the AI a safety component of, or itself a product covered by, Annex I harmonisation legislation requiring third-party conformity assessment?",
+          "required": true,
+          "legalReferenceIds": ["art-6", "annex-i"]
+        },
+        {
+          "key": "art_6_3_exception",
+          "type": "boolean",
+          "label": "For an Annex III use, is the system only performing a narrow procedural or preparatory task without materially influencing a decision?",
+          "helperText": "This is the Art. 6(3) exception route and requires documented assessment.",
+          "required": true,
+          "legalReferenceIds": ["art-6"]
+        },
+        {
+          "key": "gpai_involvement",
+          "type": "boolean",
+          "label": "Does the system provide, modify, or rely on a general-purpose AI model?",
+          "required": true,
+          "legalReferenceIds": ["art-51", "art-53"]
         },
         {
           "key": "transparency_triggers",

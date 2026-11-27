@@ -118,9 +118,7 @@ export function ReviewApprovalPanel({
     reviewInProgress ||
     projectApproved;
   const approveBlocked =
-    !canApprove ||
-    projectStatusLabel !== 'IN_REVIEW' ||
-    !allSectionsApproved;
+    !canApprove || projectStatusLabel !== 'IN_REVIEW' || !allSectionsApproved;
   const requestChangesBlocked =
     !canRequestChanges || projectStatusLabel !== 'IN_REVIEW';
   const projectStatusClass =
@@ -219,18 +217,24 @@ export function ReviewApprovalPanel({
                   : 'Prepare the work for review by resolving missing items and assigning a reviewer.'}
             </p>
             <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-              <BriefMetric label="Ready sections" value={`${readySteps}/${trackableSteps.length}`} />
+              <BriefMetric
+                label="Ready sections"
+                value={`${readySteps}/${trackableSteps.length}`}
+              />
               <BriefMetric
                 label="Section approvals"
                 value={`${approvedSteps}/${trackableSteps.length}`}
               />
-              <BriefMetric label="Reviewer" value={reviewerId ? 'Assigned' : 'Not assigned'} />
+              <BriefMetric
+                label="Reviewer"
+                value={reviewerId ? 'Assigned' : 'Not assigned'}
+              />
             </div>
           </section>
-          <details open={reviewInProgress && !allSectionsApproved}>
-            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
               What is done ({readySteps}/{trackableSteps.length || 0} ready)
-            </summary>
+            </h3>
             <p className="mt-2 text-sm text-slate-600">
               Sections with missing data stay visibly blocked until resolved.
             </p>
@@ -257,7 +261,7 @@ export function ReviewApprovalPanel({
                 />
               ))}
             </div>
-          </details>
+          </section>
         </div>
 
         <Card className="hz-review-panel__owner space-y-4 rounded-[24px] bg-slate-50/80 p-4 shadow-none">
@@ -294,10 +298,10 @@ export function ReviewApprovalPanel({
             )}
           </div>
 
-          <details className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-            <summary className="cursor-pointer text-sm font-medium text-slate-700">
+          <section className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <h3 className="text-sm font-medium text-slate-700">
               Add approver or review note (optional)
-            </summary>
+            </h3>
             <p className="mt-2 text-xs text-slate-500">
               Assign an approver when someone else should make the final
               decision. A company administrator can approve without one.
@@ -328,13 +332,13 @@ export function ReviewApprovalPanel({
                   value={reviewMessage}
                   onChange={(event) => setReviewMessage(event.target.value)}
                   rows={3}
-              disabled={assignmentLocked}
+                  disabled={assignmentLocked}
                   className="mt-2 min-h-[92px]"
                   placeholder="Add context, decision criteria, or a short note for the reviewer."
                 />
               </div>
             </div>
-          </details>
+          </section>
 
           <Card className="hz-review-panel__gate rounded-2xl bg-white p-3 shadow-none">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -348,16 +352,16 @@ export function ReviewApprovalPanel({
                 : projectApproved
                   ? 'This project is approved. Its documents and activity history are ready when you need them.'
                   : reviewBlocked
-                ? !reviewerId
-                    ? 'Choose a reviewer before you can send this.'
-                    : (projectStatusLabel === 'READY_FOR_REVIEW' ||
-                        projectStatusLabel === 'RESUBMITTED') &&
-                        !canStartReview
-                      ? 'The assigned reviewer needs to sign in and start this review.'
-                  : totalMissing > 0
-                    ? 'Resolve open section issues before sending this project forward.'
-                    : 'This project cannot move into review in its current state.'
-                : 'This project is ready for review.'}
+                    ? !reviewerId
+                      ? 'Choose a reviewer before you can send this.'
+                      : (projectStatusLabel === 'READY_FOR_REVIEW' ||
+                            projectStatusLabel === 'RESUBMITTED') &&
+                          !canStartReview
+                        ? 'The assigned reviewer needs to sign in and start this review.'
+                        : totalMissing > 0
+                          ? 'Resolve open section issues before sending this project forward.'
+                          : 'This project cannot move into review in its current state.'
+                    : 'This project is ready for review.'}
             </p>
           </Card>
         </Card>
@@ -373,8 +377,8 @@ export function ReviewApprovalPanel({
               : projectApproved
                 ? 'This project is approved and ready for its record to be used.'
                 : reviewBlocked
-              ? 'Resolve the release gate to move this project forward.'
-              : 'The project is ready for the next review step.'}
+                  ? 'Resolve the release gate to move this project forward.'
+                  : 'The project is ready for the next review step.'}
           </p>
           <div className="flex flex-wrap gap-3">
             {canSendForReview &&
@@ -549,12 +553,23 @@ function TrackableStepRow({
             >
               Approve section
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onCancelApproval}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancelApproval}
+            >
               Cancel
             </Button>
           </div>
         ) : (
-          <Button type="button" size="sm" className="mt-3" disabled={actionPending} onClick={onOpenApproval}>
+          <Button
+            type="button"
+            size="sm"
+            className="mt-3"
+            disabled={actionPending}
+            onClick={onOpenApproval}
+          >
             Approve section
           </Button>
         )

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 import type { ProjectDetail } from '@complianx/contracts/ai-systems';
 import {
   getOrganizationProfile,
@@ -108,11 +109,11 @@ export default function ProjectProfilePage({
           <h1 className="mt-3 text-2xl font-semibold text-slate-900">
             {organization ? 'Organization profile' : 'AI system profile'}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <HelpTooltip className="mt-2" label="About this profile">
             {organization
               ? 'Shared organization details reused across projects.'
               : `These answers help fill in documents for ${query.data?.name ?? 'this project'}. You can update them at any time.`}
-          </p>
+          </HelpTooltip>
         </div>
         {profileQuery.isPending ? (
           <p role="status">Loading profile…</p>
@@ -179,11 +180,11 @@ export default function ProjectProfilePage({
               </label>
             ))}
             {additionalFields.length ? (
-              <details className="rounded-xl border border-slate-100 p-4 sm:col-span-2">
-                <summary className="cursor-pointer text-sm font-medium text-slate-700">
+              <section className="rounded-xl border border-slate-100 p-4 sm:col-span-2">
+                <h2 className="text-sm font-medium text-slate-700">
                   Add {organization ? 'organization' : 'system'} context{' '}
                   (optional)
-                </summary>
+                </h2>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {additionalFields.map(([key, label]) => (
                     <label
@@ -204,7 +205,7 @@ export default function ProjectProfilePage({
                     </label>
                   ))}
                 </div>
-              </details>
+              </section>
             ) : null}
             {save.isError && (
               <p role="alert" className="sm:col-span-2">

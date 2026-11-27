@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
-import { Select } from '@/shared/components/ui/select';
 
 export interface NewProjectFormValues {
   name: string;
@@ -101,7 +100,9 @@ export function NewProjectModal({
             >
               <span className="flex items-center justify-between gap-2">
                 System name
-                <span className="text-xs font-normal text-slate-400">Required</span>
+                <span className="text-xs font-normal text-slate-400">
+                  Required
+                </span>
               </span>
               <Input
                 id="new-project-name"
@@ -109,77 +110,10 @@ export function NewProjectModal({
                 className="mt-1"
               />
             </label>
-            <details className="rounded-lg border border-slate-200 px-3 py-2">
-              <summary className="cursor-pointer text-sm font-medium text-slate-700">
-                Add context now (optional)
-              </summary>
-              <div className="mt-4 space-y-4">
-                <label className="block text-sm font-medium text-slate-700">
-                  Intended use
-                  <textarea
-                    {...register('intendedUse')}
-                    className="mt-1 min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                    placeholder="What does it do?"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-slate-700">
-                  Deployment
-                  <Input
-                    {...register('deploymentGeography')}
-                    className="mt-1"
-                    placeholder="Countries or region"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-slate-700">
-                  Lifecycle
-                  <Select {...register('lifecycleStage')} className="mt-1">
-                    <option value="UNKNOWN">Not set</option>
-                    <option value="DESIGN">Design</option>
-                    <option value="DEVELOPMENT">Development</option>
-                    <option value="PILOT">Pilot</option>
-                    <option value="PRODUCTION">Production</option>
-                    <option value="RETIRED">Retired</option>
-                  </Select>
-                </label>
-                <label className="block text-sm font-medium text-slate-700">
-                  Operating domain
-                  <Input {...register('industry')} className="mt-1" />
-                </label>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Intended users
-                    <Input {...register('intendedUsers')} className="mt-1" />
-                  </label>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Affected persons
-                    <Input {...register('affectedPersons')} className="mt-1" />
-                  </label>
-                </div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Due date
-                  <Input
-                    type="date"
-                    {...register('dueDate')}
-                    className="mt-1"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-slate-700">
-                  Business purpose
-                  <Input {...register('businessPurpose')} className="mt-1" />
-                </label>
-                <label className="block text-sm font-medium text-slate-700">
-                  Description
-                  <textarea
-                    {...register('description')}
-                    className="mt-1 min-h-16 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-slate-700">
-                  Responsible owner
-                  <Input {...register('responsibleOwner')} className="mt-1" />
-                </label>
-              </div>
-            </details>
+            <p className="text-xs text-slate-500">
+              You can add intended use, owners, and deployment details on the
+              next screen.
+            </p>
             <div className="mt-6 flex justify-end gap-3">
               <Button type="button" onClick={onClose} variant="outline">
                 Cancel

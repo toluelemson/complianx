@@ -42,6 +42,21 @@ export function getPackageGapAction(
 ): PackageGapAction {
   const normalizedGap = gap.toLowerCase();
 
+  if (normalizedGap.includes('assessment traceability')) {
+    return {
+      label: 'Finalize assessment',
+      to: `/projects/${projectId}/traceability`,
+    };
+  }
+  if (
+    normalizedGap.includes('superseded') ||
+    normalizedGap.includes('changed after classification')
+  ) {
+    return {
+      label: 'Open reassessment',
+      to: `/projects/${projectId}/classification?reassess=1`,
+    };
+  }
   if (normalizedGap.includes('classification')) {
     return {
       label: 'Review classification',

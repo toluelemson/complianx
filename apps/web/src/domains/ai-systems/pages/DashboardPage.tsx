@@ -13,16 +13,15 @@ import {
   listProjects,
   getOrganizationProfile,
 } from '@/domains/ai-systems/api';
-import type { ProjectListItem } from '@complianx/contracts/ai-systems';
+import type {
+  ProjectListItem,
+  ProjectWorkflowAction,
+} from '@complianx/contracts/ai-systems';
 import { TRACKABLE_STEP_COUNT } from '@/domains/ai-systems/constants/steps';
 import { DOCUMENT_LABELS } from '@/domains/ai-systems/constants/documents';
 import { useAuth } from '@/app/providers/AuthContext';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
-import {
-  getProjectAttentionReasons,
-  getProjectNextAction,
-  type ProjectNextAction,
-} from '../lib/project-page-logic';
+import { PROJECT_WORKFLOW_STAGES } from '../lib/workflow-stages';
 
 export default function DashboardPage() {
   const { token, initializing, activeCompanyId } = useAuth();
@@ -40,6 +39,8 @@ export default function DashboardPage() {
     queryKey: ['projects', activeCompanyId],
     enabled: Boolean(token && activeCompanyId),
     queryFn: listProjects,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
   const organizationProfileQuery = useQuery({
     queryKey: ['organizationProfile', activeCompanyId],
@@ -95,8 +96,7 @@ export default function DashboardPage() {
       const readinessMap = new Map<string, number>();
       const attention: Array<{
         project: ProjectListItem;
-        reasons: string[];
-        nextAction: ProjectNextAction;
+        nextAction: ProjectWorkflowAction;
       }> = [];
       const docs: Array<{
         id: string;
@@ -113,10 +113,9 @@ export default function DashboardPage() {
           (uniqueSections.size / TRACKABLE_STEP_COUNT) * 100 || 0,
         );
         readinessMap.set(project.id, readiness);
-        const reasons = getProjectAttentionReasons(project);
-        const nextAction = getProjectNextAction(project);
-        if (reasons.length && nextAction) {
-          attention.push({ project, reasons, nextAction });
+        const nextAction = project.workflowSummary?.nextAction;
+        if (nextAction) {
+          attention.push({ project, nextAction });
         }
         (project.documents ?? []).forEach((doc) => {
           docs.push({
@@ -149,14 +148,16 @@ export default function DashboardPage() {
       <div className="hz-console-content hz-dashboard">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-slate-500">Track each AI system from setup to approval.</p>
+            <p className="text-sm text-slate-500">
+              Track each AI system from setup to approval.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setModalOpen(true)}
               className="hz-button hz-button--primary"
             >
-              Assess an AI system
+              Add an AI system
             </button>
             <Link to="/company" className="hz-button hz-button--outline">
               Organization settings
@@ -257,25 +258,28 @@ export default function DashboardPage() {
               >
                 Add your first AI system
               </button>
-              <Link to="/demo/loan-approval-ai" className="hz-button hz-button--outline">
-                Explore a fictional example
+              <Link
+                to="/demo/loan-approval-ai"
+                className="hz-button hz-button--outline"
+              >
+                Try a safe fictional example
               </Link>
             </div>
-            <ol className="mt-5 grid gap-3 md:grid-cols-3">
-              {[
-                ['1', 'Register', 'System name and intended use.'],
-                ['2', 'Classify', 'Answer the essential EU AI Act questions.'],
-                ['3', 'Act', 'Work through the highest-priority requirements.'],
-              ].map(([number, title, description]) => (
+            <ol className="mt-5 grid gap-3 md:grid-cols-5">
+              {PROJECT_WORKFLOW_STAGES.map((stage) => (
                 <li
-                  key={number}
+                  key={stage.id}
                   className="rounded-xl border border-sky-100 bg-white p-4"
                 >
                   <span className="text-xs font-bold text-sky-700">
-                    STEP {number}
+                    STEP {stage.number}
                   </span>
-                  <p className="mt-1 font-semibold text-slate-900">{title}</p>
-                  <p className="mt-1 text-sm text-slate-600">{description}</p>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {stage.label}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {stage.description}
+                  </p>
                 </li>
               ))}
             </ol>
@@ -298,10 +302,10 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="mt-4 grid max-w-2xl gap-2">
-              {attentionProjects.map(({ project, reasons, nextAction }) => (
+              {attentionProjects.map(({ project, nextAction }) => (
                 <Link
                   key={project.id}
-                  to={`/projects/${project.id}${nextAction.path === 'overview' ? '' : `/${nextAction.path}`}${workspaceSuffix}`}
+                  to={nextAction.href}
                   className="rounded-xl border border-slate-200 p-3 hover:border-amber-400"
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -309,16 +313,12 @@ export default function DashboardPage() {
                       {project.name}
                     </p>
                     <span className="shrink-0 text-sm font-semibold text-sky-700">
-                      {nextAction.label} →
+                      {nextAction.actionLabel} →
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-slate-600">{reasons[0]}</p>
-                  {reasons.length > 1 ? (
-                    <p className="mt-1 text-xs text-slate-500">
-                      +{reasons.length - 1} additional item
-                      {reasons.length === 2 ? '' : 's'}
-                    </p>
-                  ) : null}
+                  <p className="mt-2 text-sm text-slate-600">
+                    {nextAction.detail}
+                  </p>
                 </Link>
               ))}
             </div>
@@ -327,9 +327,7 @@ export default function DashboardPage() {
         {assignedProjects.length ? (
           <div className="hz-dashboard__assigned mt-6 rounded-[1.75rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.22)]">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-700">
-                My work
-              </p>
+              <p className="text-sm font-semibold text-slate-700">My work</p>
               <span className="text-xs text-slate-400">
                 {assignedProjects.length} active
               </span>
@@ -346,7 +344,8 @@ export default function DashboardPage() {
                       {project.name}
                     </p>
                     <p className="text-xs text-slate-500">
-                      Assigned as {project.viewerRole?.toLowerCase() ?? 'reviewer'}
+                      Assigned as{' '}
+                      {project.viewerRole?.toLowerCase() ?? 'reviewer'}
                     </p>
                   </div>
                   <span className="text-xs font-semibold text-slate-500">
@@ -370,7 +369,7 @@ export default function DashboardPage() {
                 <tr>
                   <th className="px-6 py-3 font-medium">Name</th>
                   <th className="px-6 py-3 font-medium">Industry</th>
-                  <th className="px-6 py-3 font-medium">Classification</th>
+                  <th className="px-6 py-3 font-medium">What applies</th>
                   <th className="px-6 py-3 font-medium">
                     Documentation progress
                   </th>

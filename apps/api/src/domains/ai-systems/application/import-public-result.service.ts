@@ -2,6 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { EuAiActClassificationService } from '../../regulatory-frameworks/application/classification/eu-ai-act-classification.service';
+import {
+  ensureRequirementCatalogueItem,
+  getEuAiActRequirement,
+} from '../../regulatory-frameworks/application/requirements/eu-ai-act-requirement-catalogue';
 
 @Injectable()
 export class ImportPublicResultService {
@@ -114,24 +118,49 @@ export class ImportPublicResultService {
     projectId: string,
     packVersionId: string,
     classificationResultId: string,
-    result: Record<string, any>,
+    result: Record<string, unknown>,
   ) {
     const obligations = Array.isArray(result.obligations)
-      ? result.obligations
+      ? result.obligations.filter(
+          (item): item is Record<string, unknown> =>
+            typeof item === 'object' && item !== null,
+        )
       : [];
-    for (const [index, item] of obligations.entries()) {
-      const key = `${String(item.role ?? 'general')}-${index + 1}`;
+    for (const item of obligations) {
+      const role = typeof item.role === 'string' ? item.role : 'general';
+      const metadata = getEuAiActRequirement(role);
+      await ensureRequirementCatalogueItem(tx, metadata);
+      const applicabilityReason = String(
+        typeof item.title === 'string'
+          ? item.title
+          : 'Imported from the public EU AI Act checker result.',
+      );
       const obligation = await tx.obligation.upsert({
-        where: { packVersionId_key: { packVersionId, key } },
+        where: {
+          packVersionId_key: { packVersionId, key: metadata.key },
+        },
         create: {
           packVersionId,
-          key,
-          title: String(item.title ?? key),
-          legalReference: Array.isArray(result.legal_references)
-            ? String(result.legal_references[index] ?? '')
-            : null,
+          key: metadata.key,
+          catalogueId: metadata.id,
+          title: metadata.text,
+          description: metadata.text,
+          legalReference: metadata.article,
+          aiActArticle: metadata.article,
+          trustworthinessPrinciple: metadata.principle,
+          architectureElements: [...metadata.architectureElements],
+          verificationMethod: metadata.verificationMethod,
         },
-        update: { title: String(item.title ?? key) },
+        update: {
+          catalogueId: metadata.id,
+          title: metadata.text,
+          description: metadata.text,
+          legalReference: metadata.article,
+          aiActArticle: metadata.article,
+          trustworthinessPrinciple: metadata.principle,
+          architectureElements: [...metadata.architectureElements],
+          verificationMethod: metadata.verificationMethod,
+        },
       });
       await tx.aiSystemObligation.upsert({
         where: {
@@ -141,10 +170,9 @@ export class ImportPublicResultService {
           projectId,
           obligationId: obligation.id,
           classificationResultId,
-          applicabilityReason:
-            'Imported from the public EU AI Act checker result.',
+          applicabilityReason,
         },
-        update: { classificationResultId },
+        update: { classificationResultId, applicabilityReason },
       });
     }
   }

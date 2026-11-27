@@ -15,6 +15,7 @@ import { AssessmentsService } from '../../application/classification/assessments
 import { CreateAssessmentDto } from '../dto/create-assessment.dto';
 import { UpdateAssessmentAnswersDto } from '../dto/update-assessment-answers.dto';
 import { ReviewClassificationDto } from '../dto/review-classification.dto';
+import { UpdateAssessmentScoringDto } from '../dto/update-assessment-scoring.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('ai-systems/:aiSystemId/assessments')
@@ -69,6 +70,18 @@ export class AssessmentsController {
     );
   }
 
+  @Get('workspace')
+  workspace(
+    @Param('aiSystemId') aiSystemId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.getWorkspace(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+    );
+  }
+
   @Post('classifications/:classificationId/review')
   reviewClassification(
     @Param('aiSystemId') aiSystemId: string,
@@ -108,6 +121,20 @@ export class AssessmentsController {
       req.user.userId,
       this.companyId(req),
       dto.answers,
+    );
+  }
+
+  @Put(':assessmentId/scoring')
+  updateScoring(
+    @Param('assessmentId') assessmentId: string,
+    @Body() dto: UpdateAssessmentScoringDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.updateScoring(
+      assessmentId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
     );
   }
 

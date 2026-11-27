@@ -19,13 +19,22 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Panel } from '@/shared/components/ui/panel';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 
 export default function CompanyPage() {
   const { user, activeCompanyId, setActiveCompany } = useAuth();
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
   const [profile, setProfile] = useState({
-    legalName: '', website: '', industry: '', address: '', contactEmail: '',
+    organizationName: '',
+    legalName: '',
+    registrationNumber: '',
+    country: '',
+    role: 'provider',
+    website: '',
+    industry: '',
+    address: '',
+    contactEmail: '',
   });
   const [createName, setCreateName] = useState('');
   const [leftCompany, setLeftCompany] = useState(false);
@@ -139,7 +148,11 @@ export default function CompanyPage() {
     const company = companyQuery.data?.company;
     if (company) {
       setProfile({
+        organizationName: company.name ?? '',
         legalName: company.legalName ?? '',
+        registrationNumber: company.registrationNumber ?? '',
+        country: company.country ?? '',
+        role: company.aiActRole?.toLowerCase() ?? 'provider',
         website: company.website ?? '',
         industry: company.industry ?? '',
         address: company.address ?? '',
@@ -259,31 +272,65 @@ export default function CompanyPage() {
                   profileMutation.mutate();
                 }}
               >
-                <p className="sm:col-span-2 text-sm font-semibold text-slate-900">
+                <p className="flex items-center gap-1 sm:col-span-2 text-sm font-semibold text-slate-900">
                   Organization profile
+                  <HelpTooltip label="About organization profile">
+                    Add only the details that help describe your organization.
+                    All fields are optional.
+                  </HelpTooltip>
                 </p>
-                <p className="-mt-1 sm:col-span-2 text-sm text-slate-500">
-                  Add only the details that help describe your organization. All fields are optional.
-                </p>
-                {([
-                  ['legalName', 'Legal name'],
-                  ['website', 'Website'],
-                  ['industry', 'Industry'],
-                  ['contactEmail', 'Contact email'],
-                ] as const).map(([key, label]) => (
-                  <label key={key} className="text-xs font-semibold text-slate-500">
+                {(
+                  [
+                    ['organizationName', 'Organization name'],
+                    ['legalName', 'Legal name'],
+                    ['registrationNumber', 'Registration number'],
+                    ['country', 'Country'],
+                    ['website', 'Website'],
+                    ['industry', 'Industry'],
+                    ['contactEmail', 'Contact email'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label
+                    key={key}
+                    className="text-xs font-semibold text-slate-500"
+                  >
                     <span className="flex items-center justify-between gap-2">
                       {label}
-                      <span className="font-normal text-slate-400">Optional</span>
+                      <span className="font-normal text-slate-400">
+                        Optional
+                      </span>
                     </span>
                     <Input
                       value={profile[key]}
-                      onChange={(event) => setProfile((current) => ({ ...current, [key]: event.target.value }))}
+                      onChange={(event) =>
+                        setProfile((current) => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }))
+                      }
                       className="mt-1"
                       disabled={!isCompanyAdmin}
                     />
                   </label>
                 ))}
+                <label className="text-xs font-semibold text-slate-500">
+                  <span>EU AI Act role</span>
+                  <select
+                    aria-label="EU AI Act role"
+                    value={profile.role}
+                    onChange={(event) =>
+                      setProfile((current) => ({
+                        ...current,
+                        role: event.target.value as 'provider' | 'deployer',
+                      }))
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                    disabled={!isCompanyAdmin}
+                  >
+                    <option value="provider">Provider</option>
+                    <option value="deployer">Deployer</option>
+                  </select>
+                </label>
                 <label className="sm:col-span-2 text-xs font-semibold text-slate-500">
                   <span className="flex items-center justify-between gap-2">
                     Address
@@ -291,7 +338,12 @@ export default function CompanyPage() {
                   </span>
                   <Input
                     value={profile.address}
-                    onChange={(event) => setProfile((current) => ({ ...current, address: event.target.value }))}
+                    onChange={(event) =>
+                      setProfile((current) => ({
+                        ...current,
+                        address: event.target.value,
+                      }))
+                    }
                     className="mt-1"
                     disabled={!isCompanyAdmin}
                   />
@@ -469,7 +521,8 @@ export default function CompanyPage() {
                 Invite a teammate
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                They will get a link to join this workspace as a member. You can manage roles after they join.
+                They will get a link to join this workspace as a member. You can
+                manage roles after they join.
               </p>
               <form
                 className="mt-4 flex gap-3"

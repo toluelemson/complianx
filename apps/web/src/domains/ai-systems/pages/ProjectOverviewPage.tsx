@@ -1,93 +1,62 @@
+import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
-import type {
-  ProjectDetail,
-  SectionWithMeta,
-} from '@complianx/contracts/ai-systems';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
+import { getProjectWorkflowSummary } from '../api';
 import {
-  getPreliminaryClassification,
-  getProject,
-  getProjectDocuments,
-  getProjectSections,
-  listObligationEvidence,
-  listProjectObligations,
-} from '../api';
-import {
-  buildProjectAttention,
-  type AttentionCategory,
-  type AttentionItem,
-} from '../lib/project-attention';
-
-const categoryStyle: Record<AttentionCategory, string> = {
-  BLOCKED: 'border-rose-200 bg-rose-50 text-rose-700',
-  ACTION_REQUIRED: 'border-amber-200 bg-amber-50 text-amber-700',
-  WAITING: 'border-sky-200 bg-sky-50 text-sky-700',
-};
-
-const categoryLabel: Record<AttentionCategory, string> = {
-  BLOCKED: 'Blocked',
-  ACTION_REQUIRED: 'Action required',
-  WAITING: 'Awaiting review',
-};
+  PROJECT_WORKFLOW_STAGES,
+  projectWorkflowStagePath,
+} from '../lib/workflow-stages';
 
 export default function ProjectOverviewPage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { token, initializing, activeCompanyId } = useAuth();
+  const [showGuide, setShowGuide] = useState(
+    () =>
+      typeof window === 'undefined' ||
+      window.localStorage.getItem('neuraldocx-guided-intro') !== 'dismissed',
+  );
   const enabled = Boolean(token && projectId && activeCompanyId);
-  const projectQuery = useQuery<ProjectDetail>({
-    queryKey: ['project', projectId, activeCompanyId],
+  const summaryQuery = useQuery({
+    queryKey: ['project-workflow-summary', projectId, activeCompanyId],
     enabled,
-    queryFn: () => getProject(projectId),
-  });
-  const projectAvailable = enabled && projectQuery.isSuccess;
-  const sectionsQuery = useQuery<SectionWithMeta[]>({
-    queryKey: ['sections', projectId, activeCompanyId],
-    enabled: projectAvailable,
-    queryFn: () => getProjectSections(projectId),
-  });
-  const documentsQuery = useQuery({
-    queryKey: ['documents', projectId, activeCompanyId],
-    enabled: projectAvailable,
-    queryFn: () => getProjectDocuments(projectId),
-  });
-  const classificationQuery = useQuery({
-    queryKey: ['preliminary-classification', projectId, activeCompanyId],
-    enabled: projectAvailable,
-    queryFn: () => getPreliminaryClassification(projectId),
-  });
-  const obligationsQuery = useQuery({
-    queryKey: ['obligations', projectId, activeCompanyId],
-    enabled: projectAvailable,
-    queryFn: () => listProjectObligations(projectId),
-  });
-  const requirements = obligationsQuery.data ?? [];
-  const evidenceQueries = useQueries({
-    queries: requirements.map((requirement) => ({
-      queryKey: [
-        'obligationEvidence',
-        projectId,
-        requirement.id,
-        activeCompanyId,
-      ],
-      enabled: projectAvailable,
-      queryFn: () => listObligationEvidence(projectId, requirement.id),
-    })),
+    queryFn: () => getProjectWorkflowSummary(projectId),
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   if (!initializing && !token) return <Navigate to="/login" replace />;
 
-  if (projectQuery.isError) {
+  if (summaryQuery.isError || !activeCompanyId) {
+    const unavailable =
+      !activeCompanyId ||
+      (isAxiosError(summaryQuery.error) &&
+        [403, 404].includes(summaryQuery.error.response?.status ?? 0));
+    const title = unavailable
+      ? 'AI system unavailable'
+      : 'Could not load the workflow';
     return (
-      <AppShell title="AI system unavailable">
+      <AppShell title={title}>
         <div className="hz-console-content">
           <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
-            <h1 className="text-xl font-semibold">AI system unavailable</h1>
+            <h1 className="text-xl font-semibold">{title}</h1>
             <p className="mt-2 text-sm text-amber-900">
-              This AI system may have been removed, or it is not available in
-              this company.
+              {unavailable
+                ? 'Check that you are in the correct company workspace.'
+                : 'Retry to load the current workflow status.'}
             </p>
+            {!unavailable && (
+              <button
+                type="button"
+                onClick={() => void summaryQuery.refetch()}
+                className="hz-button hz-button--outline mt-5 mr-3"
+              >
+                Retry
+              </button>
+            )}
             <Link
               to="/dashboard"
               className="mt-5 inline-flex rounded-lg bg-amber-950 px-4 py-2 text-sm font-semibold text-white"
@@ -100,370 +69,177 @@ export default function ProjectOverviewPage() {
     );
   }
 
-  const sections = sectionsQuery.data ?? [];
-  const evidenceByRequirement = Object.fromEntries(
-    requirements.map((requirement, index) => [
-      requirement.id,
-      evidenceQueries[index]?.data ?? [],
-    ]),
-  );
-  const attention = buildProjectAttention({
-    projectId,
-    workflowStatus: projectQuery.data?.workflowStatus,
-    viewerRole: projectQuery.data?.viewerRole,
-    classification: classificationQuery.data,
-    requirements,
-    evidenceByRequirement,
-    documents: documentsQuery.data ?? [],
-    incompleteSectionCount: sections.filter(
-      (section) => !Object.keys(section.content ?? {}).length,
-    ).length,
-  });
-  const loading =
-    projectQuery.isLoading ||
-    sectionsQuery.isLoading ||
-    documentsQuery.isLoading ||
-    classificationQuery.isLoading ||
-    obligationsQuery.isLoading ||
-    evidenceQueries.some((query) => query.isLoading);
-  const actionCount = attention.items.filter(
-    (item) => item.category === 'ACTION_REQUIRED',
-  ).length;
-  const priorityItems = attention.items.filter(
-    (item) => item.category !== 'WAITING',
-  );
-  const waitingItems = attention.items.filter(
-    (item) => item.category === 'WAITING',
-  );
-  const missingEvidence = requirements
-    .filter(
-      (requirement) =>
-        (evidenceByRequirement[requirement.id] as unknown[] | undefined)
-          ?.length === 0,
-    )
-    .slice(0, 5);
-  const unassignedRequirements = requirements
-    .filter((requirement) => !requirement.owner)
-    .slice(0, 5);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dueSoon = new Date(today);
-  dueSoon.setDate(dueSoon.getDate() + 14);
-  const datedRequirements = requirements
-    .filter((requirement) => requirement.dueAt)
-    .map((requirement) => ({
-      requirement,
-      dueAt: new Date(requirement.dueAt!),
-    }))
-    .filter(({ dueAt }) => dueAt <= dueSoon)
-    .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())
-    .slice(0, 5);
-  const milestones = [
-    {
-      label: 'Classified',
-      complete: Boolean(classificationQuery.data),
-      detail: 'Preliminary EU AI Act mapping recorded',
-    },
-    {
-      label: 'Requirements assigned',
-      complete:
-        requirements.length > 0 && requirements.every((item) => item.owner),
-      detail: 'Each applicable requirement has an owner',
-    },
-    {
-      label: 'Evidence linked',
-      complete:
-        requirements.length > 0 &&
-        requirements.every(
-          (item) =>
-            (evidenceByRequirement[item.id] as unknown[] | undefined)
-              ?.length,
-        ),
-      detail: 'Each applicable requirement has supporting proof',
-    },
-    {
-      label: 'Ready for review',
-      complete: ['IN_REVIEW', 'APPROVED'].includes(
-        projectQuery.data?.workflowStatus ?? '',
-      ),
-      detail: 'Submitted for human verification',
-    },
-    {
-      label: 'Documents ready',
-      complete: (documentsQuery.data?.length ?? 0) > 0,
-      detail: 'Your documents are ready',
-    },
-  ];
+  const summary = summaryQuery.data;
+  const loading = summaryQuery.isPending;
+  const nextAction = summary?.nextAction;
+  const completedStages = summary?.completedStages ?? [];
 
   return (
-    <AppShell
-      title={projectQuery.data?.name ?? 'Project overview'}
-      projectId={projectId}
-    >
+    <AppShell title={summary?.name ?? 'Project overview'} projectId={projectId}>
       <div className="hz-console-content space-y-5">
+        {showGuide ? (
+          <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sky-950 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-700">
+                  New to Neuraldocx?
+                </p>
+                <h2 className="mt-1 text-lg font-semibold">
+                  Follow one task at a time.
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-sky-900">
+                  Describe the system, check what applies, complete the work,
+                  add proof, and then ask a person to review it.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.localStorage.setItem(
+                    'neuraldocx-guided-intro',
+                    'dismissed',
+                  );
+                  setShowGuide(false);
+                }}
+                className="text-sm font-semibold text-sky-800 hover:underline"
+              >
+                Got it
+              </button>
+            </div>
+            <Link
+              to="/demo/loan-approval-ai"
+              className="mt-3 inline-flex text-sm font-semibold text-sky-800 hover:underline"
+            >
+              Try a safe fictional example →
+            </Link>
+          </section>
+        ) : null}
+
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Project progress
+                Your next task
               </p>
               <h1 className="mt-2 text-2xl font-semibold text-slate-950">
                 {loading
-                  ? 'Checking what needs your attention…'
-                  : (attention.primary?.title ??
-                    'Ready for the next review stage')}
+                  ? 'Finding your next task…'
+                  : (nextAction?.title ?? 'No next task')}
               </h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 {loading
-                  ? 'Checking your classification, requirements, files, and approvals.'
-                  : (attention.primary?.detail ??
-                    'No unresolved compliance preparation items were found.')}
+                  ? 'Checking your saved work and review status.'
+                  : (nextAction?.detail ??
+                    'Review the project’s recorded status below.')}
               </p>
-              {!loading && attention.primary ? (
+              {nextAction ? (
                 <Link
-                  to={attention.primary.href}
+                  to={nextAction.href}
                   className="mt-5 inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                 >
-                  {attention.primary.actionLabel} →
+                  {nextAction.actionLabel} →
                 </Link>
               ) : null}
             </div>
-            <div className="min-w-40 rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-950">
-              <p className="text-4xl font-semibold">{attention.score}%</p>
-              <p className="mt-1 text-xs text-slate-500">
-                requirements approved
+            <div className="min-w-48 rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-950">
+              <p className="text-3xl font-semibold">
+                {loading ? '—' : completedStages.length} of{' '}
+                {PROJECT_WORKFLOW_STAGES.length}
               </p>
+              <p className="mt-1 text-xs text-slate-500">
+                guided steps complete
+              </p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{
+                    width: `${(completedStages.length / PROJECT_WORKFLOW_STAGES.length) * 100}%`,
+                  }}
+                />
+              </div>
             </div>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-3 text-sm">
-            <Metric value={attention.blockers} label="blockers" />
-            <Metric value={attention.waiting} label="awaiting review" />
-            <Metric value={actionCount} label="actions required" />
           </div>
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Compliance milestones
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Follow these stages instead of relying on a percentage alone.
-          </p>
-          <ol className="mt-5 grid gap-3 md:grid-cols-5">
-            {milestones.map((milestone, index) => (
-              <li
-                key={milestone.label}
-                className={`rounded-xl border p-3 ${
-                  milestone.complete
-                    ? 'border-emerald-200 bg-emerald-50'
-                    : 'border-slate-200 bg-slate-50'
-                }`}
-              >
-                <p className="text-xs font-bold text-slate-500">
-                  {milestone.complete ? 'COMPLETE' : `STEP ${index + 1}`}
-                </p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
-                  {milestone.label}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-slate-600">
-                  {milestone.detail}
-                </p>
-              </li>
-            ))}
+          <h2 className="font-semibold text-slate-900">Your 5-stage plan</h2>
+          <ol className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {PROJECT_WORKFLOW_STAGES.map((stage) => {
+              const current = nextAction?.stage === stage.id;
+              const complete = completedStages.includes(stage.id);
+              return (
+                <li
+                  key={stage.id}
+                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 ${
+                    current
+                      ? 'border-sky-300 bg-sky-50'
+                      : complete
+                        ? 'border-emerald-200 bg-emerald-50'
+                        : 'border-slate-200'
+                  }`}
+                >
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                      {current
+                        ? 'Current task'
+                        : complete
+                          ? 'Complete'
+                          : `Stage ${stage.number}`}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {stage.label}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <HelpTooltip label={`About ${stage.label}`}>
+                      {stage.description}
+                    </HelpTooltip>
+                    <Link
+                      to={projectWorkflowStagePath(projectId, stage)}
+                      aria-label={`Open ${stage.label}`}
+                      className="text-sm font-semibold text-sky-700 hover:underline"
+                    >
+                      Open →
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         </section>
 
-        {!loading && missingEvidence.length ? (
-          <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-sky-950">
-                  Evidence checklist
-                </h2>
-                <p className="mt-1 text-sm text-sky-900">
-                  These requirements need proof before they can move to review.
-                </p>
-              </div>
-              <Link
-                to={`/projects/${projectId}/evidence`}
-                className="rounded-lg bg-sky-800 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-900"
-              >
-                Upload evidence
-              </Link>
-            </div>
-            <ul className="mt-4 grid gap-2 md:grid-cols-2">
-              {missingEvidence.map((requirement) => (
-                <li
-                  key={requirement.id}
-                  className="rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  <Link
-                    to={`/projects/${projectId}/requirements#requirement-${requirement.id}`}
-                    className="font-medium text-sky-800 hover:underline"
-                  >
-                    {requirement.obligation.title}
-                  </Link>
-                  <span className="ml-2 text-xs text-slate-500">
-                    No evidence linked
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {!loading && unassignedRequirements.length ? (
-          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-amber-950">
-                  Ownership checklist
-                </h2>
-                <p className="mt-1 text-sm text-amber-900">
-                  Assign an accountable person before work is handed into review.
-                </p>
-              </div>
-              <Link
-                to={`/projects/${projectId}/requirements`}
-                className="rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900"
-              >
-                Assign owners
-              </Link>
-            </div>
-            <ul className="mt-4 grid gap-2 md:grid-cols-2">
-              {unassignedRequirements.map((requirement) => (
-                <li
-                  key={requirement.id}
-                  className="rounded-lg border border-amber-100 bg-white px-3 py-2 text-sm text-slate-700"
-                >
-                  <Link
-                    to={`/projects/${projectId}/requirements#requirement-${requirement.id}`}
-                    className="font-medium text-amber-900 hover:underline"
-                  >
-                    {requirement.obligation.title}
-                  </Link>
-                  <span className="ml-2 text-xs text-slate-500">
-                    Owner not assigned
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {!loading && datedRequirements.length ? (
-          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-rose-950">
-                  Due soon
-                </h2>
-                <p className="mt-1 text-sm text-rose-900">
-                  Overdue and next-14-day requirement deadlines.
-                </p>
-              </div>
-              <Link
-                to={`/projects/${projectId}/requirements`}
-                className="rounded-lg bg-rose-800 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-900"
-              >
-                Manage deadlines
-              </Link>
-            </div>
-            <ul className="mt-4 space-y-2">
-              {datedRequirements.map(({ requirement, dueAt }) => {
-                const overdue = dueAt < today;
-                return (
-                  <li
-                    key={requirement.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-100 bg-white px-3 py-2 text-sm"
-                  >
-                    <Link
-                      to={`/projects/${projectId}/requirements#requirement-${requirement.id}`}
-                      className="font-medium text-rose-950 hover:underline"
-                    >
-                      {requirement.obligation.title}
-                    </Link>
-                    <span className={overdue ? 'font-semibold text-rose-700' : 'text-rose-800'}>
-                      {overdue ? 'Overdue' : 'Due'} {dueAt.toLocaleDateString()}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ) : null}
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
+        {summary && (
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Next to resolve
+              <h2 className="font-semibold text-slate-900">
+                Project status ·{' '}
+                {summary.workflowStatus.replaceAll('_', ' ').toLowerCase()}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Prioritized from blocking issues through items waiting on a
-                person.
-              </p>
+              {summary.classificationCategory && (
+                <p className="mt-2 text-sm text-slate-700">
+                  Recorded classification:{' '}
+                  {summary.classificationCategory.replaceAll('_', ' ')}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                <Metric value={summary.blockers} label="blockers" />
+                <Metric value={summary.waiting} label="awaiting review" />
+                <Metric
+                  value={summary.verifiedRequirements}
+                  label={`of ${summary.applicableRequirements} applicable requirements approved with verified evidence`}
+                />
+              </div>
             </div>
             <Link
               to={`/projects/${projectId}/requirements`}
-              className="text-sm font-semibold text-sky-700"
+              className="text-sm font-semibold text-sky-700 hover:underline"
             >
-              All requirements →
+              View project issues →
             </Link>
-          </div>
-          <div className="mt-5 space-y-3">
-            {priorityItems.map((item) => (
-              <AttentionItemCard key={itemKey(item)} item={item} />
-            ))}
-            {waitingItems.length ? (
-              <details className="rounded-xl border border-slate-200 px-4 py-3">
-                <summary className="cursor-pointer text-sm font-medium text-slate-600">
-                  Show {waitingItems.length} item
-                  {waitingItems.length === 1 ? '' : 's'} awaiting review
-                </summary>
-                <div className="mt-3 space-y-3">
-                  {waitingItems.map((item) => (
-                    <AttentionItemCard key={itemKey(item)} item={item} />
-                  ))}
-                </div>
-              </details>
-            ) : null}
-            {!loading && !attention.items.length ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
-                No missing or waiting items were found. The project can move to
-                its next workflow stage.
-              </div>
-            ) : null}
-          </div>
-        </section>
+          </section>
+        )}
       </div>
     </AppShell>
-  );
-}
-
-function itemKey(item: AttentionItem) {
-  return `${item.category}-${item.entityType}-${item.entityId}`;
-}
-
-function AttentionItemCard({ item }: { item: AttentionItem }) {
-  return (
-    <article className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 p-4">
-      <div className="min-w-0 flex-1">
-        <span
-          className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${categoryStyle[item.category]}`}
-        >
-          {categoryLabel[item.category]}
-        </span>
-        <h3 className="mt-2 font-semibold text-slate-900">{item.title}</h3>
-        <p className="mt-1 text-sm text-slate-500">{item.detail}</p>
-      </div>
-      <Link
-        to={item.href}
-        className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-700"
-      >
-        {item.actionLabel} →
-      </Link>
-    </article>
   );
 }
 

@@ -153,12 +153,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ) => {
     if (companyId === undefined) {
       setActiveCompanyId(undefined);
+      setCompanyId(undefined);
       removeBrowserStorage('aicd_auth');
       return;
     }
     const storedUser = nextUser ?? user;
     const validatedCompanyId = getDefaultCompanyId(storedUser, companyId);
     setActiveCompanyId(validatedCompanyId);
+    setCompanyId(validatedCompanyId);
     const storedToken = nextToken ?? token;
     if (!validatedCompanyId || !storedUser || !storedToken) {
       removeBrowserStorage('aicd_auth');

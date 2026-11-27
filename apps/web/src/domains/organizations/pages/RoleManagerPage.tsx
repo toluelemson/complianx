@@ -7,6 +7,7 @@ import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Select } from '@/shared/components/ui/select';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 
 const ROLE_OPTIONS = [
   { value: 'USER', label: 'Member' },
@@ -49,9 +50,9 @@ export default function RoleManagerPage() {
 
   return (
     <AppShell title="Team roles">
-      <p className="text-sm text-slate-600">
+      <HelpTooltip label="About team roles">
         Choose who can edit work, review it, or manage your company.
-      </p>
+      </HelpTooltip>
       <Card className="mt-6 rounded-2xl border-slate-200/90 bg-white/90 shadow-[0_20px_45px_-32px_rgba(15,23,42,0.3)]">
         <CardContent className="p-0">
           <table className="w-full text-left text-sm">

@@ -60,7 +60,18 @@ export class ObligationEvidenceController {
   }
 
   @Delete(':linkId')
-  unlink(@Param('linkId') linkId: string, @Req() req: AuthenticatedRequest) {
-    return this.evidence.unlink(linkId, req.user.userId, this.companyId(req));
+  unlink(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('obligationId') obligationId: string,
+    @Param('linkId') linkId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.evidence.unlink(
+      aiSystemId,
+      obligationId,
+      linkId,
+      req.user.userId,
+      this.companyId(req),
+    );
   }
 }

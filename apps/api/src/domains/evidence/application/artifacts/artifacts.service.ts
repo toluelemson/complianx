@@ -315,45 +315,67 @@ export class ArtifactsService {
         'Only the assigned reviewer, approver, or an admin can review files',
       );
     }
-    const updated = await this.prisma.sectionArtifact.update({
-      where: { id: artifactId },
-      data: {
-        status,
-        reviewComment: comment?.trim() ? comment.trim() : null,
-        reviewedAt: new Date(),
-        reviewedById: reviewerId,
-      },
-      include: {
-        uploadedBy: { select: { id: true, email: true } },
-        reviewedBy: { select: { id: true, email: true } },
-        previousArtifact: {
-          select: {
-            id: true,
-            version: true,
-            checksum: true,
-            citationKey: true,
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Project" WHERE id = ${artifact.projectId} FOR UPDATE`;
+      const before = await tx.sectionArtifact.findUniqueOrThrow({
+        where: { id: artifactId },
+      });
+      const updated = await tx.sectionArtifact.update({
+        where: { id: artifactId },
+        data: {
+          status,
+          reviewComment: comment?.trim() ? comment.trim() : null,
+          reviewedAt: new Date(),
+          reviewedById: reviewerId,
+        },
+        include: {
+          uploadedBy: { select: { id: true, email: true } },
+          reviewedBy: { select: { id: true, email: true } },
+          previousArtifact: {
+            select: {
+              id: true,
+              version: true,
+              checksum: true,
+              citationKey: true,
+            },
           },
         },
-      },
-    });
-    if (companyId) {
-      await this.audit.record({
-        companyId,
-        projectId: artifact.projectId,
-        actorId: reviewerId,
-        entityType: 'SectionArtifact',
-        entityId: artifactId,
-        action: 'REVIEWED',
-        beforeSnapshot: {
-          status: artifact.status,
-          reviewComment: artifact.reviewComment,
-        },
-        afterSnapshot: {
-          status: updated.status,
-          reviewComment: updated.reviewComment,
-        },
       });
-    }
-    return updated;
+      if (before.status === 'APPROVED' && status !== 'APPROVED') {
+        await tx.aiSystemObligation.updateMany({
+          where: {
+            projectId: artifact.projectId,
+            approvalState: 'APPROVED',
+            status: { not: 'NOT_APPLICABLE' },
+            evidence: {
+              some: { artifactId, linkType: { in: ['PRIMARY', 'SUPPORTING'] } },
+            },
+          },
+          data: { status: 'UNDER_REVIEW', approvalState: 'READY_FOR_REVIEW' },
+        });
+      }
+      if (companyId) {
+        await this.audit.record(
+          {
+            companyId,
+            projectId: artifact.projectId,
+            actorId: reviewerId,
+            entityType: 'SectionArtifact',
+            entityId: artifactId,
+            action: 'REVIEWED',
+            beforeSnapshot: {
+              status: before.status,
+              reviewComment: before.reviewComment,
+            },
+            afterSnapshot: {
+              status: updated.status,
+              reviewComment: updated.reviewComment,
+            },
+          },
+          tx,
+        );
+      }
+      return updated;
+    });
   }
 }

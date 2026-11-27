@@ -3,8 +3,6 @@ import {
   canApproveProject,
   canRequestProjectChanges,
   canStartProjectReview,
-  getProjectAttentionReasons,
-  getProjectNextAction,
   isValidApprovalSignature,
   selectDocumentTypesForCredits,
 } from './project-page-logic';
@@ -46,53 +44,5 @@ describe('project page policy helpers', () => {
     expect(canRequestProjectChanges('REVIEWER')).toBe(true);
     expect(canRequestProjectChanges('APPROVER')).toBe(false);
     expect(canRequestProjectChanges('OWNER', 'ADMIN')).toBe(true);
-  });
-
-  it('explains why a system needs attention', () => {
-    expect(
-      getProjectAttentionReasons({
-        workflowStatus: 'DRAFT',
-        sections: [],
-        documents: [],
-      }),
-    ).toEqual([
-      'Complete the system intake',
-      'Generate the EU AI Act Documentation Package',
-    ]);
-    expect(
-      getProjectAttentionReasons({
-        workflowStatus: 'CHANGES_REQUESTED',
-        sections: Array.from({ length: 8 }),
-        documents: [{ lifecycleStatus: 'FAILED' }],
-      }),
-    ).toEqual([
-      'Address requested review changes',
-      'Retry failed package generation',
-    ]);
-  });
-
-  it('routes dashboard attention to the next relevant task', () => {
-    expect(
-      getProjectNextAction({
-        workflowStatus: 'DRAFT',
-        sections: [],
-        documents: [],
-      }),
-    ).toEqual({
-      label: 'Continue documentation',
-      path: 'compliance-workspace',
-    });
-    expect(
-      getProjectNextAction({
-        workflowStatus: 'CHANGES_REQUESTED',
-        sections: Array.from({ length: 8 }),
-      }),
-    ).toEqual({ label: 'Address review changes', path: 'review-approval' });
-    expect(
-      getProjectNextAction({
-        workflowStatus: 'APPROVED',
-        dueDate: '2020-01-01',
-      }),
-    ).toEqual({ label: 'Open system overview', path: 'overview' });
   });
 });

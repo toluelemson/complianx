@@ -15,6 +15,10 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Select } from '@/shared/components/ui/select';
 import { BrandLink } from '@/shared/components/brand/BrandLink';
+import {
+  PROJECT_WORKFLOW_STAGES,
+  projectWorkflowStagePath,
+} from '@/domains/ai-systems/lib/workflow-stages';
 
 interface Notification {
   id: string;
@@ -106,56 +110,46 @@ export function AppShell({
     }> = primary.length ? [{ title: 'Navigation', links: primary }] : [];
     if (activeProjectId) {
       sections.push({
-        title: 'Project',
+        title: 'Guided workflow',
         links: [
           {
             label: 'Overview',
             to: `/projects/${activeProjectId}/overview`,
             show: true,
           },
-          {
-            label: 'AI system profile',
-            to: `/projects/${activeProjectId}/ai-system-profile`,
+          ...PROJECT_WORKFLOW_STAGES.map((stage) => ({
+            label: `${stage.number}. ${stage.label}`,
+            to: projectWorkflowStagePath(activeProjectId, stage),
             show: true,
-          },
+          })),
+        ],
+      });
+      sections.push({
+        title: 'Comply tasks',
+        links: [
           {
-            label: 'Project details',
-            to: `/projects/${activeProjectId}/compliance-workspace`,
-            show: true,
-          },
-          {
-            label: 'Classification',
-            to: `/projects/${activeProjectId}/classification`,
-            show: true,
-          },
-          {
-            label: 'Requirements',
-            to: `/projects/${activeProjectId}/requirements`,
-            show: true,
-          },
-          {
-            label: 'Evidence',
+            label: 'Evidence and proof',
             to: `/projects/${activeProjectId}/evidence`,
             show: true,
           },
           {
-            label: 'Findings & actions',
+            label: 'Findings',
             to: `/projects/${activeProjectId}/findings`,
             show: true,
           },
+        ],
+      });
+      sections.push({
+        title: 'More',
+        links: [
           {
-            label: 'Review & approval',
-            to: `/projects/${activeProjectId}/review-approval`,
+            label: 'Traceability',
+            to: `/projects/${activeProjectId}/traceability`,
             show: true,
           },
           {
-            label: 'Documents',
-            to: `/projects/${activeProjectId}/compliance-package`,
-            show: true,
-          },
-          {
-            label: 'Messages',
-            to: `/projects/${activeProjectId}/messages`,
+            label: 'Advanced tools',
+            to: `/projects/${activeProjectId}/advanced`,
             show: true,
           },
         ],
@@ -172,20 +166,20 @@ export function AppShell({
   );
   const renderSidebarNav = () =>
     sidebarSections.map((section) => (
-        <div key={section.title} className="hz-sidebar__section">
-          <p className="hz-sidebar__label">{section.title}</p>
-          {section.links.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                className="hz-sidebar__link"
-                end={link.to.endsWith('/overview')}
-              >
-                {link.label}
-              </NavLink>
-            ))}
-        </div>
-      ));
+      <div key={section.title} className="hz-sidebar__section">
+        <p className="hz-sidebar__label">{section.title}</p>
+        {section.links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className="hz-sidebar__link"
+            end={link.to.endsWith('/overview')}
+          >
+            {link.label}
+          </NavLink>
+        ))}
+      </div>
+    ));
   const renderDesktopPrimaryNav = () =>
     primaryNav?.links.map((link) => (
       <NavLink
@@ -209,22 +203,22 @@ export function AppShell({
           {section.title}
         </p>
         <div className="flex flex-col gap-1">
-            {section.links.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={closeMobileMenu}
-                className={({ isActive }) =>
-                  `rounded-md px-2 py-1 text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-slate-100 text-slate-950'
-                      : 'text-slate-600 hover:bg-slate-50'
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+          {section.links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              onClick={closeMobileMenu}
+              className={({ isActive }) =>
+                `rounded-md px-2 py-1 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-slate-100 text-slate-950'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
         </div>
       </div>
     ));
@@ -267,56 +261,58 @@ export function AppShell({
                   return (
                     <Card key={n.id} className="rounded-xl shadow-none">
                       <CardContent className="px-3 py-2">
-                      <p className="text-sm font-medium text-slate-900">
-                        {n.title}
-                      </p>
-                      <p className="text-xs text-slate-600">{n.body}</p>
-                      <p className="text-[11px] text-slate-400">
-                        {new Date(n.createdAt).toLocaleString()}
-                      </p>
-                      <div className="mt-2 flex justify-end gap-2">
-                        {destination ? (
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              if (!isRead) {
+                        <p className="text-sm font-medium text-slate-900">
+                          {n.title}
+                        </p>
+                        <p className="text-xs text-slate-600">{n.body}</p>
+                        <p className="text-[11px] text-slate-400">
+                          {new Date(n.createdAt).toLocaleString()}
+                        </p>
+                        <div className="mt-2 flex justify-end gap-2">
+                          {destination ? (
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                if (!isRead) {
+                                  setMarkingId(n.id);
+                                  markSingleMutation.mutate(n.id);
+                                }
+                                navigate(destination);
+                                setOpen(false);
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                            >
+                              Open
+                            </Button>
+                          ) : null}
+                          {isRead ? (
+                            <span className="text-[11px] font-semibold text-slate-400">
+                              Read
+                            </span>
+                          ) : (
+                            <Button
+                              type="button"
+                              onClick={() => {
                                 setMarkingId(n.id);
                                 markSingleMutation.mutate(n.id);
+                              }}
+                              disabled={
+                                markSingleMutation.isPending &&
+                                markingId === n.id
                               }
-                              navigate(destination);
-                              setOpen(false);
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-[11px]"
-                          >
-                            Open
-                          </Button>
-                        ) : null}
-                        {isRead ? (
-                          <span className="text-[11px] font-semibold text-slate-400">
-                            Read
-                          </span>
-                        ) : (
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              setMarkingId(n.id);
-                              markSingleMutation.mutate(n.id);
-                            }}
-                            disabled={
-                              markSingleMutation.isPending && markingId === n.id
-                            }
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-[11px]"
-                          >
-                            {markSingleMutation.isPending && markingId === n.id
-                              ? 'Marking...'
-                              : 'Mark read'}
-                          </Button>
-                        )}
-                      </div>
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                            >
+                              {markSingleMutation.isPending &&
+                              markingId === n.id
+                                ? 'Marking...'
+                                : 'Mark read'}
+                            </Button>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   );

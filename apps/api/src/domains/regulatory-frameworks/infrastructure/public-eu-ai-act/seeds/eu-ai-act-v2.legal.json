@@ -1,5 +1,5 @@
 {
-  "version": "2026.03.v2",
+  "version": "2026.10.v3",
   "references": [
     {
       "id": "art-2-scope",
@@ -32,6 +32,12 @@
       "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
     },
     {
+      "id": "annex-i",
+      "label": "Annex I",
+      "title": "Union harmonisation legislation and safety-component route",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
       "id": "art-16",
       "label": "Article 16",
       "title": "Provider obligations",
@@ -53,6 +59,18 @@
       "id": "art-50",
       "label": "Article 50",
       "title": "Transparency obligations",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-51",
+      "label": "Article 51",
+      "title": "Classification of general-purpose AI models with systemic risk",
+      "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "art-53",
+      "label": "Article 53",
+      "title": "Obligations for providers of general-purpose AI models",
       "href": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
     }
   ]

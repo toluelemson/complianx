@@ -2,8 +2,10 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 import type { ProjectDetail } from '@complianx/contracts/ai-systems';
 import { getProject } from '../api';
+import { ProjectReviewControls } from '../components/ProjectReviewControls';
 
 export default function ProjectReviewPage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
@@ -27,9 +29,10 @@ export default function ProjectReviewPage() {
           <h1 className="mt-3 text-2xl font-semibold text-slate-900">
             Review &amp; approval
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            See the project’s current review status and recent decisions.
-          </p>
+          <HelpTooltip className="mt-2" label="About review and approval">
+            See the project’s current review status and the decisions recorded
+            for it.
+          </HelpTooltip>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="grid gap-4 sm:grid-cols-3">
@@ -49,7 +52,9 @@ export default function ProjectReviewPage() {
               value={query.data?.approver?.email ?? 'Not assigned'}
             />
           </div>
-          <h2 className="mt-8 text-lg font-semibold text-slate-900">Recent decisions</h2>
+          <h2 className="mt-8 text-lg font-semibold text-slate-900">
+            Recent decisions
+          </h2>
           <div className="mt-4 space-y-3">
             {query.data?.statusEvents?.map((event) => (
               <div key={event.id} className="border-l-2 border-slate-200 pl-4">
@@ -70,14 +75,23 @@ export default function ProjectReviewPage() {
             ) : null}
           </div>
         </section>
-        <div className="flex justify-end">
-          <Link
-            to={`/projects/${projectId}/compliance-workspace`}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+        {query.data ? (
+          <ProjectReviewControls
+            key={projectId}
+            project={query.data}
+            sections={query.data.sections ?? []}
+          />
+        ) : query.isError ? (
+          <button
+            type="button"
+            className="hz-button hz-button--outline"
+            onClick={() => void query.refetch()}
           >
-            Open project
-          </Link>
-        </div>
+            Retry loading review
+          </button>
+        ) : (
+          <p role="status">Loading review…</p>
+        )}
       </div>
     </AppShell>
   );

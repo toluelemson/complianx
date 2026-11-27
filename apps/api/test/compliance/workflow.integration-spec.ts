@@ -19,6 +19,7 @@ import { EvidenceExpiryScheduler } from '../../src/domains/notifications/applica
 import { NotificationsService } from '../../src/domains/notifications/application/notifications.service';
 import { EuAiActClassificationService } from '../../src/domains/regulatory-frameworks/application/classification/eu-ai-act-classification.service';
 import { PackLifecycleService } from '../../src/domains/regulatory-frameworks/application/pack-lifecycle.service';
+import { ObligationEvidenceService } from '../../src/domains/evidence/application/obligation-evidence/obligation-evidence.service';
 
 // Deliberately fail instead of skipping when the dedicated test DB is not supplied.
 const url = new URL(process.env.DATABASE_URL ?? 'postgresql://invalid/invalid');
@@ -70,6 +71,7 @@ async function fixture() {
   const project = await prisma.project.create({
     data: {
       name: 'Fixture',
+      intendedUse: 'Test an evidence-backed workflow',
       ownerId: owner.id,
       reviewerId: reviewer.id,
       companyId: company.id,
@@ -94,7 +96,7 @@ async function fixture() {
       projectId: project.id,
       packVersionId: pack.id,
       createdById: owner.id,
-      status: 'CLASSIFIED',
+      status: 'FINALIZED',
       answers: {
         is_ai_system: true,
         used_in_eu: true,
@@ -118,11 +120,23 @@ async function fixture() {
       reviewedAt: new Date(),
     },
   });
+  const catalogue = await prisma.requirementCatalogueItem.create({
+    data: {
+      id: `TEST-${suffix}`,
+      text: 'Evidence requirement',
+      aiActArticle: 'Art. 14',
+      trustworthinessPrinciple: 'HUMAN_OVERSIGHT',
+      architectureElements: [],
+      verificationMethod: 'Human review',
+    },
+  });
   const definition = await prisma.obligation.create({
     data: {
       packVersionId: pack.id,
       key: 'provider-1',
       title: 'Evidence requirement',
+      catalogueId: catalogue.id,
+      trustworthinessPrinciple: 'HUMAN_OVERSIGHT',
     },
   });
   const obligation = await prisma.aiSystemObligation.create({
@@ -133,6 +147,7 @@ async function fixture() {
       applicabilityReason: 'Original applicability',
       status: 'COMPLETE',
       approvalState: 'APPROVED',
+      ownerId: owner.id,
     },
   });
   const section = await prisma.section.create({
@@ -643,6 +658,75 @@ describe('PostgreSQL compliance workflows', () => {
       }),
     ).toBe(0);
   });
+
+  it('uses expired evidence and link changes to reopen current work while preserving the export', async () => {
+    const f = await fixture();
+    const first = await reports.createPackage(
+      f.project.id,
+      f.owner.id,
+      f.company.id,
+    );
+    await prisma.sectionArtifact.update({
+      where: { id: f.artifact.id },
+      data: { expiresAt: new Date('2020-01-01T00:00:00Z') },
+    });
+    await expect(
+      projects.getWorkflowSummary(f.project.id, f.owner.id, f.company.id),
+    ).resolves.toMatchObject({
+      verifiedRequirements: 0,
+      packageStatus: 'HISTORICAL',
+      nextAction: {
+        title: 'Evidence has expired: Evidence requirement',
+        category: 'BLOCKED',
+      },
+    });
+    await expect(
+      assessments.updateObligation(
+        f.project.id,
+        f.obligation.id,
+        f.reviewer.id,
+        f.company.id,
+        {
+          approvalState: 'APPROVED',
+          status: 'COMPLETE',
+        },
+      ),
+    ).rejects.toThrow('Approve current supporting evidence');
+    const evidence = new ObligationEvidenceService(prisma as never, projects);
+    await evidence.unlink(
+      f.project.id,
+      f.obligation.id,
+      f.evidence.id,
+      f.owner.id,
+      f.company.id,
+    );
+    const newLink = await evidence.link(
+      f.project.id,
+      f.obligation.id,
+      f.owner.id,
+      f.company.id,
+      { artifactId: f.artifact.id },
+    );
+    await expect(
+      evidence.link(f.project.id, f.obligation.id, f.owner.id, f.company.id, {
+        artifactId: f.artifact.id,
+      }),
+    ).resolves.toMatchObject({ id: newLink.id });
+    await expect(
+      prisma.aiSystemObligation.findUnique({ where: { id: f.obligation.id } }),
+    ).resolves.toMatchObject({
+      approvalState: 'READY_FOR_REVIEW',
+      status: 'UNDER_REVIEW',
+    });
+    await expect(
+      reports.verifyCompliancePackage(
+        f.project.id,
+        first.id,
+        f.owner.id,
+        f.company.id,
+      ),
+    ).resolves.toMatchObject({ valid: true });
+  });
   it('creates idempotent system findings from the worker, never from GET', async () => {
     const f = await fixture();
     await prisma.sectionArtifact.update({
@@ -777,7 +861,15 @@ describe('PostgreSQL compliance workflows', () => {
     const before = await prisma.obligation.findMany({
       where: { packVersionId: f.pack.id },
     });
-    await assessments.classify(f.assessment.id, f.owner.id, f.company.id);
+    const draft = await prisma.assessment.create({
+      data: {
+        projectId: f.project.id,
+        packVersionId: f.pack.id,
+        createdById: f.owner.id,
+        answers: f.assessment.answers ?? {},
+      },
+    });
+    await assessments.classify(draft.id, f.owner.id, f.company.id);
     expect(
       await prisma.obligation.findUnique({ where: { id: before[0].id } }),
     ).toEqual(before[0]);

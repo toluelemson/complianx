@@ -5,17 +5,36 @@ async function logIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
-test('Mia answers simple questions about her AI helper', async ({
-  page,
-}) => {
+test('Mia answers simple questions about her AI helper', async ({ page }) => {
   await logIn(page);
   await page.goto('/projects/e2e-project/classification');
 
-  await page.getByLabel('Is this actually an AI system?').setChecked(true);
+  await page
+    .getByRole('group', { name: 'Is this actually an AI system?' })
+    .getByRole('button', { name: 'Yes' })
+    .click();
   await page
     .getByLabel('We build or place the AI system on the market')
-    .setChecked(true);
+    .check();
   await page.getByRole('button', { name: 'Continue' }).click();
+  await page
+    .getByRole('group', {
+      name: /Is the AI a safety component of, or itself a product covered by/,
+    })
+    .getByRole('button', { name: 'No' })
+    .click();
+  await page
+    .getByRole('group', {
+      name: /For an Annex III use, is the system only performing a narrow/,
+    })
+    .getByRole('button', { name: 'No' })
+    .click();
+  await page
+    .getByRole('group', {
+      name: /Does the system provide, modify, or rely on a general-purpose AI model/,
+    })
+    .getByRole('button', { name: 'No' })
+    .click();
   await page.getByRole('button', { name: 'See what applies' }).click();
 
   await expect(
@@ -23,6 +42,6 @@ test('Mia answers simple questions about her AI helper', async ({
   ).toBeVisible();
   await expect(page.getByText('Human review required')).toBeVisible();
   await expect(
-    page.getByRole('link', { name: 'Continue compliance setup' }),
+    page.getByRole('link', { name: 'Continue guided setup' }),
   ).toHaveAttribute('href', '/projects/e2e-project/requirements');
 });

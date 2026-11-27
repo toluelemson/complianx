@@ -28,6 +28,7 @@ import type {
 import { STEP_CONFIG } from '@/domains/ai-systems/constants/steps';
 import { useAnimatedNumber } from '@/shared/hooks/useAnimatedNumber';
 import { Panel } from '@/shared/components/ui/panel';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 
 type ArtifactPurpose = 'GENERIC' | 'DATASET' | 'MODEL';
 
@@ -149,7 +150,9 @@ export default function ProjectTrustPage() {
   const [cohortBName, setCohortBName] = useState('Segment B');
   const [cohortBColumn, setCohortBColumn] = useState('group');
   const [cohortBValues, setCohortBValues] = useState('GroupB');
-  const [cohortResults, setCohortResults] = useState<CohortResult[] | null>(null);
+  const [cohortResults, setCohortResults] = useState<CohortResult[] | null>(
+    null,
+  );
   const [attachmentSectionId, setAttachmentSectionId] = useState<string>('');
   const resolvedAttachmentSectionId =
     attachmentSectionId || sectionsQuery.data?.[0]?.id || '';
@@ -288,8 +291,7 @@ export default function ProjectTrustPage() {
   });
 
   const deleteMetricMutation = useMutation({
-    mutationFn: (metricId: string) =>
-      deleteTrustMetric(projectId, metricId),
+    mutationFn: (metricId: string) => deleteTrustMetric(projectId, metricId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['trustMetrics', projectId, activeCompanyId],
@@ -526,10 +528,10 @@ export default function ProjectTrustPage() {
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-slate-500">
+          <HelpTooltip className="mt-2" label="About trust monitoring">
             Monitor fairness, robustness, and drift independently from document
-            generation. Upload evidence to any saved section for traceability.
-          </p>
+            generation. Upload evidence to a saved section for traceability.
+          </HelpTooltip>
           {attachmentSection ? (
             <p className="text-xs text-slate-400">
               Evidence will be attached to{' '}

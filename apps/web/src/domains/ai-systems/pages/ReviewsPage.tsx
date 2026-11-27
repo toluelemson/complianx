@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 import { listAssignedReviews } from '../api';
 
 export default function ReviewsPage() {
@@ -27,7 +28,9 @@ export default function ReviewsPage() {
     <AppShell title="Reviews">
       <div className="hz-console-content space-y-6">
         <div>
-          <p className="text-sm text-slate-500">Projects waiting for your review.</p>
+          <HelpTooltip label="About reviews">
+            Projects currently waiting for your review or approval.
+          </HelpTooltip>
         </div>
         <div className="space-y-3">
           {reviews.map((project) => (
