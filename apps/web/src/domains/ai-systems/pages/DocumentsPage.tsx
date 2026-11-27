@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 import type { ProjectListItem } from '@complianx/contracts/ai-systems';
 import { downloadDocument as downloadDocumentFile, listProjects } from '../api';
 import { DOCUMENT_LABELS } from '../constants/documents';
@@ -108,9 +109,10 @@ export default function DocumentsPage() {
           <h1 className="text-2xl font-semibold text-slate-900">
             Document library
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Find documents created for your AI systems. Open one to review or download it.
-          </p>
+          <HelpTooltip className="mt-2" label="About the document library">
+            Find documents created for your AI systems. Open one to review or
+            download it.
+          </HelpTooltip>
         </div>
         <div className="grid gap-3 sm:grid-cols-4" aria-label="Document status">
           {DOCUMENT_STATUS_OPTIONS.map(({ value, label }) => (
@@ -129,15 +131,17 @@ export default function DocumentsPage() {
                 {label}
               </p>
               <p className="mt-1 text-2xl font-semibold text-slate-900">
-                {lifecycleCounts[
-                  value === 'APPROVED'
-                    ? 'approved'
-                    : value === 'DRAFT'
-                      ? 'draft'
-                      : value === 'SUPERSEDED'
-                        ? 'superseded'
-                        : 'failed'
-                ]}
+                {
+                  lifecycleCounts[
+                    value === 'APPROVED'
+                      ? 'approved'
+                      : value === 'DRAFT'
+                        ? 'draft'
+                        : value === 'SUPERSEDED'
+                          ? 'superseded'
+                          : 'failed'
+                  ]
+                }
               </p>
             </button>
           ))}

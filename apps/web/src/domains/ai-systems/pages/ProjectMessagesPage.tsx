@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 import type {
   ProjectDetail,
   SectionWithMeta,
@@ -92,10 +93,10 @@ export default function ProjectMessagesPage() {
           <h1 className="mt-3 text-2xl font-semibold text-slate-900">
             Messages
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <HelpTooltip className="mt-2" label="About project messages">
             Questions, decisions, and review notes for{' '}
             {projectQuery.data?.name ?? 'this project'}.
-          </p>
+          </HelpTooltip>
         </div>
         <form
           onSubmit={(event) => {
@@ -128,25 +129,21 @@ export default function ProjectMessagesPage() {
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
           {selectedSection ? (
-            <details className="mt-3 text-sm text-slate-600">
-              <summary className="cursor-pointer">
-                Posting to {selectedSection.name.replaceAll('_', ' ')}
-              </summary>
-              <label className="mt-2 block max-w-lg">
-                <span className="sr-only">Discussion area</span>
-                <select
-                  value={selectedSection.id}
-                  onChange={(event) => setSelectedSectionId(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                >
-                  {(sectionsQuery.data ?? []).map((section) => (
-                    <option key={section.id} value={section.id}>
-                      {section.name.replaceAll('_', ' ')}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </details>
+            <label className="mt-3 block max-w-lg text-sm text-slate-600">
+              Discussion area
+              <select
+                aria-label="Discussion area"
+                value={selectedSection.id}
+                onChange={(event) => setSelectedSectionId(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              >
+                {(sectionsQuery.data ?? []).map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name.replaceAll('_', ' ')}
+                  </option>
+                ))}
+              </select>
+            </label>
           ) : null}
           <div className="mt-3 flex justify-end">
             <button
@@ -193,11 +190,11 @@ export default function ProjectMessagesPage() {
               </article>
             ))}
             {resolvedMessages.length ? (
-              <details className="rounded-xl border border-slate-200 px-4 py-3">
-                <summary className="cursor-pointer text-sm font-medium text-slate-600">
-                  Show {resolvedMessages.length} resolved message
+              <section className="rounded-xl border border-slate-200 px-4 py-3">
+                <h3 className="text-sm font-medium text-slate-600">
+                  {resolvedMessages.length} resolved message
                   {resolvedMessages.length === 1 ? '' : 's'}
-                </summary>
+                </h3>
                 <div className="mt-3 space-y-3">
                   {resolvedMessages.map((message) => (
                     <article
@@ -230,7 +227,7 @@ export default function ProjectMessagesPage() {
                     </article>
                   ))}
                 </div>
-              </details>
+              </section>
             ) : null}
             {!messages.length ? (
               <p className="py-8 text-center text-sm text-slate-500">

@@ -14,6 +14,11 @@ import type {
 } from '@complianx/contracts/ai-systems';
 import { PrismaService } from '../../../../platform/database/prisma.service';
 import type { CreateAiSystemCommand } from './project.commands';
+import {
+  buildProjectWorkflowSummary,
+  loadMaterialChanges,
+  projectWorkflowInclude,
+} from './project-workflow-summary';
 import { LifecycleStage, Prisma, Project } from '@prisma/client';
 import type {
   ProjectAccessOptions,
@@ -63,6 +68,7 @@ const projectDetailInclude = Prisma.validator<Prisma.ProjectInclude>()({
 });
 
 const projectListInclude = Prisma.validator<Prisma.ProjectInclude>()({
+  ...projectWorkflowInclude,
   sections: {
     select: { id: true, name: true, updatedAt: true },
   },
@@ -85,6 +91,24 @@ const projectListInclude = Prisma.validator<Prisma.ProjectInclude>()({
 const projectCloneInclude = Prisma.validator<Prisma.ProjectInclude>()({
   sections: true,
 });
+
+const assessmentProfileFields = [
+  'description',
+  'businessPurpose',
+  'intendedUse',
+  'intendedUsers',
+  'affectedPersons',
+  'deploymentGeography',
+  'operatorRoles',
+  'lifecycleStage',
+  'providerOrDeveloper',
+  'deployerOrUser',
+  'importer',
+  'distributor',
+  'authorizedRepresentative',
+  'generatesContent',
+  'useCaseIndicators',
+] as const;
 
 type ProjectListItem = Prisma.ProjectGetPayload<{
   include: typeof projectListInclude;
@@ -365,8 +389,12 @@ export class ProjectsService {
     dto: CreateAiSystemCommand,
   ) {
     await this.assertOwnership(projectId, userId, companyId);
-    return this.prisma.project
-      .update({
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Project" WHERE id = ${projectId} FOR UPDATE`;
+      const before = await tx.project.findUniqueOrThrow({
+        where: { id: projectId },
+      });
+      const project = await tx.project.update({
         where: { id: projectId },
         data: {
           name: dto.name,
@@ -390,8 +418,25 @@ export class ProjectsService {
           dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         },
         include: projectDetailInclude,
-      })
-      .then((project) => mapProjectDetail(project, 'OWNER'));
+      });
+      const changedFields = assessmentProfileFields.filter(
+        (key) => JSON.stringify(before[key]) !== JSON.stringify(project[key]),
+      );
+      if (changedFields.length) {
+        await tx.auditEvent.create({
+          data: {
+            companyId,
+            projectId,
+            actorId: userId,
+            entityType: 'Project',
+            entityId: projectId,
+            action: 'AI_SYSTEM_PROFILE_UPDATED',
+            metadata: { changedFields },
+          },
+        });
+      }
+      return mapProjectDetail(project, 'OWNER');
+    });
   }
 
   private async resolveAccess(
@@ -480,6 +525,12 @@ export class ProjectsService {
       orderBy: { createdAt: 'desc' },
       include: projectListInclude,
     });
+    const materialChanges = await loadMaterialChanges(
+      this.prisma,
+      companyId,
+      projects.map((project) => project.id),
+    );
+    const now = new Date();
     return projects.map((project: ProjectListItem) => ({
       id: project.id,
       name: project.name,
@@ -514,6 +565,12 @@ export class ProjectsService {
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
       workflowStatus: project.workflowStatus,
+      workflowSummary: buildProjectWorkflowSummary(
+        project,
+        { id: userId, membershipRole: membership.role },
+        materialChanges.get(project.id),
+        now,
+      ),
       viewerRole:
         project.ownerId === userId
           ? 'OWNER'
@@ -610,6 +667,36 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
     return mapProjectDetail(project, access.accessRole);
+  }
+
+  async getWorkflowSummary(
+    projectId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    const access = await this.resolveAccess(projectId, userId, companyId, {
+      allowReviewer: true,
+      allowApprover: true,
+      allowCompanyMember: true,
+    });
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        companyId,
+        company: { members: { some: { userId } } },
+      },
+      include: projectWorkflowInclude,
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    const changes = await loadMaterialChanges(this.prisma, companyId, [
+      projectId,
+    ]);
+    return buildProjectWorkflowSummary(
+      project,
+      { id: userId, membershipRole: access.membershipRole },
+      changes.get(projectId),
+      new Date(),
+    );
   }
 
   async assertOwnership(

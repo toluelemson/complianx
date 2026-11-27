@@ -2,7 +2,7 @@
 
 ## Scope and method
 
-This audit records the workflow that is implemented in the repository as of
+This audit records the baseline observed before the workflow refactor on
 2026-11-27. It is based on the Prisma schema, Nest controllers and services,
 shared contracts, web routes, React Query consumers, and existing unit and E2E
 tests. It deliberately does not treat an automated classification as a legal
@@ -48,10 +48,10 @@ create a second workflow.
 
 ## What is already working toward the target
 
-- `apps/web/src/domains/ai-systems/lib/project-attention.ts` already turns
+- The original client attention helper turned
   persisted classification, requirement, evidence, document, and workflow
   states into a prioritised next action. It differentiates blockers, action
-  required, and waiting states and is covered by focused tests.
+  required, and waiting states. The API workflow summary now owns those decisions.
 - Project-specific pages already split the workflow into overview, profile,
   classification/assessment, requirements, evidence, findings, review,
   documentation, package, and traceability views.
@@ -76,5 +76,18 @@ create a second workflow.
 This audit is intentionally non-destructive. Repository-wide build, lint, and
 test results are recorded in [workflow-verification.md](workflow-verification.md).
 The local runtime baseline previously confirmed authenticated API login and an
-AI-system list request through the Vite proxy. That is a smoke check only, not
-workflow certification.
+AI-system list request through the Vite proxy.
+
+## Implementation outcome
+
+Project registration still writes the existing `Project` aggregate. Assess,
+Comply, Review and Report now lead to dedicated project routes. A single
+workflow summary supplies both the dashboard and overview. The documentation
+editor retains section-level tools and shares the classification and review
+controls. Legacy AI-system and project document links retain their project
+context through redirects.
+
+The refactor resolved a package gate that required conflicting assessment
+statuses. Package creation uses finalized traceability, recorded decisions
+and verified evidence. A material change can reopen current work while
+previous package manifests and archive bytes remain verifiable.

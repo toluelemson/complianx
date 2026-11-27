@@ -106,8 +106,8 @@ export function FindingWorkflow({
     (status) => !['RESOLVED', 'ACCEPTED_RISK'].includes(status) || canReview,
   );
   return (
-    <details className="w-full space-y-3">
-      <summary>Manage this problem</summary>
+    <section className="w-full space-y-3">
+      <h3 className="font-medium">Manage this problem</h3>
       {!closed ? (
         <>
           <label className="block">
@@ -208,9 +208,7 @@ export function FindingWorkflow({
               ))}
             </>
           ) : (
-            <p>
-              Link this problem to a requirement before closing it.
-            </p>
+            <p>Link this problem to a requirement before closing it.</p>
           )}
         </>
       ) : null}
@@ -240,6 +238,6 @@ export function FindingWorkflow({
         </p>
       ) : null}
       {mutation.isSuccess ? <p role="status">Finding updated.</p> : null}
-    </details>
+    </section>
   );
 }

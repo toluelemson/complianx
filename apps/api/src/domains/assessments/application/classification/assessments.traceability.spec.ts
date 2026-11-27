@@ -29,10 +29,19 @@ describe('Requirement traceability', () => {
           applicabilityReason: 'High-risk system',
           obligation: {
             id: 'obligation',
+            catalogueId: 'EU-AIA-ART-14-HUMAN-OVERSIGHT',
             key: 'EUAI-HO-1',
             title: 'Human oversight',
             description: 'Document human oversight measures.',
             legalReference: 'Article 14',
+            catalogue: {
+              id: 'EU-AIA-ART-14-HUMAN-OVERSIGHT',
+              text: 'Human oversight',
+              aiActArticle: 'Art. 14',
+              trustworthinessPrinciple: 'HUMAN_OVERSIGHT',
+              architectureElements: ['Operator console'],
+              verificationMethod: 'Test the human override procedure',
+            },
             packVersion: {
               id: 'pack',
               key: 'EU_AI_ACT',
@@ -102,6 +111,11 @@ describe('Requirement traceability', () => {
     expect(result.evidence[0].artifact).toMatchObject({
       evidenceVersion: 2,
       reviewer: { email: 'jane@example.com' },
+    });
+    expect(result.requirement).toMatchObject({
+      identifier: 'EU-AIA-ART-14-HUMAN-OVERSIGHT',
+      title: 'Human oversight',
+      legalReference: 'Art. 14',
     });
     expect(result.review.approval).toMatchObject({
       actor: { email: 'john@example.com' },

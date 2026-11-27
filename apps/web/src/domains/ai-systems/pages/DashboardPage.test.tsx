@@ -71,7 +71,7 @@ describe('AI system onboarding entry', () => {
 
     expect(await screen.findByText('Your first 30 minutes')).toBeVisible();
     expect(
-      screen.getByRole('link', { name: 'Explore a fictional example' }),
+      screen.getByRole('link', { name: 'Try a safe fictional example' }),
     ).toHaveAttribute('href', '/demo/loan-approval-ai');
     fireEvent.click(
       screen.getByRole('button', { name: 'Add your first AI system' }),
@@ -97,9 +97,7 @@ describe('AI system onboarding entry', () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Assess an AI system' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add an AI system' }));
     fireEvent.click(screen.getByRole('button', { name: 'Submit system' }));
 
     expect(await screen.findByText('EU AI Act questions')).toBeVisible();
@@ -107,12 +105,19 @@ describe('AI system onboarding entry', () => {
     expect(mockedApi.classifyProjectIntake).not.toHaveBeenCalled();
   });
 
-  it('takes an incomplete system directly to documentation from next actions', async () => {
+  it('uses the same next action supplied by the workflow API', async () => {
     mockedApi.listProjects.mockResolvedValue([
       {
         id: 'system-1',
         name: 'Retail assistant',
         workflowStatus: 'DRAFT',
+        workflowSummary: {
+          nextAction: {
+            href: '/projects/system-1/ai-system-profile',
+            actionLabel: 'Open system profile',
+            detail: 'Record what the system is intended to do.',
+          },
+        },
         sections: [],
         documents: [],
         createdAt: '2026-01-01T00:00:00.000Z',
@@ -128,8 +133,8 @@ describe('AI system onboarding entry', () => {
           <Routes>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route
-              path="/projects/:projectId/compliance-workspace"
-              element={<p>Documentation workspace</p>}
+              path="/projects/:projectId/ai-system-profile"
+              element={<p>AI system profile</p>}
             />
           </Routes>
         </MemoryRouter>
@@ -137,11 +142,11 @@ describe('AI system onboarding entry', () => {
     );
 
     const nextAction = await screen.findByRole('link', {
-      name: /retail assistant.*continue documentation/i,
+      name: /retail assistant.*open system profile/i,
     });
     expect(nextAction).toHaveAttribute(
       'href',
-      '/projects/system-1/compliance-workspace?companyId=company-1',
+      '/projects/system-1/ai-system-profile',
     );
   });
 });

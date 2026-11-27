@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient, Role, TrustworthinessPrinciple } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -36,6 +36,41 @@ async function main() {
     where: { userId_companyId: { userId: user.id, companyId: company.id } },
     update: { role: Role.ADMIN },
     create: { userId: user.id, companyId: company.id, role: Role.ADMIN },
+  });
+  const otherCompany = await prisma.company.upsert({
+    where: { id: 'e2e-other-company' },
+    update: {},
+    create: { id: 'e2e-other-company', name: 'E2E Other Company' },
+  });
+  const otherUser = await prisma.user.upsert({
+    where: { id: 'e2e-other-user' },
+    update: {
+      passwordHash,
+      role: Role.ADMIN,
+      companyId: otherCompany.id,
+      defaultCompanyId: otherCompany.id,
+      emailVerified: true,
+    },
+    create: {
+      id: 'e2e-other-user',
+      email: 'e2e-other-user@example.invalid',
+      passwordHash,
+      role: Role.ADMIN,
+      companyId: otherCompany.id,
+      defaultCompanyId: otherCompany.id,
+      emailVerified: true,
+    },
+  });
+  await prisma.userCompany.upsert({
+    where: {
+      userId_companyId: { userId: otherUser.id, companyId: otherCompany.id },
+    },
+    update: { role: Role.ADMIN },
+    create: {
+      userId: otherUser.id,
+      companyId: otherCompany.id,
+      role: Role.ADMIN,
+    },
   });
   const project = await prisma.project.upsert({
     where: { id: 'e2e-project' },
@@ -84,6 +119,18 @@ async function main() {
   if (!pack) {
     throw new Error('E2E fixtures require a published EU AI Act pack');
   }
+  const catalogueItem = await prisma.requirementCatalogueItem.upsert({
+    where: { id: 'EU-AIA-E2E-REQUIREMENT' },
+    update: {},
+    create: {
+      id: 'EU-AIA-E2E-REQUIREMENT',
+      text: 'E2E requirement control',
+      aiActArticle: 'Art. 14',
+      trustworthinessPrinciple: TrustworthinessPrinciple.HUMAN_OVERSIGHT,
+      architectureElements: ['E2E test fixture'],
+      verificationMethod: 'Browser workflow verification',
+    },
+  });
   const obligation = await prisma.obligation.upsert({
     where: {
       packVersionId_key: { packVersionId: pack.id, key: 'e2e-requirement' },
@@ -92,8 +139,10 @@ async function main() {
     create: {
       packVersionId: pack.id,
       key: 'e2e-requirement',
+      catalogueId: catalogueItem.id,
       title: 'E2E requirement control',
       description: 'A deterministic requirement for browser testing.',
+      trustworthinessPrinciple: TrustworthinessPrinciple.HUMAN_OVERSIGHT,
     },
   });
   await prisma.aiSystemObligation.upsert({

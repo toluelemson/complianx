@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 import { loadPublicQuestionPack } from '@/domains/regulatory-frameworks/api';
 import type {
   EuAiActQuestion,
@@ -22,6 +23,7 @@ import {
 import type { ProjectDetail } from '@complianx/contracts/ai-systems';
 import { summarizeOnboarding } from '../lib/onboarding-summary';
 import { trackMarketingEvent } from '@/platform/analytics/marketing';
+import { ProjectClassificationReview } from '../components/ProjectClassificationReview';
 
 const STEP_TITLES: Record<string, string> = {
   scope: 'Where the system is used',
@@ -54,6 +56,7 @@ function answered(question: EuAiActQuestion, value: unknown) {
 
 export default function ProjectQuestionnairePage() {
   const { projectId = '' } = useParams<{ projectId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { token, initializing, activeCompanyId } = useAuth();
   const client = useQueryClient();
   const [pack, setPack] = useState<EuAiActQuestionPack | null>(null);
@@ -63,8 +66,6 @@ export default function ProjectQuestionnairePage() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [stepIndex, setStepIndex] = useState(0);
   const [editing, setEditing] = useState(false);
-  const [completedClassification, setCompletedClassification] =
-    useState<PreliminaryClassification | null>(null);
   const [error, setError] = useState<string | null>(null);
   const startedAutomatically = useRef(false);
   const classification = useQuery({
@@ -77,15 +78,19 @@ export default function ProjectQuestionnairePage() {
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getProject(projectId),
   });
+  const intendedUse = project.data?.intendedUse?.trim();
+  const affectedPersons = project.data?.affectedPersons?.trim();
+  const deployment = project.data?.deploymentGeography?.trim() ?? '';
+  const operatorRoles = project.data?.operatorRoles;
   const profileAnswers = useMemo(() => {
-    const deployment = project.data?.deploymentGeography?.trim() ?? '';
-    const operatorRoles = project.data?.operatorRoles ?? [];
     const answers: Record<string, unknown> = {};
+    if (intendedUse) answers.intended_use = intendedUse;
+    if (affectedPersons) answers.affected_persons = affectedPersons;
     if (/\b(EU|EEA|European Union)\b/i.test(deployment)) {
       answers.used_in_eu = true;
     }
     if (
-      operatorRoles.length === 1 &&
+      operatorRoles?.length === 1 &&
       ['provider', 'deployer', 'importer', 'distributor'].includes(
         operatorRoles[0],
       )
@@ -93,9 +98,9 @@ export default function ProjectQuestionnairePage() {
       answers.company_role = operatorRoles[0];
     }
     return answers;
-  }, [project.data?.deploymentGeography, project.data?.operatorRoles]);
+  }, [affectedPersons, deployment, intendedUse, operatorRoles]);
   const effectiveAnswers = useMemo(
-    () => ({ ...profileAnswers, ...answers }),
+    () => ({ ...answers, ...profileAnswers }),
     [answers, profileAnswers],
   );
   const profileDerivedQuestionKeys = useMemo(
@@ -105,18 +110,23 @@ export default function ProjectQuestionnairePage() {
   const assessmentId =
     createdAssessmentId ?? classification.data?.assessmentId ?? null;
   useQuery({
-    queryKey: ['assessmentAnswers', projectId, assessmentId],
+    queryKey: ['assessmentAnswers', projectId, assessmentId, activeCompanyId],
     enabled: Boolean(assessmentId),
     queryFn: async () => {
       const savedAnswers = await listAssessmentAnswers(
         projectId,
         assessmentId ?? '',
       );
-      setAnswers(
-        Object.fromEntries(
-          savedAnswers.map((answer) => [answer.questionKey, answer.valueJson]),
-        ),
-      );
+      if (savedAnswers.length) {
+        setAnswers(
+          Object.fromEntries(
+            savedAnswers.map((answer) => [
+              answer.questionKey,
+              answer.valueJson,
+            ]),
+          ),
+        );
+      }
       return savedAnswers;
     },
   });
@@ -169,16 +179,34 @@ export default function ProjectQuestionnairePage() {
     },
     onSuccess: (result: PreliminaryClassification) => {
       trackMarketingEvent('classification_completed');
-      setCompletedClassification(result);
+      client.setQueryData(
+        ['preliminaryClassification', projectId, activeCompanyId],
+        result,
+      );
       setEditing(false);
       setError(null);
+      if (searchParams.has('reassess')) {
+        const updated = new URLSearchParams(searchParams);
+        updated.delete('reassess');
+        setSearchParams(updated, { replace: true });
+      }
       void client.invalidateQueries({
-        queryKey: ['preliminaryClassification', projectId],
+        queryKey: ['preliminaryClassification', projectId, activeCompanyId],
       });
       void client.invalidateQueries({ queryKey: ['obligations', projectId] });
     },
     onError: () =>
       setError('Classification failed. Check your answers and retry.'),
+  });
+  const reassess = useMutation({
+    mutationFn: () => createProjectAssessment(projectId),
+    onSuccess: (draft) => {
+      setCreatedAssessmentId(draft.id);
+      setEditing(true);
+      setStepIndex(0);
+      setError(null);
+    },
+    onError: () => setError('Unable to start reassessment. Retry to continue.'),
   });
   const steps = useMemo(
     () =>
@@ -197,7 +225,7 @@ export default function ProjectQuestionnairePage() {
     [pack, effectiveAnswers, profileDerivedQuestionKeys],
   );
   const step = steps[stepIndex];
-  const result = completedClassification ?? classification.data;
+  const result = classification.data;
   const obligations = useQuery({
     queryKey: ['obligations', projectId, activeCompanyId],
     enabled: Boolean(result && projectId && activeCompanyId),
@@ -214,7 +242,7 @@ export default function ProjectQuestionnairePage() {
     ) ?? [];
   if (!initializing && !token) return <Navigate to="/login" replace />;
   return (
-    <AppShell title="EU AI Act assessment" projectId={projectId}>
+    <AppShell title="Check what applies" projectId={projectId}>
       <div className="hz-console-content space-y-6">
         <div>
           <Link
@@ -224,13 +252,13 @@ export default function ProjectQuestionnairePage() {
             ← AI system overview
           </Link>
           <h1 className="mt-3 text-2xl font-semibold text-slate-900">
-            EU AI Act assessment
+            Check what applies
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Answer a short set of questions about your system and how your
-            organization uses it. Neuraldocx uses your answers to suggest which
-            current EU AI Act rules may apply to this project.
-          </p>
+          <HelpTooltip className="mt-2" label="About this legal scope check">
+            Answer questions about your system and how your organization uses
+            it. This preliminary EU AI Act check suggests which current rules
+            may apply and still requires human verification.
+          </HelpTooltip>
         </div>
         {error ? (
           <div
@@ -245,7 +273,7 @@ export default function ProjectQuestionnairePage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-                  Assessment result
+                  Legal scope result
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold text-slate-900">
                   Here is what likely applies
@@ -292,6 +320,17 @@ export default function ProjectQuestionnairePage() {
               />
             </div>
 
+            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">
+                Outside this result
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Institutional enforcement, penalties, and definitive legal
+                conclusions remain outside this preliminary result and require
+                authorized human review.
+              </p>
+            </div>
+
             {result.resultSnapshot?.missing_information?.length ? (
               <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
                 <p className="text-sm font-semibold text-amber-900">
@@ -304,6 +343,12 @@ export default function ProjectQuestionnairePage() {
                 </ul>
               </div>
             ) : null}
+
+            <ProjectClassificationReview
+              projectId={projectId}
+              project={project.data}
+              result={result}
+            />
 
             <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -346,17 +391,28 @@ export default function ProjectQuestionnairePage() {
                 to={`/projects/${projectId}/requirements`}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
               >
-                Continue compliance setup
+                Continue guided setup
               </Link>
               <button
                 type="button"
                 onClick={() => {
+                  if (
+                    result.assessment?.status === 'FINALIZED' ||
+                    searchParams.has('reassess')
+                  ) {
+                    reassess.mutate();
+                    return;
+                  }
                   setEditing(true);
                   setStepIndex(0);
                 }}
+                disabled={reassess.isPending}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
               >
-                Review or update answers
+                {result.assessment?.status === 'FINALIZED' ||
+                searchParams.has('reassess')
+                  ? 'Start reassessment'
+                  : 'Review or update answers'}
               </button>
             </div>
           </section>
@@ -479,7 +535,10 @@ function NextAction({
       <p className="text-xs font-bold text-sky-700">STEP {number}</p>
       <p className="mt-1 font-semibold text-slate-900">{title}</p>
       <p className="mt-1 text-sm text-slate-600">{text}</p>
-      <Link to={to} className="mt-3 inline-block text-sm font-semibold text-sky-700">
+      <Link
+        to={to}
+        className="mt-3 inline-block text-sm font-semibold text-sky-700"
+      >
         Open →
       </Link>
     </li>
@@ -517,32 +576,42 @@ function Question({
 }) {
   if (question.type === 'boolean')
     return (
-      <label className="flex items-start gap-3 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={value === true}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-          <span>
-          <span className="font-medium">{question.label}</span>
+      <fieldset>
+        <legend className="text-sm font-medium text-slate-700">
+          <QuestionLabel label={question.label} />
           {question.required ? (
             <span aria-hidden="true" className="ml-2 text-xs text-slate-400">
               Required
             </span>
           ) : null}
-          {question.helperText ? (
-            <span className="block text-xs text-slate-500">
-              {question.helperText}
-            </span>
-          ) : null}
-        </span>
-      </label>
+        </legend>
+        {question.helperText ? (
+          <p className="mt-1 text-xs text-slate-500">{question.helperText}</p>
+        ) : null}
+        <div className="mt-2 flex gap-2">
+          {[true, false].map((option) => (
+            <button
+              key={String(option)}
+              type="button"
+              aria-pressed={value === option}
+              onClick={() => onChange(option)}
+              className={`rounded-md border px-4 py-2 text-sm font-medium transition ${
+                value === option
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              {option ? 'Yes' : 'No'}
+            </button>
+          ))}
+        </div>
+      </fieldset>
     );
   if (question.options?.length)
     return (
       <fieldset>
         <legend className="text-sm font-medium text-slate-700">
-          {question.label}
+          <QuestionLabel label={question.label} />
           {question.required ? ' *' : ''}
         </legend>
         <div className="mt-2 space-y-2">
@@ -576,7 +645,7 @@ function Question({
                   )
                 }
               />
-              {option.label}
+              <QuestionLabel label={option.label} />
             </label>
           ))}
         </div>
@@ -587,7 +656,7 @@ function Question({
     );
   return (
     <label className="block text-sm font-medium text-slate-700">
-      {question.label}
+      <QuestionLabel label={question.label} />
       {question.required ? ' *' : ''}
       <input
         type={question.type === 'number' ? 'number' : 'text'}
@@ -607,5 +676,19 @@ function Question({
         </span>
       ) : null}
     </label>
+  );
+}
+
+function QuestionLabel({ label }: { label: string }) {
+  const match = label.match(/^(.*)\s(\((?:Art\.|Annex)[\s\S]*\))$/);
+  if (!match) return <>{label}</>;
+  const [, plainLabel, legalReference] = match;
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span>{plainLabel}</span>
+      <HelpTooltip label={`Legal reference for ${plainLabel}`}>
+        {legalReference.slice(1, -1)}
+      </HelpTooltip>
+    </span>
   );
 }

@@ -94,10 +94,30 @@ describe('Compliance mutation boundaries', () => {
       },
       assessment: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'assessment',
+          projectId: 'project',
+          packVersionId: 'pack',
+          status: 'CLASSIFIED',
+          answers: {},
+        }),
         create: jest.fn(({ data }) =>
           Promise.resolve({ id: 'assessment', ...data }),
         ),
+        update: jest.fn(({ data }) =>
+          Promise.resolve({
+            id: 'assessment',
+            weightingChoice: data.weightingChoice ?? 'STANDARD',
+            targetBand: data.targetBand ?? 'READY',
+            versionNumber: 2,
+          }),
+        ),
       },
+      assessmentRequirementRow: {
+        findMany: jest.fn().mockResolvedValue([{ obligationId: 'obligation' }]),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      assessmentChangeLog: { create: jest.fn().mockResolvedValue({}) },
       auditEvent: { create: jest.fn().mockResolvedValue({}) },
     };
     const prisma = { ...tx, $transaction: jest.fn((fn) => fn(tx)) };
@@ -147,6 +167,84 @@ describe('Compliance mutation boundaries', () => {
     );
     expect(tx.assessment.create).not.toHaveBeenCalled();
     expect(tx.auditEvent.create).not.toHaveBeenCalled();
+  });
+  it('updates one assessment scoring row, increments its version, and records the change', async () => {
+    const { service, tx } = setup();
+    await service.updateScoring('assessment', 'owner', 'company', {
+      weightingChoice: 'RISK_WEIGHTED',
+      targetBand: 'AT_RISK',
+      rows: [
+        {
+          obligationId: 'obligation',
+          score: 80,
+          state: 'IN_PROGRESS',
+          weight: 2,
+          rationale: 'Control is being implemented',
+          evidenceLinks: ['https://example.com/evidence'],
+        },
+      ],
+    });
+    expect(tx.assessment.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ versionNumber: { increment: 1 } }),
+      }),
+    );
+    expect(tx.assessmentRequirementRow.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ score: 80, state: 'IN_PROGRESS' }),
+      }),
+    );
+    expect(tx.assessmentChangeLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'SCORING_UPDATED',
+          versionNumber: 2,
+          actorId: 'owner',
+        }),
+      }),
+    );
+  });
+  it('returns canonical catalogue metadata for every assessment row', async () => {
+    const { service, tx } = setup();
+    tx.assessment.findFirst.mockResolvedValueOnce({
+      id: 'assessment',
+      requirementRows: [
+        {
+          id: 'row',
+          obligation: {
+            id: 'system-obligation',
+            status: 'NOT_STARTED',
+            obligation: {
+              catalogueId: 'EU-AIA-ART-50-TRANSPARENCY',
+              catalogue: {
+                id: 'EU-AIA-ART-50-TRANSPARENCY',
+                text: 'Transparency notice for affected people',
+                aiActArticle: 'Art. 50',
+                trustworthinessPrinciple: 'TRANSPARENCY_AND_LOGGING',
+                architectureElements: [
+                  'User interface notice',
+                  'Interaction logging',
+                ],
+                verificationMethod: 'Inspect the user notice',
+              },
+            },
+          },
+        },
+      ],
+      changeLog: [],
+    } as never);
+
+    const result = await service.getWorkspace('project', 'owner', 'company');
+    expect(result?.requirementRows[0].obligation.obligation).toEqual(
+      expect.objectContaining({
+        catalogueId: 'EU-AIA-ART-50-TRANSPARENCY',
+        title: 'Transparency notice for affected people',
+        aiActArticle: 'Art. 50',
+        trustworthinessPrinciple: 'TRANSPARENCY_AND_LOGGING',
+        architectureElements: ['User interface notice', 'Interaction logging'],
+        verificationMethod: 'Inspect the user notice',
+      }),
+    );
   });
   it.each(['finding', 'obligation', 'createAction', 'updateAction'])(
     'rejects member mutation of %s',

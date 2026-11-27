@@ -24,7 +24,7 @@ function contentHash(value: unknown) {
 }
 
 async function main() {
-  const version = '2026.03.v2';
+  const version = '2026.10.v3';
   const questionPack = loadJson('eu-ai-act-v2.questions.json');
   const rulePack = loadJson('eu-ai-act-v2.rules.json');
   const legalRegistry = loadJson('eu-ai-act-v2.legal.json');
@@ -59,7 +59,7 @@ async function main() {
       status: 'PUBLISHED',
       publishedAt: new Date(),
       changelog:
-        'Generic compliance questionnaire pack for simple company checks.',
+        'EU AI Act scope, prohibited-practice, high-risk, GPAI, and readiness questionnaire.',
       questionPack,
       rulePack,
       legalRegistry,
@@ -75,7 +75,7 @@ async function main() {
       status: 'PUBLISHED',
       publishedAt: existingPack?.publishedAt ?? new Date(),
       changelog:
-        'Generic compliance questionnaire pack for simple company checks.',
+        'EU AI Act scope, prohibited-practice, high-risk, GPAI, and readiness questionnaire.',
       questionPack,
       rulePack,
       legalRegistry,

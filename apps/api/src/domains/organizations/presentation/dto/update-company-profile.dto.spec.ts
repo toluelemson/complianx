@@ -22,12 +22,24 @@ describe('UpdateCompanyProfileDto', () => {
     ).resolves.toBeDefined();
   });
 
+  it('accepts the complete EU AI Act organization profile', async () => {
+    await expect(
+      validate({
+        organizationName: 'Example AI OÜ',
+        registrationNumber: '12345678',
+        country: 'Estonia',
+        role: 'provider',
+      }),
+    ).resolves.toBeDefined();
+  });
+
   it.each([
     { website: 'invalid' },
     { website: 'example.com' },
     { website: 123 },
     { contactEmail: 'invalid' },
     { contactEmail: [] },
+    { role: 'importer' },
   ])('rejects invalid nonempty input: %j', async (body) => {
     await expect(validate(body)).rejects.toBeInstanceOf(BadRequestException);
   });

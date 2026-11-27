@@ -60,3 +60,32 @@ authorization, loading, error, and navigation behavior.
    state.
 5. Feature usage and error telemetry show no regression before removing an
    adapter route.
+
+## Implemented workflow
+
+The dashboard and project overview use the same tenant-scoped workflow
+projection. A project detail request uses
+`GET /api/projects/:id/workflow-summary`. The project list includes the same
+summary per system. Both read persisted decisions, current supporting
+evidence, open findings and recorded package history.
+
+Classification and review controls are shared by the guided pages and the
+documentation editor. The requirements page now owns requirement planning,
+approval and evidence linking. `/ai-systems/:projectId` redirects to the
+overview, and the old project documents URL redirects to Report. Both
+redirects preserve query parameters and fragments.
+
+The documentation editor still serves `/compliance-workspace` and section
+bookmarks. It contains section forms, templates, suggestions, reminders and
+document generation. Report links to the editor for document preparation.
+
+Profile edits and evidence link changes append audit events. The project
+summary uses recorded profile, asset, lifecycle and pack changes to surface
+reassessment. Evidence expiry and review changes affect current requirement
+verification. Approved package archives remain available for inspection.
+
+Deploy the API, client and shared contracts together. Apply the four existing
+traceability migrations in order using `prisma migrate deploy`. The workflow
+summary and audit changes add no new migration. An application rollback keeps
+the additive schema and existing audit records. Exported files and manifests
+remain tied to their original snapshots.

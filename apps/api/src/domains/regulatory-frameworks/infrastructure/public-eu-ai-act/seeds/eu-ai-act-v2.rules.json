@@ -1,6 +1,6 @@
 {
   "packKey": "eu-ai-act",
-  "version": "2026.03.v2",
+  "version": "2026.10.v3",
   "rules": [
     {
       "id": "quick-scope",

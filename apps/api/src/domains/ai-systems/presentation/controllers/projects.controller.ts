@@ -82,6 +82,21 @@ export class ProjectsController {
     );
   }
 
+  @Get(':id/workflow-summary')
+  @ApiOperation({
+    summary: 'Get the current workflow summary for an AI system',
+  })
+  getWorkflowSummary(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.projectsService.getWorkflowSummary(
+      id,
+      req.user.userId,
+      this.resolveCompanyId(req),
+    );
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,

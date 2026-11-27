@@ -252,10 +252,10 @@ export default function SubmitSystemPage() {
                   />
                 </label>
 
-                <details className="rounded-xl border border-slate-200 px-4 py-3">
-                  <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                <section className="rounded-xl border border-slate-200 px-4 py-3">
+                  <h2 className="text-sm font-medium text-slate-700">
                     Add package or delivery preferences (optional)
-                  </summary>
+                  </h2>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <label className="block text-sm font-medium text-slate-700">
                       Package interest
@@ -283,7 +283,7 @@ export default function SubmitSystemPage() {
                       </Select>
                     </label>
                   </div>
-                </details>
+                </section>
 
                 <Button
                   type="submit"

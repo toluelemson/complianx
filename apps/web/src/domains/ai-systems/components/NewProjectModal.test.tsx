@@ -7,13 +7,13 @@ describe('NewProjectModal', () => {
   it('keeps the first step focused on the required system name', async () => {
     const onSubmit = vi.fn();
 
-    render(
-      <NewProjectModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />,
-    );
+    render(<NewProjectModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />);
 
     expect(screen.getByText('Required')).toBeVisible();
-    expect(screen.getByText('Add context now (optional)')).toBeVisible();
-    expect(screen.queryByLabelText('Intended use')).not.toBeVisible();
+    expect(
+      screen.getByText(/add intended use, owners, and deployment details/i),
+    ).toBeVisible();
+    expect(screen.queryByLabelText('Intended use')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole('textbox', { name: /system name/i }), {
       target: { value: 'Harbor Assist' },

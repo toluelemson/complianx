@@ -14,56 +14,58 @@ datasource db {
 }
 
 model User {
-  id                              String                 @id @default(uuid())
-  email                           String                 @unique
+  id                              String                  @id @default(uuid())
+  email                           String                  @unique
   passwordHash                    String
-  emailVerified                   Boolean                @default(false)
-  emailVerificationToken          String?                @unique
+  emailVerified                   Boolean                 @default(false)
+  emailVerificationToken          String?                 @unique
   emailVerificationTokenExpiresAt DateTime?
-  passwordResetToken              String?                @unique
+  passwordResetToken              String?                 @unique
   passwordResetTokenExpiresAt     DateTime?
   firstName                       String?
   lastName                        String?
   jobTitle                        String?
   phone                           String?
   timezone                        String?
-  preferredLocale                 String                 @default("en")
-  createdAt                       DateTime               @default(now())
-  updatedAt                       DateTime               @updatedAt
-  role                            Role                   @default(USER)
+  preferredLocale                 String                  @default("en")
+  createdAt                       DateTime                @default(now())
+  updatedAt                       DateTime                @updatedAt
+  role                            Role                    @default(USER)
   companyId                       String?
-  company                         Company?               @relation(fields: [companyId], references: [id])
+  company                         Company?                @relation(fields: [companyId], references: [id])
   defaultCompanyId                String? // keep for backward compatibility; will be deprecated
   companies                       UserCompany[]
   projects                        Project[]
-  editedSections                  Section[]              @relation("SectionLastEditor")
+  editedSections                  Section[]               @relation("SectionLastEditor")
   sectionComments                 SectionComment[]
-  resolvedComments                SectionComment[]       @relation("CommentResolver")
+  resolvedComments                SectionComment[]        @relation("CommentResolver")
   sectionTemplates                SectionTemplate[]
   reminders                       Reminder[]
   projectStatusEvents             ProjectStatusEvent[]
   sectionStatusEvents             SectionStatusEvent[]
   suggestionFeedback              SuggestionFeedback[]
-  invitationsSent                 Invitation[]           @relation("UserInvitations")
-  uploadedArtifacts               SectionArtifact[]      @relation("ArtifactUploader")
-  reviewedArtifacts               SectionArtifact[]      @relation("ArtifactReviewer")
-  reviewerForProjects             Project[]              @relation("ProjectReviewer")
-  approverForProjects             Project[]              @relation("ProjectApprover")
+  invitationsSent                 Invitation[]            @relation("UserInvitations")
+  uploadedArtifacts               SectionArtifact[]       @relation("ArtifactUploader")
+  reviewedArtifacts               SectionArtifact[]       @relation("ArtifactReviewer")
+  reviewerForProjects             Project[]               @relation("ProjectReviewer")
+  approverForProjects             Project[]               @relation("ProjectApprover")
   notifications                   Notification[]
-  assessmentsCreated              Assessment[]           @relation("AssessmentCreator")
-  answeredAssessments             AssessmentAnswer[]     @relation("AssessmentAnswerer")
-  ownedObligations                AiSystemObligation[]   @relation("ObligationOwner")
-  ownedComplianceActions          ComplianceAction[]     @relation("ActionOwner")
-  evidenceLinks                   ObligationEvidence[]   @relation("EvidenceLinker")
-  generatedReports                ReadinessReport[]      @relation("ReportGenerator")
-  auditEvents                     AuditEvent[]           @relation("AuditActor")
-  evaluatedClassifications        ClassificationResult[] @relation("ClassificationEvaluator")
-  ownedFindings                   Finding[]              @relation("FindingOwner")
-  generatedPackages               CompliancePackage[]    @relation("PackageGenerator")
+  assessmentsCreated              Assessment[]            @relation("AssessmentCreator")
+  answeredAssessments             AssessmentAnswer[]      @relation("AssessmentAnswerer")
+  ownedObligations                AiSystemObligation[]    @relation("ObligationOwner")
+  ownedComplianceActions          ComplianceAction[]      @relation("ActionOwner")
+  evidenceLinks                   ObligationEvidence[]    @relation("EvidenceLinker")
+  generatedReports                ReadinessReport[]       @relation("ReportGenerator")
+  auditEvents                     AuditEvent[]            @relation("AuditActor")
+  evaluatedClassifications        ClassificationResult[]  @relation("ClassificationEvaluator")
+  ownedFindings                   Finding[]               @relation("FindingOwner")
+  generatedPackages               CompliancePackage[]     @relation("PackageGenerator")
+  lifecycleEventsCreated          SystemLifecycleEvent[]  @relation("LifecycleEventCreator")
+  stakeholdersCreated             ComplianceStakeholder[] @relation("StakeholderCreator")
 }
 
 model Project {
-  id                       String                @id @default(uuid())
+  id                       String                  @id @default(uuid())
   name                     String
   industry                 String?
   riskLevel                String? // Legacy value; classification now derives risk from intake facts.
@@ -85,19 +87,19 @@ model Project {
   useCaseIndicators        Json?
   sourcePublicResultId     String?
   dueDate                  DateTime?
-  status                   ProjectStatus         @default(DRAFT)
-  workflowStatus           ProjectWorkflowStatus @default(DRAFT)
-  workflowVersion          Int                   @default(0)
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
+  status                   ProjectStatus           @default(DRAFT)
+  workflowStatus           ProjectWorkflowStatus   @default(DRAFT)
+  workflowVersion          Int                     @default(0)
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
   ownerId                  String
-  owner                    User                  @relation(fields: [ownerId], references: [id])
+  owner                    User                    @relation(fields: [ownerId], references: [id])
   companyId                String?
-  company                  Company?              @relation(fields: [companyId], references: [id])
+  company                  Company?                @relation(fields: [companyId], references: [id])
   reviewerId               String?
-  reviewer                 User?                 @relation("ProjectReviewer", fields: [reviewerId], references: [id])
+  reviewer                 User?                   @relation("ProjectReviewer", fields: [reviewerId], references: [id])
   approverId               String?
-  approver                 User?                 @relation("ProjectApprover", fields: [approverId], references: [id])
+  approver                 User?                   @relation("ProjectApprover", fields: [approverId], references: [id])
   sections                 Section[]
   documents                Document[]
   artifacts                SectionArtifact[]
@@ -111,6 +113,10 @@ model Project {
   auditEvents              AuditEvent[]
   findings                 Finding[]
   compliancePackages       CompliancePackage[]
+  systemAssets             SystemAsset[]
+  documentationItems       DocumentationItem[]
+  lifecycleEvents          SystemLifecycleEvent[]
+  complianceStakeholders   ComplianceStakeholder[]
 }
 
 enum LifecycleStage {
@@ -246,6 +252,9 @@ model Company {
   industry             String?
   address              String?
   contactEmail         String?
+  registrationNumber   String?
+  country              String?
+  aiActRole            CompanyAiActRole?
   createdAt            DateTime                   @default(now())
   updatedAt            DateTime                   @default(now()) @updatedAt
   users                User[]
@@ -263,6 +272,11 @@ model Company {
   auditEvents          AuditEvent[]
   findings             Finding[]
   compliancePackages   CompliancePackage[]
+}
+
+enum CompanyAiActRole {
+  PROVIDER
+  DEPLOYER
 }
 
 enum Plan {
@@ -513,21 +527,62 @@ model AuditEvent {
 }
 
 model Assessment {
-  id              String                 @id @default(uuid())
+  id              String                     @id @default(uuid())
   projectId       String
-  project         Project                @relation(fields: [projectId], references: [id])
+  project         Project                    @relation(fields: [projectId], references: [id])
   packVersionId   String
-  packVersion     CompliancePackVersion  @relation(fields: [packVersionId], references: [id])
+  packVersion     CompliancePackVersion      @relation(fields: [packVersionId], references: [id])
   createdById     String
-  createdBy       User                   @relation("AssessmentCreator", fields: [createdById], references: [id])
-  status          AssessmentStatus       @default(DRAFT)
+  createdBy       User                       @relation("AssessmentCreator", fields: [createdById], references: [id])
+  status          AssessmentStatus           @default(DRAFT)
+  weightingChoice String                     @default("STANDARD")
+  targetBand      String                     @default("READY")
+  versionNumber   Int                        @default(1)
+  assessmentDate  DateTime                   @default(now())
+  assessorType    AssessorType               @default(SELF_ASSESSMENT)
+  assessorName    String?
+  coverageScore   Float?
   answers         Json
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
   classifications ClassificationResult[]
   answersAudit    AssessmentAnswer[]
+  requirementRows AssessmentRequirementRow[]
+  changeLog       AssessmentChangeLog[]
 
   @@index([projectId, createdAt])
+}
+
+model AssessmentRequirementRow {
+  id            String             @id @default(uuid())
+  assessmentId  String
+  assessment    Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  obligationId  String
+  obligation    AiSystemObligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  requirementId String
+  score         Float?
+  state         String
+  weight        Float              @default(1)
+  rationale     String?
+  evidenceLinks Json?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([assessmentId, obligationId])
+  @@index([assessmentId, state])
+}
+
+model AssessmentChangeLog {
+  id            String     @id @default(uuid())
+  assessmentId  String
+  assessment    Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  action        String
+  snapshot      Json?
+  actorId       String?
+  createdAt     DateTime   @default(now())
+
+  @@index([assessmentId, createdAt])
 }
 
 model AssessmentAnswer {
@@ -582,40 +637,72 @@ enum ClassificationReviewStatus {
 }
 
 model Obligation {
-  id             String                @id @default(uuid())
-  packVersionId  String
-  packVersion    CompliancePackVersion @relation(fields: [packVersionId], references: [id])
-  key            String
-  title          String
-  description    String?
-  legalReference String?
-  createdAt      DateTime              @default(now())
-  systems        AiSystemObligation[]
+  id                       String                   @id @default(uuid())
+  packVersionId            String
+  packVersion              CompliancePackVersion    @relation(fields: [packVersionId], references: [id])
+  key                      String
+  catalogueId              String
+  catalogue                RequirementCatalogueItem @relation(fields: [catalogueId], references: [id], onDelete: Restrict)
+  title                    String
+  description              String?
+  legalReference           String?
+  trustworthinessPrinciple TrustworthinessPrinciple
+  aiActArticle             String?
+  architectureElements     Json?
+  verificationMethod       String?
+  createdAt                DateTime                 @default(now())
+  systems                  AiSystemObligation[]
 
   @@unique([packVersionId, key])
+  @@unique([packVersionId, catalogueId])
   @@index([packVersionId, createdAt])
 }
 
+model RequirementCatalogueItem {
+  id                       String                   @id
+  text                     String
+  aiActArticle             String
+  trustworthinessPrinciple TrustworthinessPrinciple
+  architectureElements     Json
+  verificationMethod       String
+  createdAt                DateTime                 @default(now())
+  obligations              Obligation[]
+}
+
+enum TrustworthinessPrinciple {
+  RISK_MANAGEMENT
+  DATA_AND_MODEL_GOVERNANCE
+  TRANSPARENCY_AND_LOGGING
+  HUMAN_OVERSIGHT
+  ACCURACY_AND_ROBUSTNESS
+  CYBERSECURITY
+  LIFECYCLE_MONITORING
+}
+
 model AiSystemObligation {
-  id                     String                  @id @default(uuid())
+  id                     String                     @id @default(uuid())
   projectId              String
-  project                Project                 @relation(fields: [projectId], references: [id])
+  project                Project                    @relation(fields: [projectId], references: [id])
   obligationId           String
-  obligation             Obligation              @relation(fields: [obligationId], references: [id])
+  obligation             Obligation                 @relation(fields: [obligationId], references: [id])
   classificationResultId String?
-  classificationResult   ClassificationResult?   @relation(fields: [classificationResultId], references: [id])
+  classificationResult   ClassificationResult?      @relation(fields: [classificationResultId], references: [id])
   applicabilityReason    String?
-  status                 ObligationStatus        @default(NOT_STARTED)
-  priority               ObligationPriority      @default(MEDIUM)
-  approvalState          ObligationApprovalState @default(DRAFT)
+  status                 ObligationStatus           @default(NOT_STARTED)
+  priority               ObligationPriority         @default(MEDIUM)
+  approvalState          ObligationApprovalState    @default(DRAFT)
   ownerId                String?
-  owner                  User?                   @relation("ObligationOwner", fields: [ownerId], references: [id])
+  owner                  User?                      @relation("ObligationOwner", fields: [ownerId], references: [id])
   dueAt                  DateTime?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
   actions                ComplianceAction[]
   evidence               ObligationEvidence[]
   findings               Finding[]
+  assessmentRows         AssessmentRequirementRow[]
+  assetLinks             RequirementAsset[]
+  technicalMeasures      TechnicalMeasure[]
+  documentationItems     DocumentationItem[]
 
   @@unique([projectId, obligationId])
   @@index([projectId, status])
@@ -778,7 +865,152 @@ enum ActionStatus {
 enum AssessmentStatus {
   DRAFT
   CLASSIFIED
+  FINALIZED
   ARCHIVED
+}
+
+enum AssessorType {
+  SELF_ASSESSMENT
+  INTERNAL_AUDIT
+  NOTIFIED_BODY
+  COMPETENT_AUTHORITY
+}
+
+enum SystemAssetType {
+  MODEL
+  DATASET
+  SOFTWARE_COMPONENT
+  INFRASTRUCTURE
+  USER_INTERFACE
+  HUMAN_PROCESS
+  OTHER
+}
+
+enum TechnicalMeasureStatus {
+  PLANNED
+  PARTIAL
+  COMPLETE
+}
+
+enum DocumentationItemType {
+  GENERAL_SYSTEM_DESCRIPTION
+  DETAILED_SYSTEM_ELEMENTS
+  DESIGN_AND_DEVELOPMENT_PROCEDURES
+  RISK_MANAGEMENT_DOCUMENTATION
+  DATA_GOVERNANCE_DOCUMENTATION
+  MONITORING_AND_TESTING
+  CHANGES_AND_UPDATES
+  STANDARDS_APPLIED
+  EU_DECLARATION_OF_CONFORMITY
+  INSTRUCTIONS_FOR_USE
+  OTHER
+}
+
+enum ComplianceStakeholderRole {
+  PROVIDER
+  DEPLOYER
+  IMPORTER
+  DISTRIBUTOR
+  AUTHORIZED_REPRESENTATIVE
+  NOTIFIED_BODY
+  COMPETENT_AUTHORITY
+  EU_AI_OFFICE
+}
+
+model SystemAsset {
+  id                 String              @id @default(uuid())
+  projectId          String
+  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name               String
+  description        String?
+  assetType          SystemAssetType
+  lifecycleStage     LifecycleStage?
+  version            String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  requirementLinks   RequirementAsset[]
+  documentationItems DocumentationItem[]
+
+  @@unique([projectId, name])
+  @@index([projectId, assetType])
+}
+
+model RequirementAsset {
+  aiSystemObligationId String
+  obligation           AiSystemObligation @relation(fields: [aiSystemObligationId], references: [id], onDelete: Cascade)
+  systemAssetId        String
+  systemAsset          SystemAsset        @relation(fields: [systemAssetId], references: [id], onDelete: Cascade)
+  createdAt            DateTime           @default(now())
+
+  @@id([aiSystemObligationId, systemAssetId])
+  @@index([systemAssetId])
+}
+
+model TechnicalMeasure {
+  id                   String                 @id @default(uuid())
+  aiSystemObligationId String
+  obligation           AiSystemObligation     @relation(fields: [aiSystemObligationId], references: [id], onDelete: Cascade)
+  title                String
+  description          String?
+  status               TechnicalMeasureStatus @default(PLANNED)
+  verificationNotes    String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@index([aiSystemObligationId, status])
+}
+
+model DocumentationItem {
+  id                   String                @id @default(uuid())
+  projectId            String
+  project              Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  systemAssetId        String?
+  systemAsset          SystemAsset?          @relation(fields: [systemAssetId], references: [id], onDelete: SetNull)
+  aiSystemObligationId String?
+  obligation           AiSystemObligation?   @relation(fields: [aiSystemObligationId], references: [id], onDelete: SetNull)
+  documentType         DocumentationItemType
+  title                String
+  description          String?
+  referenceUrl         String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([projectId, documentType])
+  @@index([systemAssetId])
+  @@index([aiSystemObligationId])
+}
+
+model SystemLifecycleEvent {
+  id          String         @id @default(uuid())
+  projectId   String
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage       LifecycleStage
+  happenedAt  DateTime
+  notes       String?
+  createdById String
+  createdBy   User           @relation("LifecycleEventCreator", fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+
+  @@index([projectId, happenedAt])
+}
+
+model ComplianceStakeholder {
+  id                 String                    @id @default(uuid())
+  projectId          String
+  project            Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role               ComplianceStakeholderRole
+  name               String
+  registrationNumber String?
+  country            String?
+  contactEmail       String?
+  notes              String?
+  createdById        String
+  createdBy          User                      @relation("StakeholderCreator", fields: [createdById], references: [id])
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@unique([projectId, role, name])
+  @@index([projectId, role])
 }
 
 model CompliancePackVersion {

@@ -13,6 +13,11 @@ import archiver from 'archiver';
 import { basename } from 'node:path';
 import { promises as fs } from 'node:fs';
 import { ProjectsService } from '../../../ai-systems/application/projects/projects.service';
+import {
+  assessmentReassessmentReasons,
+  hasVerifiedSupportingEvidence,
+  materialAssessmentAuditFilter,
+} from '../../../ai-systems/application/projects/workflow-freshness';
 import { PdfService } from '../../../../platform/pdf/pdf.service';
 import { ReadinessService } from '../readiness/readiness.service';
 import { ReportCompositionService } from '../report-generation/report-composition.service';
@@ -144,12 +149,38 @@ export class ReadinessReportService {
               include: {
                 company: { select: { id: true, name: true } },
                 documents: true,
+                systemAssets: true,
+                lifecycleEvents: {
+                  include: {
+                    createdBy: { select: { id: true, email: true } },
+                  },
+                  orderBy: { happenedAt: 'asc' },
+                },
+                complianceStakeholders: {
+                  include: {
+                    createdBy: { select: { id: true, email: true } },
+                  },
+                  orderBy: [{ role: 'asc' }, { name: 'asc' }],
+                },
+                documentationItems: {
+                  include: {
+                    systemAsset: { select: { id: true, name: true } },
+                  },
+                },
                 statusEvents: { orderBy: { createdAt: 'asc' } },
+                auditEvents: {
+                  where: { companyId, OR: materialAssessmentAuditFilter },
+                  orderBy: { createdAt: 'desc' },
+                  take: 1,
+                  select: { createdAt: true },
+                },
                 assessments: {
                   orderBy: { createdAt: 'desc' },
                   take: 1,
                   include: {
                     packVersion: true,
+                    requirementRows: true,
+                    changeLog: { orderBy: { createdAt: 'asc' } },
                     classifications: {
                       orderBy: { createdAt: 'desc' },
                       take: 1,
@@ -158,9 +189,12 @@ export class ReadinessReportService {
                 },
                 obligations: {
                   include: {
-                    obligation: true,
+                    obligation: { include: { catalogue: true } },
                     evidence: { include: { artifact: true, document: true } },
                     actions: true,
+                    assetLinks: true,
+                    technicalMeasures: true,
+                    documentationItems: true,
                   },
                 },
                 findings: { include: { actions: true } },
@@ -169,7 +203,20 @@ export class ReadinessReportService {
             if (!project) throw new NotFoundException('AI System not found');
             const assessment = project.assessments[0];
             const classification = assessment?.classifications[0];
+            const currentObligations = project.obligations.filter(
+              (item) =>
+                !item.classificationResultId ||
+                item.classificationResultId === classification?.id,
+            );
             const gaps: string[] = [];
+            if (!assessment || assessment.status !== 'FINALIZED')
+              gaps.push('Assessment traceability has not been finalized');
+            gaps.push(
+              ...assessmentReassessmentReasons(
+                assessment,
+                project.auditEvents[0]?.createdAt,
+              ),
+            );
             if (!classification || classification.reviewStatus === 'PENDING')
               gaps.push('Classification requires human review');
             else if (!classification.reviewerId || !classification.reviewedAt)
@@ -199,15 +246,13 @@ export class ReadinessReportService {
                 : undefined;
             if (
               !Array.isArray(expectedObligations) ||
-              project.obligations.filter(
+              currentObligations.filter(
                 (item) => item.classificationResultId === classification?.id,
               ).length < expectedObligations.length
             )
               gaps.push(
                 'Classification applicability has not been fully materialized',
               );
-            if (assessment?.status !== 'CLASSIFIED')
-              gaps.push('Assessment answers require classification');
             if (
               Array.isArray(classification?.missingInformation) &&
               classification.missingInformation.length
@@ -245,7 +290,7 @@ export class ReadinessReportService {
                 projectId,
                 companyId,
                 entityType: 'AiSystemObligation',
-                entityId: { in: project.obligations.map((item) => item.id) },
+                entityId: { in: currentObligations.map((item) => item.id) },
                 action: 'UPDATED',
               },
               select: {
@@ -268,7 +313,7 @@ export class ReadinessReportService {
                 })
                 .map((event) => event.entityId),
             );
-            for (const obligation of project.obligations) {
+            for (const obligation of currentObligations) {
               if (
                 obligation.approvalState !== 'APPROVED' ||
                 !['COMPLETE', 'NOT_APPLICABLE'].includes(obligation.status)
@@ -282,20 +327,8 @@ export class ReadinessReportService {
                 );
               if (
                 obligation.status !== 'NOT_APPLICABLE' &&
-                !obligation.evidence.some(
-                  (link) =>
-                    ['SUPPORTING', 'PRIMARY'].includes(link.linkType) &&
-                    ((link.artifact?.projectId === projectId &&
-                      link.artifact.status === 'APPROVED' &&
-                      Boolean(link.artifact.reviewedById) &&
-                      Boolean(link.artifact.reviewedAt) &&
-                      (!link.artifact.expiresAt ||
-                        link.artifact.expiresAt > now) &&
-                      (!link.artifact.validFrom ||
-                        link.artifact.validFrom <= now)) ||
-                      (link.document?.projectId === projectId &&
-                        link.document.approvalState === 'APPROVED' &&
-                        link.document.lifecycleStatus === 'CURRENT')),
+                !obligation.evidence.some((link) =>
+                  hasVerifiedSupportingEvidence(link, projectId, now),
                 )
               )
                 gaps.push(
@@ -352,7 +385,7 @@ export class ReadinessReportService {
                 `documents/${document.id}.pdf`,
               );
             const captured = new Set<string>();
-            for (const obligation of project.obligations)
+            for (const obligation of currentObligations)
               for (const link of obligation.evidence) {
                 if (
                   link.artifact &&
@@ -379,7 +412,7 @@ export class ReadinessReportService {
               _max: { version: true },
             });
             const manifest = {
-              manifestVersion: 'neuraldocx-package-1.1.0',
+              manifestVersion: 'neuraldocx-package-1.3.0',
               integrity: {
                 hashAlgorithm: MANIFEST_HASH_ALGORITHM,
                 canonicalization: MANIFEST_CANONICALIZATION,
@@ -413,14 +446,42 @@ export class ReadinessReportService {
                     snapshot: classification.resultSnapshot,
                   }
                 : null,
-              obligations: project.obligations.map((item) => ({
+              assessment: assessment
+                ? {
+                    id: assessment.id,
+                    date: assessment.assessmentDate,
+                    assessorType: assessment.assessorType,
+                    assessorName: assessment.assessorName,
+                    coverageScore: assessment.coverageScore,
+                    versionNumber: assessment.versionNumber,
+                    status: assessment.status,
+                    requirementRows: assessment.requirementRows,
+                    changeLog: assessment.changeLog,
+                  }
+                : null,
+              systemAssets: project.systemAssets,
+              lifecycleHistory: project.lifecycleEvents,
+              complianceStakeholders: project.complianceStakeholders,
+              obligations: currentObligations.map((item) => ({
                 id: item.id,
                 key: item.obligation.key,
-                title: item.obligation.title,
-                legalReference: item.obligation.legalReference,
+                requirementId: item.obligation.catalogue.id,
+                title: item.obligation.catalogue.text,
+                legalReference: item.obligation.catalogue.aiActArticle,
+                trustworthinessPrinciple:
+                  item.obligation.catalogue.trustworthinessPrinciple,
+                architectureElements:
+                  item.obligation.catalogue.architectureElements,
+                verificationMethod:
+                  item.obligation.catalogue.verificationMethod,
                 status: item.status,
                 approvalState: item.approvalState,
                 applicabilityReason: item.applicabilityReason,
+                systemAssetIds: item.assetLinks.map(
+                  (link) => link.systemAssetId,
+                ),
+                technicalMeasures: item.technicalMeasures,
+                documentationItems: item.documentationItems,
                 evidence: item.evidence.map((link) => ({
                   id: link.id,
                   linkType: link.linkType,
@@ -434,6 +495,7 @@ export class ReadinessReportService {
                 actions: item.actions,
               })),
               findings: project.findings,
+              documentationItems: project.documentationItems,
               documents: project.documents.map((document) => ({
                 id: document.id,
                 type: document.type,

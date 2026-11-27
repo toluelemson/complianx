@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 import {
   createProjectFinding,
   listProjectFindings,
@@ -75,10 +76,10 @@ export default function ProjectFindingsPage() {
           <h1 className="mt-3 text-2xl font-semibold text-slate-900">
             Findings &amp; actions
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Track problems, who owns them, and what needs fixing. Open work
-            stays visible until it is reviewed.
-          </p>
+          <HelpTooltip className="mt-2" label="About findings and actions">
+            Track problems, ownership, and what needs fixing. Open work stays
+            visible until it is reviewed.
+          </HelpTooltip>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">
@@ -105,10 +106,8 @@ export default function ProjectFindingsPage() {
                 {create.isPending ? 'Adding…' : 'Add problem'}
               </button>
             </div>
-            <details className="text-sm text-slate-600">
-              <summary className="cursor-pointer">
-                Link a requirement (optional)
-              </summary>
+            <label className="block text-sm text-slate-600">
+              Link a requirement (optional)
               <select
                 aria-label="Related obligation"
                 value={obligationId}
@@ -122,7 +121,7 @@ export default function ProjectFindingsPage() {
                   </option>
                 ))}
               </select>
-            </details>
+            </label>
           </div>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

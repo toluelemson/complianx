@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsIn,
   IsOptional,
   IsString,
   IsUrl,
@@ -9,6 +10,11 @@ import {
 import { Transform } from 'class-transformer';
 
 export class UpdateCompanyProfileDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  organizationName?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -41,4 +47,18 @@ export class UpdateCompanyProfileDto {
   @IsEmail()
   @MaxLength(320)
   contactEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  registrationNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  country?: string;
+
+  @IsOptional()
+  @IsIn(['provider', 'deployer'])
+  role?: 'provider' | 'deployer';
 }

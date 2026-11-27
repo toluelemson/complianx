@@ -9,6 +9,7 @@
 | What is unresolved? | `Finding`, action, rejected/expired/pending evidence | obligations/workflow | Comply and overview | Next action links to the owning task. |
 | Who approved or requested changes? | review/workflow event and approval state | workflow/review | Review | Actor and timestamp are audit-derived. |
 | What did the report represent? | readiness report, generated document, `CompliancePackage` | reporting | Report/package | Package can be verified as an immutable snapshot. |
+| Do current changes require follow-up? | profile, asset and lifecycle audit events, pack supersession, current evidence decisions and expiry | workflow summary and package gate | Overview, Assess, Report | A material change can block a new export while the saved archive continues to verify. |
 
 ## Gaps to validate before changing schema
 

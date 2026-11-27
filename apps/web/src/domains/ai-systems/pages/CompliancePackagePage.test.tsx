@@ -20,6 +20,13 @@ vi.mock('@/app/layout/AppShell', () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock('../api', () => ({
+  getProjectWorkflowSummary: vi
+    .fn()
+    .mockResolvedValue({
+      packageStatus: 'NONE',
+      applicableRequirements: 0,
+      verifiedRequirements: 0,
+    }),
   getProject: vi.fn().mockResolvedValue({
     name: 'Project',
     sections: [],

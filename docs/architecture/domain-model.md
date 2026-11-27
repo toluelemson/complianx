@@ -14,10 +14,15 @@ erDiagram
   PROJECT ||--o{ AI_SYSTEM_OBLIGATION : maps
   AI_SYSTEM_OBLIGATION ||--o{ COMPLIANCE_ACTION : requires
   AI_SYSTEM_OBLIGATION ||--o{ OBLIGATION_EVIDENCE : supported_by
-  OBLIGATION_EVIDENCE }o--|| DOCUMENT : references
+  OBLIGATION_EVIDENCE }o--o| DOCUMENT : references
+  OBLIGATION_EVIDENCE }o--o| SECTION_ARTIFACT : references
   AI_SYSTEM_OBLIGATION ||--o{ FINDING : exposes
   PROJECT ||--o{ DOCUMENTATION_ITEM : documents
   PROJECT ||--o{ COMPLIANCE_PACKAGE : snapshots
+  PROJECT ||--o{ SYSTEM_ASSET : registers
+  SYSTEM_ASSET ||--o{ REQUIREMENT_ASSET : implements
+  AI_SYSTEM_OBLIGATION ||--o{ REQUIREMENT_ASSET : maps
+  AI_SYSTEM_OBLIGATION ||--o{ TECHNICAL_MEASURE : documents
 ```
 
 ## Ownership map
@@ -50,6 +55,17 @@ direction is:
 
 `Project → Assessment/Classification → Obligation → Action/Evidence/Finding → Review → Report/Package`.
 
-P2 work should fill observed gaps with durable relation or audit records, not a
-second “workflow state” table. The existing traceability-model migration work
-should be reconciled with this model before adding another schema change.
+System assets, asset-to-requirement mappings, technical measures, documentary
+evidence and assessments have persisted relationships. A requirement catalogue
+entry carries its article reference and trustworthiness principle.
+Engineering requirements remain represented through catalogue descriptions,
+architecture elements and linked work. Neuraldocx does not maintain a separate
+engineering requirements registry.
+
+The correspondence above is an implementation mapping to the concepts in the
+publisher's abstract. [Ekeh et al., BIR 2026 proceedings](https://link.springer.com/chapter/10.1007/978-3-032-38498-0_10).
+
+Project status and package freshness are deliberately distinct. Audit events
+record material changes and decision history. The workflow summary evaluates
+those facts at read time and uses the same evidence checks as the package gate
+for current supporting proof.

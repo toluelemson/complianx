@@ -1,12 +1,7 @@
 // AI systems domain route.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { AppShell } from '@/app/layout/AppShell';
@@ -23,32 +18,21 @@ import {
   getProjectDocuments,
   getProjectSections,
   listProjectReminders,
-  listProjectObligations,
-  linkObligationEvidence,
-  listObligationEvidence,
-  listProjectReviewers,
-  updateProjectObligation,
   listTemplates,
-  reviewClassification,
-  runProjectWorkflowAction,
   saveProjectSection,
   setCommentResolution,
   sendSuggestionFeedback,
   suggestSection,
   updateProjectReminder,
   updateTemplate,
-  unlinkObligationEvidence,
 } from '@/domains/ai-systems/api';
-import type { ObligationEvidenceLink } from '@/domains/ai-systems/api';
 import type {
   DocumentItem,
   ArtifactStatus,
   FormValues,
   GenerationReadiness,
   ProjectDetail,
-  ProjectWorkflowStatus,
   ReminderItem,
-  ReviewerItem,
   SectionComment,
   SectionArtifactItem,
   SectionWithMeta,
@@ -67,19 +51,14 @@ import {
 } from '@/domains/ai-systems/constants/documents';
 import { DocumentPreviewModal } from '@/domains/evidence/components/DocumentPreviewModal';
 import TemplateLibraryModal from '@/domains/reports/components/TemplateLibraryModal';
-import { ReviewApprovalPanel } from '@/domains/workflows/components/ReviewApprovalPanel';
+import { ProjectReviewControls } from '../components/ProjectReviewControls';
+import { ProjectClassificationReview } from '../components/ProjectClassificationReview';
 import { WizardSidebar } from '../components/WizardSidebar';
 import { ProjectPanel } from '../components/ProjectPanel';
 import { useProjectAutosave } from '../hooks/useProjectAutosave';
-import { useProjectWorkflow } from '../hooks/useProjectWorkflow';
 import { useProjectEvidence } from '../hooks/useProjectEvidence';
 import { useProjectDocuments } from '../hooks/useProjectDocuments';
-import {
-  canApproveProject as canApproveProjectForRole,
-  canRequestProjectChanges as canRequestProjectChangesForRole,
-  canStartProjectReview as canStartProjectReviewForRole,
-  isValidApprovalSignature,
-} from '../lib/project-page-logic';
+import { hasFieldValue } from '../lib/project-page-logic';
 
 const monetizationEnabled =
   import.meta.env.VITE_MONETIZATION_ENABLED !== 'false';
@@ -103,22 +82,6 @@ function getApiErrorMessage(error: unknown) {
     return message;
   }
   return message?.message;
-}
-
-function hasFieldValue(value: unknown) {
-  if (value === null || value === undefined) {
-    return false;
-  }
-  if (typeof value === 'string') {
-    return value.trim().length > 0;
-  }
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
-  if (typeof value === 'object') {
-    return Object.keys(value as Record<string, unknown>).length > 0;
-  }
-  return true;
 }
 
 function formatFileSize(bytes?: number) {
@@ -164,11 +127,14 @@ export default function ProjectPage() {
       messages: 'review_generate',
       'review-approval': 'review_generate',
     };
-    const nextStep = sectionKey ? routeStep[sectionKey] : undefined;
+    const requestedStep = new URLSearchParams(location.search).get('section');
+    const nextStep =
+      requestedStep ??
+      (sectionKey ? (routeStep[sectionKey] ?? sectionKey) : undefined);
     if (nextStep && STEP_CONFIG.some((step) => step.id === nextStep)) {
       setActiveStepId(nextStep);
     }
-  }, [sectionKey]);
+  }, [location.search, sectionKey]);
   useEffect(() => {
     const paramsCompanyId = new URLSearchParams(location.search).get(
       'companyId',
@@ -193,7 +159,6 @@ export default function ProjectPage() {
   const sectionsQueryKey = ['sections', projectId, activeCompanyId];
   const documentsQueryKey = ['documents', projectId, activeCompanyId];
   const remindersQueryKey = ['reminders', projectId, activeCompanyId];
-  const reviewersQueryKey = ['projectReviewers', projectId, activeCompanyId];
   const wizardSectionRef = useRef<HTMLElement | null>(null);
   const sectionScrollInitiated = useRef(false);
   useEffect(() => {
@@ -240,88 +205,6 @@ export default function ProjectPage() {
     enabled: projectAvailable,
     queryFn: () => getPreliminaryClassification(projectId),
   });
-  const classificationReviewMutation = useMutation({
-    mutationFn: (payload: {
-      status: 'REVIEWED' | 'OVERRIDDEN';
-      overrideCategory?: string;
-      reason?: string;
-    }) =>
-      reviewClassification(
-        projectId,
-        classificationQuery.data?.id ?? '',
-        payload,
-      ),
-    onSuccess: () => {
-      toast.success('Classification review saved');
-      queryClient.invalidateQueries({
-        queryKey: ['preliminaryClassification', projectId, activeCompanyId],
-      });
-    },
-    onError: (error) =>
-      toast.error(
-        getApiErrorMessage(error) ?? 'Unable to save classification review',
-      ),
-  });
-  const obligationsQuery = useQuery({
-    queryKey: ['obligations', projectId, activeCompanyId],
-    enabled: projectAvailable,
-    queryFn: () => listProjectObligations(projectId),
-  });
-  const [obligationFilter, setObligationFilter] = useState('ALL');
-  const [obligationOwnerFilter, setObligationOwnerFilter] = useState('ALL');
-  const [obligationPriorityFilter, setObligationPriorityFilter] =
-    useState('ALL');
-  const [obligationApprovalFilter, setObligationApprovalFilter] =
-    useState('ALL');
-  const obligationUpdateMutation = useMutation({
-    mutationFn: (payload: {
-      obligationId: string;
-      field: string;
-      value: string;
-    }) =>
-      updateProjectObligation(projectId, payload.obligationId, {
-        [payload.field]: payload.value,
-      }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['obligations', projectId],
-      });
-    },
-    onError: () => toast.error('Unable to update requirement'),
-  });
-  const visibleObligations = (obligationsQuery.data ?? []).filter(
-    (item) =>
-      (obligationFilter === 'ALL' || item.status === obligationFilter) &&
-      (obligationOwnerFilter === 'ALL' ||
-        item.owner?.id === obligationOwnerFilter) &&
-      (obligationPriorityFilter === 'ALL' ||
-        item.priority === obligationPriorityFilter) &&
-      (obligationApprovalFilter === 'ALL' ||
-        item.approvalState === obligationApprovalFilter),
-  );
-  const activeObligationFilterCount = [
-    obligationFilter,
-    obligationOwnerFilter,
-    obligationPriorityFilter,
-    obligationApprovalFilter,
-  ].filter((value) => value !== 'ALL').length;
-  const obligationEvidenceQueries = useQueries({
-    queries: (obligationsQuery.data ?? []).map((item) => ({
-      queryKey: ['obligationEvidence', projectId, item.id, activeCompanyId],
-      enabled: projectAvailable,
-      queryFn: () => listObligationEvidence(projectId, item.id),
-    })),
-  });
-  const evidenceByObligation = useMemo(
-    () =>
-      new Map(
-        (obligationsQuery.data ?? []).map((item, index) => [
-          item.id,
-          obligationEvidenceQueries[index]?.data ?? [],
-        ]),
-      ),
-    [obligationsQuery.data, obligationEvidenceQueries],
-  );
   const projectArtifacts = useMemo(
     () =>
       (sectionsQuery.data ?? []).flatMap((section) =>
@@ -333,41 +216,6 @@ export default function ProjectPage() {
     [sectionsQuery.data],
   );
   const [evidenceNow] = useState(() => Date.now());
-  const evidenceLinkMutation = useMutation<
-    ObligationEvidenceLink | { success: boolean },
-    unknown,
-    {
-      action: 'link' | 'unlink';
-      obligationId: string;
-      artifactId?: string;
-      documentId?: string;
-      linkId?: string;
-    }
-  >({
-    mutationFn: (payload: {
-      action: 'link' | 'unlink';
-      obligationId: string;
-      artifactId?: string;
-      documentId?: string;
-      linkId?: string;
-    }) =>
-      payload.action === 'link'
-        ? linkObligationEvidence(projectId, payload.obligationId, {
-            artifactId: payload.artifactId,
-            documentId: payload.documentId,
-          })
-        : unlinkObligationEvidence(
-            projectId,
-            payload.obligationId,
-            payload.linkId ?? '',
-          ),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['obligationEvidence', projectId],
-      });
-    },
-    onError: () => toast.error('Unable to update requirement evidence'),
-  });
   const documents = useProjectDocuments(
     projectId,
     token,
@@ -386,7 +234,6 @@ export default function ProjectPage() {
     docLimit,
     docsUsed,
     docsRemaining,
-    isPaidPlan,
     generateMutation,
     handleGenerateClick,
     downloadingId,
@@ -414,37 +261,7 @@ export default function ProjectPage() {
   const isAdmin = user?.role === 'ADMIN';
   const isAssignedReviewer = viewerRole === 'REVIEWER';
   const isAssignedApprover = viewerRole === 'APPROVER';
-  const canApproveProject = canApproveProjectForRole(viewerRole, user?.role);
-  const canRequestProjectChanges = canRequestProjectChangesForRole(
-    viewerRole,
-    user?.role,
-  );
-  const canStartProjectReview = canStartProjectReviewForRole(
-    viewerRole,
-    user?.role,
-  );
   const canReviewEvidence = isAssignedReviewer || isAssignedApprover || isAdmin;
-  const canAssignSelf =
-    isOwner && (user?.role === 'REVIEWER' || user?.role === 'ADMIN');
-  const reviewersQuery = useQuery<ReviewerItem[]>({
-    queryKey: reviewersQueryKey,
-    queryFn: () => listProjectReviewers(projectId),
-    enabled:
-      Boolean(projectId && projectQuery.data?.companyId && activeCompanyId) &&
-      isOwner,
-  });
-  const availableReviewers = useMemo(() => {
-    const allowedRoles = new Set(['REVIEWER', 'ADMIN']);
-    return (reviewersQuery.data ?? []).filter((reviewer) =>
-      allowedRoles.has(reviewer.role),
-    );
-  }, [reviewersQuery.data]);
-  const availableApprovers = useMemo(() => {
-    const allowedRoles = new Set(['APPROVER', 'ADMIN']);
-    return (reviewersQuery.data ?? []).filter((reviewer) =>
-      allowedRoles.has(reviewer.role),
-    );
-  }, [reviewersQuery.data]);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const hydratedSectionKeyRef = useRef<string | null>(null);
 
@@ -491,13 +308,6 @@ export default function ProjectPage() {
     string | null
   >(null);
   const formValues = useWatch({ control }) as FormValues;
-  const [selectedReviewerId, setSelectedReviewerId] = useState<string | null>(
-    null,
-  );
-  const [selectedApproverId, setSelectedApproverId] = useState<string | null>(
-    null,
-  );
-  const [reviewMessage, setReviewMessage] = useState('');
   const [manageModalOpen, setManageModalOpen] = useState(false);
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(
     () => new Set(),
@@ -507,8 +317,6 @@ export default function ProjectPage() {
   >('');
   const [templateName, setTemplateName] = useState('');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [approvalSignature, setApprovalSignature] = useState('');
-  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const sectionByName = useMemo(() => {
     const map = new Map<string, SectionWithMeta>();
     (sectionsQuery.data ?? []).forEach((section) =>
@@ -565,27 +373,6 @@ export default function ProjectPage() {
     restoreRecovery,
     markSaved,
   } = useProjectAutosave(currentSection, formValues, isFormStep);
-  useEffect(() => {
-    if (projectQuery.data?.reviewerId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedReviewerId(projectQuery.data.reviewerId);
-      return;
-    }
-    if (availableReviewers.length) {
-      setSelectedReviewerId((prev) => prev ?? availableReviewers[0].id);
-    }
-  }, [availableReviewers, projectQuery.data?.reviewerId]);
-  useEffect(() => {
-    if (projectQuery.data?.approverId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedApproverId(projectQuery.data.approverId);
-      return;
-    }
-    if (availableApprovers.length) {
-      setSelectedApproverId((prev) => prev ?? availableApprovers[0].id);
-    }
-  }, [availableApprovers, projectQuery.data?.approverId]);
-
   useEffect(() => {
     if (!currentSection || !activeStep.fields.length) return;
     const sectionKey = `${currentSection.id}:${currentSection.updatedAt}`;
@@ -957,39 +744,6 @@ export default function ProjectPage() {
     });
   };
 
-  const workflowStatus = (projectQuery.data?.workflowStatus ??
-    'DRAFT') as ProjectWorkflowStatus;
-  const workflowVersion = projectQuery.data?.workflowVersion;
-  const sendProjectForReview = () => {
-    workflow.sendForReview();
-    setReviewMessage('');
-  };
-
-  const approveProject = () => {
-    if (!canApproveProject || !isPaidPlan || workflowStatus !== 'IN_REVIEW') {
-      workflow.approveWithSignature('');
-      return;
-    }
-    setApprovalSignature('');
-    setApprovalDialogOpen(true);
-  };
-
-  const submitApproval = (event: React.FormEvent) => {
-    event.preventDefault();
-    const trimmed = approvalSignature.trim();
-    if (!isValidApprovalSignature(trimmed)) {
-      toast.error('Signature is required for approval');
-      return;
-    }
-    workflow.approveWithSignature(trimmed);
-    setApprovalDialogOpen(false);
-    setApprovalSignature('');
-  };
-
-  const requestChanges = () => {
-    workflow.requestChanges();
-  };
-
   const trackableStepIds = useMemo(
     () =>
       STEP_CONFIG.filter((step) => step.fields.length > 0).map(
@@ -1034,57 +788,6 @@ export default function ProjectPage() {
     });
     return map;
   }, [sectionByName]);
-  const trackableStepSummaries = useMemo(
-    () =>
-      trackableStepIds.map((stepId) => ({
-        stepId,
-        title: stepTitleMap.get(stepId) ?? stepId,
-        missing: incompleteFieldsByStep.get(stepId)?.length ?? 0,
-        status: sectionByName.get(stepId)?.workflowStatus ?? 'DRAFT',
-      })),
-    [trackableStepIds, stepTitleMap, incompleteFieldsByStep, sectionByName],
-  );
-  const allFieldsComplete = [...incompleteFieldsByStep.values()].every(
-    (fields) => fields.length === 0,
-  );
-  const workflow = useProjectWorkflow({
-    projectId,
-    status: workflowStatus,
-    version: workflowVersion,
-    isPaidPlan,
-    isOwner,
-    canStartReview: canStartProjectReview,
-    canApprove: canApproveProject,
-    canRequestChanges: canRequestProjectChanges,
-    allFieldsComplete,
-    reviewerId: selectedReviewerId,
-    approverId: selectedApproverId,
-    reviewMessage,
-    onPaywall: () => window.dispatchEvent(new Event('paywall')),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: projectQueryKey }),
-  });
-  const sectionWorkflowMutation = useMutation({
-    mutationFn: (payload: {
-      stepId: string;
-      action: 'complete' | 'start-review' | 'approve';
-      signature?: string;
-    }) => {
-      const section = sectionByName.get(payload.stepId);
-      if (!section) throw new Error('Section not found');
-      return runProjectWorkflowAction({
-        endpoint: `/sections/${section.id}/workflow/${payload.action}`,
-        body: payload.signature ? { signature: payload.signature } : {},
-      });
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: sectionsQueryKey });
-      void queryClient.invalidateQueries({ queryKey: projectQueryKey });
-      toast.success('Section review updated');
-    },
-    onError: (error: unknown) =>
-      toast.error(getApiErrorMessage(error) ?? 'Unable to update section review'),
-  });
   const PROJECT_STATUS_LABELS: Record<string, string> = {
     DRAFT: 'Draft',
     INFORMATION_REQUIRED: 'Information required',
@@ -1099,40 +802,6 @@ export default function ProjectPage() {
     REJECTED: 'Rejected',
     CANCELLED: 'Cancelled',
   };
-  const projectStatusLabel = workflowStatus;
-  const projectStatusDisplay =
-    PROJECT_STATUS_LABELS[projectStatusLabel] ?? projectStatusLabel;
-  const sendForReviewLabel =
-    workflowStatus === 'CHANGES_REQUESTED'
-      ? 'Resubmit project'
-      : workflowStatus === 'READY_FOR_REVIEW' ||
-          workflowStatus === 'RESUBMITTED'
-        ? 'Start review'
-        : 'Send for review';
-  const sendForReviewDisabled =
-    !isPaidPlan ||
-    (workflowStatus === 'READY_FOR_REVIEW' || workflowStatus === 'RESUBMITTED'
-      ? !canStartProjectReview
-      : workflowStatus === 'CHANGES_REQUESTED'
-        ? !isOwner || !allFieldsComplete || !selectedReviewerId
-        : !isOwner ||
-          workflowStatus === 'IN_REVIEW' ||
-          workflowStatus === 'APPROVED' ||
-          workflowStatus === 'MONITORING' ||
-          workflowStatus === 'ARCHIVED' ||
-          workflowStatus === 'REJECTED' ||
-          workflowStatus === 'CANCELLED' ||
-          !selectedReviewerId ||
-          !allFieldsComplete);
-  const disableAssignmentFields =
-    workflowStatus === 'READY_FOR_REVIEW' ||
-    workflowStatus === 'RESUBMITTED' ||
-    workflowStatus === 'IN_REVIEW' ||
-    workflowStatus === 'APPROVED' ||
-    workflowStatus === 'MONITORING' ||
-    workflowStatus === 'ARCHIVED' ||
-    workflowStatus === 'REJECTED' ||
-    workflowStatus === 'CANCELLED';
   const artifactStatusStyles: Record<ArtifactStatus, string> = {
     PENDING: 'bg-amber-100 text-amber-800',
     APPROVED: 'bg-emerald-100 text-emerald-800',
@@ -1255,11 +924,11 @@ export default function ProjectPage() {
       ? 'bg-emerald-500 animate-pulse'
       : 'bg-emerald-400';
   const liveStatusTimestamp = lastSavedAt
-      ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], {
+    ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], {
         hour: 'numeric',
         minute: '2-digit',
       })}`
-      : 'Not saved yet';
+    : 'Not saved yet';
 
   return (
     <AppShell
@@ -1336,43 +1005,11 @@ export default function ProjectPage() {
                       )}
                     </p>
                   ) : null}
-                  {classificationQuery.data.reviewStatus === 'PENDING' &&
-                  (isAssignedReviewer || isAssignedApprover || isAdmin) ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={classificationReviewMutation.isPending}
-                        onClick={() =>
-                          classificationReviewMutation.mutate({
-                            status: 'REVIEWED',
-                          })
-                        }
-                        className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
-                      >
-                        Mark reviewed
-                      </button>
-                      <button
-                        type="button"
-                        disabled={classificationReviewMutation.isPending}
-                        onClick={() => {
-                          const category = window.prompt(
-                            'Override category (for example: high_risk)',
-                          );
-                          if (!category?.trim()) return;
-                          const reason = window.prompt('Reason for override');
-                          if (!reason?.trim()) return;
-                          classificationReviewMutation.mutate({
-                            status: 'OVERRIDDEN',
-                            overrideCategory: category.trim(),
-                            reason: reason.trim(),
-                          });
-                        }}
-                        className="rounded-md border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-800 disabled:opacity-60"
-                      >
-                        Override result
-                      </button>
-                    </div>
-                  ) : null}
+                  <ProjectClassificationReview
+                    projectId={projectId}
+                    project={projectQuery.data}
+                    result={classificationQuery.data}
+                  />
                 </div>
               ) : null}
               {classificationQuery.data?.assessmentId ? (
@@ -1396,324 +1033,14 @@ export default function ProjectPage() {
                   </div>
                 </div>
               ) : null}
-              {obligationsQuery.data?.length ? (
-                <div
-                  id="requirements"
-                  className="sm:col-span-3 rounded-xl border border-slate-200 bg-white p-3"
+              <div id="requirements" className="sm:col-span-3">
+                <Link
+                  to={`/projects/${projectId}/requirements`}
+                  className="text-sm font-semibold text-sky-700 hover:underline"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        Requirements
-                      </p>
-                      <span className="text-xs text-slate-500">
-                        {obligationsQuery.data.length} mapped from the latest
-                        classification
-                      </span>
-                    </div>
-                    <Link
-                      to={`/projects/${projectId}/requirements`}
-                      className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      Manage requirements
-                    </Link>
-                  </div>
-                  <details className="mt-3">
-                    <summary className="cursor-pointer text-xs font-medium text-slate-600 hover:text-slate-900">
-                      Show requirement details and actions
-                    </summary>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <select
-                        aria-label="Filter requirements"
-                        value={obligationFilter}
-                        onChange={(event) =>
-                          setObligationFilter(event.target.value)
-                        }
-                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
-                      >
-                        <option value="ALL">All statuses</option>
-                        <option value="NOT_STARTED">Not started</option>
-                        <option value="IN_PROGRESS">In progress</option>
-                        <option value="READY_FOR_REVIEW">
-                          Ready for review
-                        </option>
-                        <option value="SATISFIED">Satisfied</option>
-                      </select>
-                      <select
-                        aria-label="Filter requirement owner"
-                        value={obligationOwnerFilter}
-                        onChange={(event) =>
-                          setObligationOwnerFilter(event.target.value)
-                        }
-                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
-                      >
-                        <option value="ALL">All owners</option>
-                        {availableReviewers.map((reviewer) => (
-                          <option key={reviewer.id} value={reviewer.id}>
-                            {reviewer.email}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="Filter requirement priority"
-                        value={obligationPriorityFilter}
-                        onChange={(event) =>
-                          setObligationPriorityFilter(event.target.value)
-                        }
-                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
-                      >
-                        <option value="ALL">All priorities</option>
-                        <option value="LOW">Low</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="HIGH">High</option>
-                        <option value="CRITICAL">Critical</option>
-                      </select>
-                      <select
-                        aria-label="Filter requirement approval state"
-                        value={obligationApprovalFilter}
-                        onChange={(event) =>
-                          setObligationApprovalFilter(event.target.value)
-                        }
-                        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
-                      >
-                        <option value="ALL">All approval states</option>
-                        <option value="DRAFT">Draft</option>
-                        <option value="READY_FOR_REVIEW">
-                          Ready for review
-                        </option>
-                        <option value="APPROVED">Approved</option>
-                        <option value="CHANGES_REQUESTED">
-                          Changes requested
-                        </option>
-                      </select>
-                      {activeObligationFilterCount ? (
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-slate-500 hover:text-slate-900"
-                          onClick={() => {
-                            setObligationFilter('ALL');
-                            setObligationOwnerFilter('ALL');
-                            setObligationPriorityFilter('ALL');
-                            setObligationApprovalFilter('ALL');
-                          }}
-                        >
-                          Clear filters ({activeObligationFilterCount})
-                        </button>
-                      ) : null}
-                    </div>
-                    <ul className="mt-3 grid gap-2 md:grid-cols-2">
-                      {visibleObligations.map((item) => (
-                        <li
-                          key={item.id}
-                          className="rounded-lg border border-slate-100 px-3 py-2"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-medium text-slate-800">
-                                {item.obligation.title}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-500">
-                                {item.obligation.legalReference ??
-                                  'EU AI Act pack reference'}{' '}
-                                ·{' '}
-                                {item.status.replaceAll('_', ' ').toLowerCase()}
-                                {item.actions.length
-                                  ? ` · ${item.actions.length} action${item.actions.length === 1 ? '' : 's'}`
-                                  : ''}
-                              </p>
-                              <p className="mt-1 text-[11px] text-slate-400">
-                                Owner: {item.owner?.email ?? 'Unassigned'}
-                                {item.dueAt
-                                  ? ` · Due ${new Date(item.dueAt).toLocaleDateString()}`
-                                  : ''}
-                              </p>
-                              {isOwner || canReviewEvidence ? (
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  <select
-                                    aria-label={`Priority for ${item.obligation.title}`}
-                                    value={item.priority}
-                                    onChange={(event) =>
-                                      obligationUpdateMutation.mutate({
-                                        obligationId: item.id,
-                                        field: 'priority',
-                                        value: event.target.value,
-                                      })
-                                    }
-                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
-                                  >
-                                    <option value="LOW">Low priority</option>
-                                    <option value="MEDIUM">
-                                      Medium priority
-                                    </option>
-                                    <option value="HIGH">High priority</option>
-                                    <option value="CRITICAL">
-                                      Critical priority
-                                    </option>
-                                  </select>
-                                  <select
-                                    aria-label={`Approval state for ${item.obligation.title}`}
-                                    value={item.approvalState}
-                                    onChange={(event) =>
-                                      obligationUpdateMutation.mutate({
-                                        obligationId: item.id,
-                                        field: 'approvalState',
-                                        value: event.target.value,
-                                      })
-                                    }
-                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
-                                  >
-                                    <option value="DRAFT">Draft</option>
-                                    <option value="READY_FOR_REVIEW">
-                                      Ready for review
-                                    </option>
-                                    <option value="APPROVED">Approved</option>
-                                    <option value="CHANGES_REQUESTED">
-                                      Changes requested
-                                    </option>
-                                  </select>
-                                  <select
-                                    aria-label={`Owner for ${item.obligation.title}`}
-                                    value={item.owner?.id ?? ''}
-                                    onChange={(event) =>
-                                      event.target.value
-                                        ? obligationUpdateMutation.mutate({
-                                            obligationId: item.id,
-                                            field: 'ownerId',
-                                            value: event.target.value,
-                                          })
-                                        : undefined
-                                    }
-                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
-                                  >
-                                    <option value="">Unassigned</option>
-                                    {availableReviewers.map((reviewer) => (
-                                      <option
-                                        key={reviewer.id}
-                                        value={reviewer.id}
-                                      >
-                                        {reviewer.email}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <input
-                                    type="date"
-                                    aria-label={`Due date for ${item.obligation.title}`}
-                                    value={
-                                      item.dueAt ? item.dueAt.slice(0, 10) : ''
-                                    }
-                                    onChange={(event) =>
-                                      obligationUpdateMutation.mutate({
-                                        obligationId: item.id,
-                                        field: 'dueAt',
-                                        value: event.target.value,
-                                      })
-                                    }
-                                    className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600"
-                                  />
-                                </div>
-                              ) : null}
-                            </div>
-                            <span className="shrink-0 text-xs font-medium text-slate-400">
-                              {evidenceByObligation.get(item.id)?.length ?? 0}{' '}
-                              linked
-                            </span>
-                          </div>
-                          <div className="mt-2 space-y-1">
-                            {(evidenceByObligation.get(item.id) ?? []).map(
-                              (link) => (
-                                <div
-                                  key={link.id}
-                                  className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-600"
-                                >
-                                  <span className="truncate">
-                                    {link.artifact?.originalName ??
-                                      DOCUMENT_LABELS[
-                                        link.document?.type ?? ''
-                                      ] ??
-                                      'Linked document'}
-                                    {link.artifact
-                                      ? ` · v${link.artifact.version}`
-                                      : ''}
-                                  </span>
-                                  {isOwner || canReviewEvidence ? (
-                                    <button
-                                      type="button"
-                                      className="shrink-0 font-semibold text-slate-500 hover:text-rose-600"
-                                      onClick={() =>
-                                        evidenceLinkMutation.mutate({
-                                          action: 'unlink',
-                                          obligationId: item.id,
-                                          linkId: link.id,
-                                        })
-                                      }
-                                    >
-                                      Remove
-                                    </button>
-                                  ) : null}
-                                </div>
-                              ),
-                            )}
-                          </div>
-                          {isOwner || canReviewEvidence ? (
-                            <select
-                              aria-label={`Link evidence to ${item.obligation.title}`}
-                              value=""
-                              onChange={(event) => {
-                                const selected = event.target.value;
-                                if (!selected) return;
-                                evidenceLinkMutation.mutate({
-                                  action: 'link',
-                                  obligationId: item.id,
-                                  ...(selected.startsWith('doc:')
-                                    ? { documentId: selected.slice(4) }
-                                    : { artifactId: selected }),
-                                });
-                              }}
-                              className="mt-2 w-full rounded-md border border-dashed border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-500"
-                              disabled={evidenceLinkMutation.isPending}
-                            >
-                              <option value="">Link evidence…</option>
-                              {projectArtifacts
-                                .filter(
-                                  (artifact) =>
-                                    !(
-                                      evidenceByObligation.get(item.id) ?? []
-                                    ).some(
-                                      (link) =>
-                                        link.artifact?.id === artifact.id,
-                                    ),
-                                )
-                                .map((artifact) => (
-                                  <option key={artifact.id} value={artifact.id}>
-                                    {artifact.originalName} ·{' '}
-                                    {artifact.sectionName}
-                                  </option>
-                                ))}
-                              {(projectQuery.data?.documents ?? []).map(
-                                (document) => (
-                                  <option
-                                    key={`doc:${document.id}`}
-                                    value={`doc:${document.id}`}
-                                  >
-                                    {DOCUMENT_LABELS[document.type] ??
-                                      document.type}{' '}
-                                    · package
-                                  </option>
-                                ),
-                              )}
-                            </select>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                    {!visibleObligations.length ? (
-                      <p className="mt-3 text-sm text-slate-500">
-                        No requirements match this filter.
-                      </p>
-                    ) : null}
-                  </details>
-                </div>
-              ) : null}
+                  Manage requirements and linked evidence →
+                </Link>
+              </div>
               <div id="organization-profile">
                 <p className="text-xs uppercase tracking-wide text-slate-400">
                   System owner
@@ -1824,10 +1151,8 @@ export default function ProjectPage() {
               {activeStep.fields.length ? (
                 <>
                   {isOwner ? (
-                    <details className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                      <summary className="cursor-pointer font-medium text-slate-700">
-                        Templates
-                      </summary>
+                    <section className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                      <h3 className="font-medium text-slate-700">Templates</h3>
                       <div className="mt-3 flex flex-wrap items-center gap-3">
                         <button
                           type="button"
@@ -1864,12 +1189,14 @@ export default function ProjectPage() {
                           Manage templates
                         </button>
                       </div>
-                    </details>
+                    </section>
                   ) : null}
                   {aiSuggestion && (
                     <div className="mt-4 rounded-xl border border-dashed border-sky-200 bg-sky-50/60 p-3 text-sm text-slate-700">
                       <div className="flex items-center justify-between">
-                        <p className="font-semibold text-slate-900">Suggested text</p>
+                        <p className="font-semibold text-slate-900">
+                          Suggested text
+                        </p>
                         <button
                           className="text-xs text-slate-500 hover:text-slate-700"
                           onClick={() => setAiSuggestion(null)}
@@ -2156,10 +1483,10 @@ export default function ProjectPage() {
                               </span>
                             </button>
                           </div>
-                          <details className="md:col-span-2">
-                            <summary className="cursor-pointer rounded-md border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-500">
+                          <section className="md:col-span-2">
+                            <h4 className="rounded-md border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-500">
                               Add file details
-                            </summary>
+                            </h4>
                             <div className="mt-2 grid gap-2 sm:grid-cols-2">
                               <input
                                 type="text"
@@ -2176,7 +1503,9 @@ export default function ProjectPage() {
                                 onChange={(e) =>
                                   setArtifactPurpose(
                                     e.target.value as
-                                      'GENERIC' | 'DATASET' | 'MODEL',
+                                      | 'GENERIC'
+                                      | 'DATASET'
+                                      | 'MODEL',
                                   )
                                 }
                                 disabled={!isOwner}
@@ -2228,7 +1557,7 @@ export default function ProjectPage() {
                                 className="rounded-md border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50 sm:col-span-2"
                               />
                             </div>
-                          </details>
+                          </section>
                           <div className="flex items-center justify-end gap-2">
                             {artifactFile ? (
                               <button
@@ -2457,7 +1786,8 @@ export default function ProjectPage() {
                             )
                           ) : (
                             <p className="text-sm text-slate-500">
-                              No files added yet. Add a file that supports this section.
+                              No files added yet. Add a file that supports this
+                              section.
                             </p>
                           )}
                         </div>
@@ -2481,10 +1811,10 @@ export default function ProjectPage() {
                           {currentSection.comments.length} comments
                         </span>
                       </div>
-                      <details className="rounded-xl border border-dashed border-slate-200 px-3 py-2">
-                        <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                      <section className="rounded-xl border border-dashed border-slate-200 px-3 py-2">
+                        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                           Recent changes
-                        </summary>
+                        </h4>
                         <div className="mt-2 space-y-1">
                           {currentSection.statusEvents?.length ? (
                             currentSection.statusEvents
@@ -2520,7 +1850,7 @@ export default function ProjectPage() {
                             </p>
                           )}
                         </div>
-                      </details>
+                      </section>
                       <div className="mt-4 space-y-3">
                         {currentSection.comments.length ? (
                           currentSection.comments.map(
@@ -2629,52 +1959,16 @@ export default function ProjectPage() {
                 </>
               ) : (
                 <div id="review-approval" className="mt-6 space-y-4">
-                  <ReviewApprovalPanel
-                    trackableSteps={trackableStepSummaries}
-                    projectStatusLabel={projectStatusLabel}
-                    projectStatusDisplay={projectStatusDisplay}
-                    onSendForReview={sendProjectForReview}
-                    sendForReviewLabel={sendForReviewLabel}
-                    onApprove={approveProject}
-                    onRequestChanges={requestChanges}
-                    reviewerId={selectedReviewerId}
-                    approverId={selectedApproverId}
-                    onReviewerChange={(value) =>
-                      setSelectedReviewerId(value || null)
-                    }
-                    onApproverChange={(value) =>
-                      setSelectedApproverId(value || null)
-                    }
-                    reviewMessage={reviewMessage}
-                    setReviewMessage={setReviewMessage}
-                    reviewers={reviewersQuery.data ?? []}
-                    availableReviewers={availableReviewers}
-                    canAssignSelf={canAssignSelf}
-                    canSendForReview={isOwner || canStartProjectReview}
-                    canStartReview={canStartProjectReview}
-                    sendForReviewDisabled={sendForReviewDisabled}
-                    canApprove={canApproveProject && isPaidPlan}
-                    canRequestChanges={canRequestProjectChanges && isPaidPlan}
-                    disableAssignmentFields={disableAssignmentFields}
-                    userId={user?.id}
-                    projectId={projectId}
-                    canCompleteSections={isOwner || isAdmin}
-                    canReviewSections={isAssignedReviewer || isAdmin}
-                    sectionActionPending={sectionWorkflowMutation.isPending}
-                    onSectionWorkflowAction={(stepId, action, signature) =>
-                      sectionWorkflowMutation.mutate({
-                        stepId,
-                        action,
-                        signature,
-                      })
-                    }
-                  />
-                  <details
-                    className="rounded-2xl border border-slate-200 bg-white p-4"
-                  >
-                    <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+                  {projectQuery.data && (
+                    <ProjectReviewControls
+                      project={projectQuery.data}
+                      sections={sectionsQuery.data ?? []}
+                    />
+                  )}
+                  <section className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <h3 className="text-sm font-semibold text-slate-900">
                       Activity history
-                    </summary>
+                    </h3>
                     <div className="mt-3 space-y-2">
                       {projectQuery.data?.statusEvents?.length ? (
                         projectQuery.data.statusEvents.map((event, index) => (
@@ -2706,7 +2000,7 @@ export default function ProjectPage() {
                         </p>
                       )}
                     </div>
-                  </details>
+                  </section>
                   <div
                     className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
                     id="documents-panel"
@@ -2794,8 +2088,7 @@ export default function ProjectPage() {
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-slate-900">
-                            Ready to create: {readinessQuery.data.score}
-                            %
+                            Ready to create: {readinessQuery.data.score}%
                           </p>
                           <p className="mt-1 text-sm text-slate-700">
                             {readinessQuery.data.summary}
@@ -2948,10 +2241,10 @@ export default function ProjectPage() {
                             </button>
                           </div>
                           {previous.length > 0 && (
-                            <details className="mt-4 border-t border-slate-100 pt-4">
-                              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            <section className="mt-4 border-t border-slate-100 pt-4">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                                 Version history ({previous.length})
-                              </summary>
+                              </h4>
                               <ul className="mt-2 space-y-2 text-xs text-slate-500">
                                 {previous.map((doc: DocumentItem) => {
                                   const ver =
@@ -2985,7 +2278,7 @@ export default function ProjectPage() {
                                   );
                                 })}
                               </ul>
-                            </details>
+                            </section>
                           )}
                         </div>
                       );
@@ -3001,10 +2294,10 @@ export default function ProjectPage() {
               )}
             </ProjectPanel>
 
-            <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
-              <summary className="cursor-pointer text-lg font-semibold text-slate-900">
+            <section className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
+              <h2 className="text-lg font-semibold text-slate-900">
                 Project summary
-              </summary>
+              </h2>
               <div className="mt-4 grid gap-6 lg:grid-cols-2">
                 <ProjectPanel>
                   <h3 className="text-lg font-semibold text-slate-900">
@@ -3174,12 +2467,12 @@ export default function ProjectPage() {
                   )}
                 </ProjectPanel>
               </div>
-            </details>
+            </section>
 
-            <details className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <section className="rounded-2xl border border-slate-200 bg-white px-6 py-4">
+              <h2 className="text-sm font-semibold text-slate-900">
                 Reminders
-              </summary>
+              </h2>
               <ProjectPanel className="mt-4">
                 <div className="flex items-center justify-end">
                   <button
@@ -3268,12 +2561,13 @@ export default function ProjectPage() {
                     ))
                   ) : (
                     <p className="text-sm text-slate-500">
-                      No reminders yet. Add one when something needs attention later.
+                      No reminders yet. Add one when something needs attention
+                      later.
                     </p>
                   )}
                 </div>
               </ProjectPanel>
-            </details>
+            </section>
           </section>
         </div>
         {templateDialogOpen && (
@@ -3328,64 +2622,6 @@ export default function ProjectPage() {
                   {saveTemplateMutation.isPending
                     ? 'Saving...'
                     : 'Save template'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-        {approvalDialogOpen && (
-          <div
-            className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 p-4"
-            role="presentation"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
-                setApprovalDialogOpen(false);
-              }
-            }}
-          >
-            <form
-              onSubmit={submitApproval}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="approval-dialog-title"
-              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
-            >
-              <h2
-                id="approval-dialog-title"
-                className="text-lg font-semibold text-slate-900"
-              >
-                Approve project
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Enter your signature to record this approval.
-              </p>
-              <label
-                htmlFor="approval-signature"
-                className="mt-4 block text-sm font-medium text-slate-700"
-              >
-                Signature
-              </label>
-              <input
-                id="approval-signature"
-                autoFocus
-                value={approvalSignature}
-                onChange={(event) => setApprovalSignature(event.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-              />
-              <div className="mt-5 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setApprovalDialogOpen(false)}
-                  className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={workflow.isPending}
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
-                >
-                  {workflow.isPending ? 'Approving...' : 'Approve project'}
                 </button>
               </div>
             </form>

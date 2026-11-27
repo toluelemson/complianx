@@ -103,8 +103,12 @@ describe('EU AI Act onboarding result', () => {
     expect(screen.getByText('Human review required')).toBeVisible();
     expect(screen.getByText('Neuraldocx interpretation')).toBeVisible();
     expect(screen.getByText(/not legal advice/i)).toBeVisible();
+    expect(screen.getByText('Outside this result')).toBeVisible();
     expect(
-      screen.getByRole('link', { name: 'Continue compliance setup' }),
+      screen.getByText(/institutional enforcement, penalties/i),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: 'Continue guided setup' }),
     ).toHaveAttribute('href', '/projects/project-1/requirements');
     expect(mockedApi.createProjectAssessment).not.toHaveBeenCalled();
   });

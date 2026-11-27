@@ -43,8 +43,9 @@ Primary project navigation should expose only:
 5. Review
 6. Report
 
-Evidence, requirements, findings, and documents remain task views under
-**Comply**. Traceability, advanced metadata, messages, and legacy workspace
+Requirements, evidence, findings and corrective actions sit under **Comply**.
+Technical documents and saved exports are reached from **Report**.
+Traceability, advanced metadata, messages and legacy workspace
 views remain available but are not parallel top-level journeys.
 
 ## State principles

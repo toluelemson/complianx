@@ -115,6 +115,45 @@ export type ProjectWorkflowStatus =
   | 'REJECTED'
   | 'CANCELLED';
 
+export type ProjectWorkflowStageId =
+  | 'register'
+  | 'assess'
+  | 'comply'
+  | 'review'
+  | 'report';
+
+export type ProjectWorkflowAction = {
+  stage: ProjectWorkflowStageId;
+  category: 'BLOCKED' | 'ACTION_REQUIRED' | 'WAITING';
+  title: string;
+  detail: string;
+  actionLabel: string;
+  href: string;
+  entityId: string;
+  entityType: 'project' | 'assessment' | 'requirement' | 'finding' | 'package';
+  permission:
+    | 'OWNER'
+    | 'CONTRIBUTOR'
+    | 'REVIEWER_OR_APPROVER'
+    | 'PROJECT_READER';
+};
+
+export type ProjectWorkflowSummary = {
+  projectId: string;
+  name: string;
+  workflowStatus: ProjectWorkflowStatus;
+  completedStages: ProjectWorkflowStageId[];
+  classificationCategory: string | null;
+  applicableRequirements: number;
+  verifiedRequirements: number;
+  blockers: number;
+  waiting: number;
+  outstanding: number;
+  nextAction: ProjectWorkflowAction | null;
+  reassessmentReasons: string[];
+  packageStatus: 'NONE' | 'CURRENT' | 'HISTORICAL';
+};
+
 export type ProjectDetail = {
   id: string;
   name: string;
@@ -199,6 +238,7 @@ export type ProjectListItem = {
   createdAt: string;
   updatedAt: string;
   workflowStatus?: ProjectWorkflowStatus;
+  workflowSummary?: ProjectWorkflowSummary;
   viewerRole: 'OWNER' | 'REVIEWER' | 'APPROVER' | 'MEMBER';
   sections: ProjectListSection[];
   documents: Array<

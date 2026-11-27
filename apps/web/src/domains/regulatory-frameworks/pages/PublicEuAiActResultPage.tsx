@@ -61,7 +61,7 @@ export default function PublicEuAiActResultPage() {
   });
   const importMutation = useMutation({
     mutationFn: () => importPublicResult({ publicResultId: resultId! }),
-    onSuccess: ({ projectId }) => navigate(`/ai-systems/${projectId}`),
+    onSuccess: ({ projectId }) => navigate(`/projects/${projectId}`),
   });
 
   const result = resultQuery.data?.result;

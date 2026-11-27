@@ -21,6 +21,24 @@ import { ReviewClassificationDto } from '../../presentation/dto/review-classific
 import { AuditService } from '../../../audit/application/audit.service';
 import { CreateFindingDto } from '../../presentation/dto/create-finding.dto';
 import { UpdateFindingDto } from '../../presentation/dto/update-finding.dto';
+import { UpdateAssessmentScoringDto } from '../../presentation/dto/update-assessment-scoring.dto';
+import {
+  CreateComplianceStakeholderDto,
+  CreateDocumentationItemDto,
+  CreateLifecycleEventDto,
+  CreateSystemAssetDto,
+  CreateTechnicalMeasureDto,
+  UpdateAssessmentContextDto,
+  UpdateComplianceStakeholderDto,
+  UpdateRequirementAssetLinksDto,
+  UpdateSystemAssetDto,
+  UpdateTechnicalMeasureDto,
+} from '../../presentation/dto/traceability-model.dto';
+import {
+  ensureRequirementCatalogueItem,
+  getEuAiActRequirement,
+} from '../../../regulatory-frameworks/application/requirements/eu-ai-act-requirement-catalogue';
+import { hasVerifiedSupportingEvidence } from '../../../ai-systems/application/projects/workflow-freshness';
 
 @Injectable()
 export class AssessmentsService {
@@ -71,6 +89,19 @@ export class AssessmentsService {
         },
         tx,
       );
+      await tx.assessmentChangeLog.create({
+        data: {
+          assessmentId: assessment.id,
+          versionNumber: assessment.versionNumber,
+          action: 'CREATED',
+          actorId: userId,
+          snapshot: {
+            packVersion: pack.version,
+            weightingChoice: assessment.weightingChoice,
+            targetBand: assessment.targetBand,
+          },
+        },
+      });
       return assessment;
     });
   }
@@ -86,6 +117,9 @@ export class AssessmentsService {
       userId,
       companyId,
     );
+    if (assessment.status === AssessmentStatus.FINALIZED) {
+      throw new ConflictException('A finalized assessment cannot be edited');
+    }
     await this.authorizeMutation(assessment.projectId, userId, companyId);
     const entries = Object.entries(answers).filter(([questionKey]) =>
       /^[a-zA-Z0-9_.-]{1,120}$/.test(questionKey),
@@ -135,6 +169,15 @@ export class AssessmentsService {
         },
         tx,
       );
+      await tx.assessmentChangeLog.create({
+        data: {
+          assessmentId: assessment.id,
+          versionNumber: updated.versionNumber,
+          action: 'ANSWERS_UPDATED',
+          actorId: userId,
+          snapshot: answers as Prisma.InputJsonValue,
+        },
+      });
       return updated;
     });
     return updated;
@@ -166,6 +209,11 @@ export class AssessmentsService {
       userId,
       companyId,
     );
+    if (assessment.status === AssessmentStatus.FINALIZED) {
+      throw new ConflictException(
+        'A finalized assessment cannot be reclassified',
+      );
+    }
     await this.authorizeMutation(assessment.projectId, userId, companyId);
     const answers =
       assessment.answers &&
@@ -221,6 +269,36 @@ export class AssessmentsService {
         classification.id,
         result,
       );
+      const obligations = await tx.aiSystemObligation.findMany({
+        where: { projectId: assessment.projectId },
+        include: { obligation: { select: { catalogueId: true } } },
+      });
+      for (const obligation of obligations) {
+        await tx.assessmentRequirementRow.upsert({
+          where: {
+            assessmentId_obligationId: {
+              assessmentId: assessment.id,
+              obligationId: obligation.id,
+            },
+          },
+          create: {
+            assessmentId: assessment.id,
+            obligationId: obligation.id,
+            requirementId: obligation.obligation.catalogueId,
+            state: obligation.status,
+          },
+          update: { state: obligation.status },
+        });
+      }
+      await tx.assessmentChangeLog.create({
+        data: {
+          assessmentId: assessment.id,
+          versionNumber: assessment.versionNumber,
+          action: 'CLASSIFIED',
+          actorId: userId,
+          snapshot: result as Prisma.InputJsonValue,
+        },
+      });
       await this.audit.record(
         {
           companyId,
@@ -299,6 +377,850 @@ export class AssessmentsService {
     });
   }
 
+  async getWorkspace(projectId: string, userId: string, companyId: string) {
+    await this.authorizeProject(projectId, userId, companyId);
+    const workspace = await this.prisma.assessment.findFirst({
+      where: { projectId },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        packVersion: { select: { id: true, key: true, version: true } },
+        requirementRows: {
+          include: {
+            obligation: {
+              select: {
+                id: true,
+                status: true,
+                obligation: {
+                  select: {
+                    catalogueId: true,
+                    catalogue: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+        changeLog: { orderBy: { createdAt: 'desc' }, take: 50 },
+      },
+    });
+    if (!workspace) return null;
+    return {
+      ...workspace,
+      requirementRows: workspace.requirementRows.map((row) => ({
+        ...row,
+        obligation: {
+          ...row.obligation,
+          obligation: canonicalRequirement(row.obligation.obligation),
+        },
+      })),
+    };
+  }
+
+  async getTraceabilityModel(
+    projectId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    await this.authorizeProject(projectId, userId, companyId);
+    const [
+      project,
+      assessment,
+      assets,
+      obligations,
+      documentationItems,
+      lifecycleEvents,
+      stakeholders,
+      auditEvents,
+    ] = await Promise.all([
+      this.prisma.project.findFirst({
+        where: { id: projectId, companyId },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          lifecycleStage: true,
+          providerOrDeveloper: true,
+          company: {
+            select: {
+              name: true,
+              registrationNumber: true,
+              country: true,
+              aiActRole: true,
+            },
+          },
+        },
+      }),
+      this.prisma.assessment.findFirst({
+        where: { projectId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        include: {
+          createdBy: { select: { id: true, email: true } },
+          packVersion: { select: { version: true } },
+          classifications: {
+            take: 1,
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            select: { id: true },
+          },
+          requirementRows: true,
+          changeLog: { orderBy: { createdAt: 'desc' }, take: 100 },
+        },
+      }),
+      this.prisma.systemAsset.findMany({
+        where: { projectId },
+        include: { documentationItems: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.aiSystemObligation.findMany({
+        where: { projectId },
+        include: {
+          obligation: { include: { catalogue: true } },
+          assetLinks: { include: { systemAsset: true } },
+          technicalMeasures: { orderBy: { createdAt: 'asc' } },
+          documentationItems: { orderBy: { createdAt: 'asc' } },
+          evidence: {
+            include: { artifact: true, document: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.documentationItem.findMany({
+        where: { projectId },
+        include: {
+          systemAsset: { select: { id: true, name: true } },
+          obligation: {
+            select: {
+              id: true,
+              obligation: { select: { catalogueId: true, title: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.systemLifecycleEvent.findMany({
+        where: { projectId },
+        include: { createdBy: { select: { id: true, email: true } } },
+        orderBy: [{ happenedAt: 'asc' }, { createdAt: 'asc' }],
+      }),
+      this.prisma.complianceStakeholder.findMany({
+        where: { projectId },
+        include: { createdBy: { select: { id: true, email: true } } },
+        orderBy: [{ role: 'asc' }, { name: 'asc' }],
+      }),
+      this.prisma.auditEvent.findMany({
+        where: {
+          projectId,
+          companyId,
+          entityType: {
+            in: [
+              'Assessment',
+              'SystemAsset',
+              'SystemLifecycleEvent',
+              'ComplianceStakeholder',
+              'AiSystemObligation',
+              'TechnicalMeasure',
+              'DocumentationItem',
+            ],
+          },
+        },
+        include: { actor: { select: { id: true, email: true } } },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 100,
+      }),
+    ]);
+    if (!project) throw new NotFoundException('Project not found');
+    const calculatedCoverage = assessment
+      ? calculateCoverageScore(assessment.requirementRows)
+      : null;
+    const canonicalObligations = obligations.map((item) => ({
+      ...item,
+      obligation: canonicalRequirement(item.obligation),
+    }));
+    const gaps = buildTraceabilityGaps({
+      assessment,
+      assets,
+      obligations: canonicalObligations.filter(
+        (item) =>
+          !item.classificationResultId ||
+          item.classificationResultId === assessment?.classifications?.[0]?.id,
+      ),
+      lifecycleEvents,
+      stakeholders,
+      documentationItems,
+    });
+    const history = [
+      ...auditEvents.map((event) => ({
+        id: event.id,
+        source: 'AUDIT' as const,
+        action: event.action,
+        entityType: event.entityType,
+        entityId: event.entityId,
+        versionNumber: null,
+        actor: event.actor?.email ?? 'System',
+        snapshot: null,
+        createdAt: event.createdAt,
+      })),
+      ...(assessment?.changeLog ?? []).map((event) => ({
+        id: event.id,
+        source: 'ASSESSMENT' as const,
+        action: event.action,
+        entityType: 'Assessment',
+        entityId: assessment?.id ?? '',
+        versionNumber: event.versionNumber,
+        actor: event.actorId ?? 'System',
+        snapshot: event.snapshot,
+        createdAt: event.createdAt,
+      })),
+    ]
+      .sort(
+        (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+      )
+      .slice(0, 100);
+    const blockers = gaps.filter((gap) => gap.severity === 'BLOCKER');
+    const assessmentFinalizedAt =
+      assessment?.status === AssessmentStatus.FINALIZED
+        ? assessment.updatedAt
+        : null;
+    const lifecycleEventsSinceFinalization = assessmentFinalizedAt
+      ? lifecycleEvents.filter(
+          (event) =>
+            event.happenedAt.getTime() > assessmentFinalizedAt.getTime(),
+        )
+      : [];
+    return {
+      project,
+      assessment: assessment
+        ? {
+            id: assessment.id,
+            status: assessment.status,
+            date: assessment.assessmentDate,
+            assessorType: assessment.assessorType,
+            assessorName: assessment.assessorName ?? assessment.createdBy.email,
+            coverageScore: assessment.coverageScore ?? calculatedCoverage,
+            versionNumber: assessment.versionNumber,
+            catalogueVersion: assessment.packVersion.version,
+          }
+        : null,
+      assets,
+      obligations: canonicalObligations,
+      documentationItems,
+      lifecycleEvents,
+      stakeholders,
+      history,
+      gaps,
+      finalization: {
+        ready: blockers.length === 0,
+        blockers: blockers.map((gap) => gap.title),
+      },
+      reassessment: {
+        required: lifecycleEventsSinceFinalization.length > 0,
+        reason:
+          lifecycleEventsSinceFinalization.length > 0
+            ? `${lifecycleEventsSinceFinalization.length} lifecycle event(s) were recorded after this assessment was finalized.`
+            : null,
+      },
+      scope: {
+        included:
+          'Article-level technical documentation, trustworthiness, measures, evidence, and assessment coverage.',
+        excluded:
+          'Institutional enforcement, penalties, and definitive legal conclusions remain outside this workspace and require authorized human review.',
+      },
+    };
+  }
+
+  async createSystemAsset(
+    projectId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateSystemAssetDto,
+  ) {
+    await this.authorizeMutation(projectId, userId, companyId);
+    const asset = await this.prisma.systemAsset.create({
+      data: {
+        projectId,
+        name: dto.name.trim(),
+        description: dto.description?.trim() || null,
+        assetType: dto.assetType,
+        lifecycleStage: dto.lifecycleStage,
+        version: dto.version?.trim() || null,
+      },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'SystemAsset',
+      entityId: asset.id,
+      action: 'CREATED',
+      afterSnapshot: asset as unknown as Prisma.InputJsonValue,
+    });
+    return asset;
+  }
+
+  async updateSystemAsset(
+    projectId: string,
+    assetId: string,
+    userId: string,
+    companyId: string,
+    dto: UpdateSystemAssetDto,
+  ) {
+    await this.authorizeMutation(projectId, userId, companyId);
+    const existing = await this.prisma.systemAsset.findFirst({
+      where: { id: assetId, projectId },
+    });
+    if (!existing) throw new NotFoundException('System asset not found');
+    const asset = await this.prisma.systemAsset.update({
+      where: { id: assetId },
+      data: { lifecycleStage: dto.lifecycleStage },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'SystemAsset',
+      entityId: asset.id,
+      action: 'LIFECYCLE_STAGE_UPDATED',
+      beforeSnapshot: existing as unknown as Prisma.InputJsonValue,
+      afterSnapshot: asset as unknown as Prisma.InputJsonValue,
+    });
+    return asset;
+  }
+
+  async createLifecycleEvent(
+    projectId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateLifecycleEventDto,
+  ) {
+    await this.authorizeMutation(projectId, userId, companyId);
+    return this.mutate(async (tx) => {
+      const event = await tx.systemLifecycleEvent.create({
+        data: {
+          projectId,
+          stage: dto.stage,
+          happenedAt: new Date(dto.happenedAt),
+          notes: dto.notes?.trim() || null,
+          createdById: userId,
+        },
+        include: { createdBy: { select: { id: true, email: true } } },
+      });
+      await tx.project.update({
+        where: { id: projectId },
+        data: { lifecycleStage: dto.stage },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          projectId,
+          actorId: userId,
+          entityType: 'SystemLifecycleEvent',
+          entityId: event.id,
+          action: 'LIFECYCLE_STAGE_RECORDED',
+          afterSnapshot: {
+            stage: event.stage,
+            happenedAt: event.happenedAt.toISOString(),
+            notes: event.notes,
+          },
+        },
+        tx,
+      );
+      return event;
+    });
+  }
+
+  async createComplianceStakeholder(
+    projectId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateComplianceStakeholderDto,
+  ) {
+    await this.authorizeMutation(projectId, userId, companyId);
+    return this.mutate(async (tx) => {
+      const stakeholder = await tx.complianceStakeholder.create({
+        data: {
+          projectId,
+          role: dto.role,
+          name: dto.name.trim(),
+          registrationNumber: dto.registrationNumber?.trim() || null,
+          country: dto.country?.trim().toUpperCase() || null,
+          contactEmail: dto.contactEmail?.trim().toLowerCase() || null,
+          notes: dto.notes?.trim() || null,
+          createdById: userId,
+        },
+        include: { createdBy: { select: { id: true, email: true } } },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          projectId,
+          actorId: userId,
+          entityType: 'ComplianceStakeholder',
+          entityId: stakeholder.id,
+          action: 'CREATED',
+          afterSnapshot: {
+            role: stakeholder.role,
+            name: stakeholder.name,
+            registrationNumber: stakeholder.registrationNumber,
+            country: stakeholder.country,
+          },
+        },
+        tx,
+      );
+      return stakeholder;
+    });
+  }
+
+  async updateComplianceStakeholder(
+    projectId: string,
+    stakeholderId: string,
+    userId: string,
+    companyId: string,
+    dto: UpdateComplianceStakeholderDto,
+  ) {
+    await this.authorizeMutation(projectId, userId, companyId);
+    return this.mutate(async (tx) => {
+      const existing = await tx.complianceStakeholder.findFirst({
+        where: { id: stakeholderId, projectId },
+      });
+      if (!existing) throw new NotFoundException('Stakeholder not found');
+      const stakeholder = await tx.complianceStakeholder.update({
+        where: { id: stakeholderId },
+        data: {
+          role: dto.role,
+          name: dto.name?.trim(),
+          registrationNumber:
+            dto.registrationNumber === undefined
+              ? undefined
+              : dto.registrationNumber.trim() || null,
+          country:
+            dto.country === undefined
+              ? undefined
+              : dto.country.trim().toUpperCase() || null,
+          contactEmail:
+            dto.contactEmail === undefined
+              ? undefined
+              : dto.contactEmail.trim().toLowerCase() || null,
+          notes: dto.notes === undefined ? undefined : dto.notes.trim() || null,
+        },
+        include: { createdBy: { select: { id: true, email: true } } },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          projectId,
+          actorId: userId,
+          entityType: 'ComplianceStakeholder',
+          entityId: stakeholder.id,
+          action: 'UPDATED',
+          beforeSnapshot: {
+            role: existing.role,
+            name: existing.name,
+            registrationNumber: existing.registrationNumber,
+            country: existing.country,
+          },
+          afterSnapshot: {
+            role: stakeholder.role,
+            name: stakeholder.name,
+            registrationNumber: stakeholder.registrationNumber,
+            country: stakeholder.country,
+          },
+        },
+        tx,
+      );
+      return stakeholder;
+    });
+  }
+
+  async updateRequirementAssetLinks(
+    projectId: string,
+    obligationId: string,
+    userId: string,
+    companyId: string,
+    dto: UpdateRequirementAssetLinksDto,
+  ) {
+    return this.mutate(async (tx) => {
+      await this.authorizeMutation(projectId, userId, companyId);
+      const obligation = await tx.aiSystemObligation.findFirst({
+        where: { id: obligationId, projectId },
+      });
+      if (!obligation) throw new NotFoundException('Obligation not found');
+      const assets = dto.assetIds.length
+        ? await tx.systemAsset.findMany({
+            where: { id: { in: dto.assetIds }, projectId },
+            select: { id: true },
+          })
+        : [];
+      if (assets.length !== dto.assetIds.length) {
+        throw new BadRequestException(
+          'Every asset must belong to this project',
+        );
+      }
+      await tx.requirementAsset.deleteMany({
+        where: { aiSystemObligationId: obligationId },
+      });
+      if (dto.assetIds.length) {
+        await tx.requirementAsset.createMany({
+          data: dto.assetIds.map((systemAssetId) => ({
+            aiSystemObligationId: obligationId,
+            systemAssetId,
+          })),
+        });
+      }
+      await this.audit.record(
+        {
+          companyId,
+          projectId,
+          actorId: userId,
+          entityType: 'AiSystemObligation',
+          entityId: obligationId,
+          action: 'ASSETS_LINKED',
+          afterSnapshot: { assetIds: dto.assetIds },
+        },
+        tx,
+      );
+      return tx.requirementAsset.findMany({
+        where: { aiSystemObligationId: obligationId },
+        include: { systemAsset: true },
+      });
+    });
+  }
+
+  async createTechnicalMeasure(
+    projectId: string,
+    obligationId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateTechnicalMeasureDto,
+  ) {
+    await this.authorizeMutation(projectId, userId, companyId);
+    const obligation = await this.prisma.aiSystemObligation.findFirst({
+      where: { id: obligationId, projectId },
+    });
+    if (!obligation) throw new NotFoundException('Obligation not found');
+    const measure = await this.prisma.technicalMeasure.create({
+      data: {
+        aiSystemObligationId: obligationId,
+        title: dto.title.trim(),
+        description: dto.description?.trim() || null,
+        status: dto.status,
+        verificationNotes: dto.verificationNotes?.trim() || null,
+      },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'TechnicalMeasure',
+      entityId: measure.id,
+      action: 'CREATED',
+      afterSnapshot: measure as unknown as Prisma.InputJsonValue,
+    });
+    return measure;
+  }
+
+  async updateTechnicalMeasure(
+    projectId: string,
+    measureId: string,
+    userId: string,
+    companyId: string,
+    dto: UpdateTechnicalMeasureDto,
+  ) {
+    await this.authorizeMutation(projectId, userId, companyId);
+    const existing = await this.prisma.technicalMeasure.findFirst({
+      where: { id: measureId, obligation: { projectId } },
+    });
+    if (!existing) throw new NotFoundException('Technical measure not found');
+    const measure = await this.prisma.technicalMeasure.update({
+      where: { id: measureId },
+      data: {
+        title: dto.title?.trim(),
+        description:
+          dto.description === undefined
+            ? undefined
+            : dto.description.trim() || null,
+        status: dto.status,
+        verificationNotes:
+          dto.verificationNotes === undefined
+            ? undefined
+            : dto.verificationNotes.trim() || null,
+      },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'TechnicalMeasure',
+      entityId: measure.id,
+      action: 'UPDATED',
+      beforeSnapshot: existing as unknown as Prisma.InputJsonValue,
+      afterSnapshot: measure as unknown as Prisma.InputJsonValue,
+    });
+    return measure;
+  }
+
+  async createDocumentationItem(
+    projectId: string,
+    userId: string,
+    companyId: string,
+    dto: CreateDocumentationItemDto,
+  ) {
+    await this.authorizeMutation(projectId, userId, companyId);
+    if (!dto.systemAssetId && !dto.aiSystemObligationId) {
+      throw new BadRequestException(
+        'Documentation must be linked to a system asset or requirement',
+      );
+    }
+    if (dto.systemAssetId) {
+      const asset = await this.prisma.systemAsset.findFirst({
+        where: { id: dto.systemAssetId, projectId },
+      });
+      if (!asset)
+        throw new BadRequestException('Asset must belong to this project');
+    }
+    if (dto.aiSystemObligationId) {
+      const obligation = await this.prisma.aiSystemObligation.findFirst({
+        where: { id: dto.aiSystemObligationId, projectId },
+      });
+      if (!obligation) {
+        throw new BadRequestException(
+          'Requirement must belong to this project',
+        );
+      }
+    }
+    const item = await this.prisma.documentationItem.create({
+      data: {
+        projectId,
+        documentType: dto.documentType,
+        title: dto.title.trim(),
+        description: dto.description?.trim() || null,
+        referenceUrl: dto.referenceUrl?.trim() || null,
+        systemAssetId: dto.systemAssetId,
+        aiSystemObligationId: dto.aiSystemObligationId,
+      },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'DocumentationItem',
+      entityId: item.id,
+      action: 'CREATED',
+      afterSnapshot: item as unknown as Prisma.InputJsonValue,
+    });
+    return item;
+  }
+
+  async updateAssessmentContext(
+    projectId: string,
+    assessmentId: string,
+    userId: string,
+    companyId: string,
+    dto: UpdateAssessmentContextDto,
+  ) {
+    const assessment = await this.getAuthorized(
+      assessmentId,
+      userId,
+      companyId,
+    );
+    if (assessment.projectId !== projectId) {
+      throw new NotFoundException('Assessment not found');
+    }
+    if (assessment.status === AssessmentStatus.FINALIZED) {
+      throw new ConflictException('A finalized assessment cannot be edited');
+    }
+    await this.authorizeMutation(projectId, userId, companyId);
+    const updated = await this.prisma.assessment.update({
+      where: { id: assessmentId },
+      data: {
+        assessorType: dto.assessorType,
+        assessorName: dto.assessorName?.trim() || null,
+        assessmentDate: new Date(dto.assessmentDate),
+      },
+    });
+    await this.audit.record({
+      companyId,
+      projectId,
+      actorId: userId,
+      entityType: 'Assessment',
+      entityId: assessmentId,
+      action: 'ASSESSOR_UPDATED',
+      afterSnapshot: {
+        assessorType: updated.assessorType,
+        assessorName: updated.assessorName,
+        assessmentDate: updated.assessmentDate.toISOString(),
+      },
+    });
+    return updated;
+  }
+
+  async finalizeAssessment(
+    projectId: string,
+    assessmentId: string,
+    userId: string,
+    companyId: string,
+  ) {
+    const assessment = await this.getAuthorized(
+      assessmentId,
+      userId,
+      companyId,
+    );
+    if (assessment.projectId !== projectId) {
+      throw new NotFoundException('Assessment not found');
+    }
+    await this.authorizeMutation(projectId, userId, companyId, true);
+    if (assessment.status === AssessmentStatus.FINALIZED) return assessment;
+    const model = await this.getTraceabilityModel(projectId, userId, companyId);
+    if (model.assessment?.id !== assessmentId) {
+      throw new ConflictException(
+        'Only the latest assessment can be finalized',
+      );
+    }
+    if (!model.finalization.ready) {
+      throw new BadRequestException({
+        message: 'Assessment cannot be finalized until blockers are resolved',
+        blockers: model.finalization.blockers,
+      });
+    }
+    return this.mutate(async (tx) => {
+      const updated = await tx.assessment.update({
+        where: { id: assessmentId },
+        data: {
+          status: AssessmentStatus.FINALIZED,
+          versionNumber: { increment: 1 },
+        },
+      });
+      await tx.assessmentChangeLog.create({
+        data: {
+          assessmentId,
+          versionNumber: updated.versionNumber,
+          action: 'FINALIZED',
+          actorId: userId,
+          snapshot: {
+            coverageScore: updated.coverageScore,
+            assessorType: updated.assessorType,
+            assessmentDate: updated.assessmentDate.toISOString(),
+          },
+        },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          projectId,
+          actorId: userId,
+          entityType: 'Assessment',
+          entityId: assessmentId,
+          action: 'FINALIZED',
+          afterSnapshot: {
+            status: updated.status,
+            versionNumber: updated.versionNumber,
+            coverageScore: updated.coverageScore,
+          },
+        },
+        tx,
+      );
+      return updated;
+    });
+  }
+
+  async updateScoring(
+    assessmentId: string,
+    userId: string,
+    companyId: string,
+    dto: UpdateAssessmentScoringDto,
+  ) {
+    const assessment = await this.getAuthorized(
+      assessmentId,
+      userId,
+      companyId,
+    );
+    if (assessment.status === AssessmentStatus.FINALIZED) {
+      throw new ConflictException('A finalized assessment cannot be rescored');
+    }
+    await this.authorizeMutation(assessment.projectId, userId, companyId);
+    return this.mutate(async (tx) => {
+      const rowIds = dto.rows?.map((row) => row.obligationId) ?? [];
+      if (new Set(rowIds).size !== rowIds.length) {
+        throw new BadRequestException(
+          'Each requirement can only be scored once per save',
+        );
+      }
+      if (rowIds.length) {
+        const rows = await tx.assessmentRequirementRow.findMany({
+          where: { assessmentId, obligationId: { in: rowIds } },
+          select: { obligationId: true },
+        });
+        if (rows.length !== rowIds.length) {
+          throw new NotFoundException('Assessment requirement row not found');
+        }
+      }
+      for (const row of dto.rows ?? []) {
+        await tx.assessmentRequirementRow.update({
+          where: {
+            assessmentId_obligationId: {
+              assessmentId,
+              obligationId: row.obligationId,
+            },
+          },
+          data: {
+            score: row.score,
+            state: row.state,
+            weight: row.weight,
+            rationale: row.rationale,
+            evidenceLinks: row.evidenceLinks as
+              | Prisma.InputJsonValue
+              | undefined,
+          },
+        });
+      }
+      const scoredRows = await tx.assessmentRequirementRow.findMany({
+        where: { assessmentId },
+      });
+      const coverageScore = calculateCoverageScore(scoredRows);
+      const updated = await tx.assessment.update({
+        where: { id: assessmentId },
+        data: {
+          weightingChoice: dto.weightingChoice,
+          targetBand: dto.targetBand,
+          coverageScore,
+          versionNumber: { increment: 1 },
+        },
+      });
+      await tx.assessmentChangeLog.create({
+        data: {
+          assessmentId,
+          versionNumber: updated.versionNumber,
+          action: 'SCORING_UPDATED',
+          actorId: userId,
+          snapshot: {
+            weightingChoice: updated.weightingChoice,
+            targetBand: updated.targetBand,
+            rowCount: dto.rows?.length ?? 0,
+            coverageScore,
+          },
+        },
+      });
+      await this.audit.record(
+        {
+          companyId,
+          projectId: assessment.projectId,
+          actorId: userId,
+          entityType: 'Assessment',
+          entityId: assessmentId,
+          action: 'SCORING_UPDATED',
+          afterSnapshot: {
+            weightingChoice: updated.weightingChoice,
+            targetBand: updated.targetBand,
+            versionNumber: updated.versionNumber,
+            coverageScore,
+          },
+        },
+        tx,
+      );
+      return updated;
+    });
+  }
+
   async reviewClassification(
     projectId: string,
     classificationId: string,
@@ -366,10 +1288,10 @@ export class AssessmentsService {
 
   async listObligations(projectId: string, userId: string, companyId: string) {
     await this.authorizeProject(projectId, userId, companyId);
-    return this.prisma.aiSystemObligation.findMany({
+    const obligations = await this.prisma.aiSystemObligation.findMany({
       where: { projectId },
       include: {
-        obligation: true,
+        obligation: { include: { catalogue: true } },
         owner: { select: { id: true, email: true } },
         actions: {
           include: { owner: { select: { id: true, email: true } } },
@@ -378,6 +1300,10 @@ export class AssessmentsService {
       },
       orderBy: { createdAt: 'asc' },
     });
+    return obligations.map((obligation) => ({
+      ...obligation,
+      obligation: canonicalRequirement(obligation.obligation),
+    }));
   }
 
   async getObligationTraceability(
@@ -390,7 +1316,7 @@ export class AssessmentsService {
     const obligation = await this.prisma.aiSystemObligation.findFirst({
       where: { id: obligationId, projectId },
       include: {
-        obligation: { include: { packVersion: true } },
+        obligation: { include: { packVersion: true, catalogue: true } },
         classificationResult: {
           select: {
             id: true,
@@ -490,17 +1416,18 @@ export class AssessmentsService {
         title: action.title,
         status: action.status,
       }));
+    const canonical = canonicalRequirement(obligation.obligation);
     return {
       requirement: {
         id: obligation.obligation.id,
-        identifier: obligation.obligation.key,
-        title: obligation.obligation.title,
-        description: obligation.obligation.description,
-        legalReference: obligation.obligation.legalReference,
+        identifier: canonical.catalogueId,
+        title: canonical.title,
+        description: canonical.description,
+        legalReference: canonical.legalReference,
         applicability: obligation.status,
         ownerId: obligation.ownerId,
       },
-      legalReference: obligation.obligation.legalReference,
+      legalReference: canonical.legalReference,
       packVersion: {
         id: obligation.obligation.packVersion.id,
         key: obligation.obligation.packVersion.key,
@@ -746,6 +1673,25 @@ export class AssessmentsService {
         dto.status === 'COMPLETE'
       ) {
         await this.authorizeMutation(projectId, userId, companyId, true);
+      }
+      if (
+        (dto.approvalState === 'APPROVED' || dto.status === 'COMPLETE') &&
+        (dto.status ?? existing.status) !== 'NOT_APPLICABLE'
+      ) {
+        const links = await tx.obligationEvidence.findMany({
+          where: { aiSystemObligationId: obligationId },
+          include: { artifact: true, document: true },
+        });
+        const now = new Date();
+        if (
+          !links.some((link) =>
+            hasVerifiedSupportingEvidence(link, projectId, now),
+          )
+        ) {
+          throw new BadRequestException(
+            'Approve current supporting evidence before approving this requirement',
+          );
+        }
       }
       const updated = await tx.aiSystemObligation.update({
         where: { id: obligationId },
@@ -997,6 +1943,13 @@ export class AssessmentsService {
         throw new ConflictException(
           'The compliance record changed concurrently. Reload and retry.',
         );
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new ConflictException(
+          'A record with the same unique identity already exists.',
+        );
       throw error;
     }
   }
@@ -1084,24 +2037,58 @@ export class AssessmentsService {
     projectId: string,
     packVersionId: string,
     classificationResultId: string,
-    result: Record<string, any>,
+    result: Record<string, unknown>,
   ) {
     const obligations = Array.isArray(result.obligations)
-      ? result.obligations
+      ? result.obligations.filter(
+          (item): item is Record<string, unknown> =>
+            typeof item === 'object' && item !== null,
+        )
       : [];
-    for (const [index, item] of obligations.entries()) {
-      const key = `${String(item.role ?? 'general')}-${index + 1}`;
+    for (const item of obligations) {
+      const role = typeof item.role === 'string' ? item.role : 'general';
+      const catalogue = getEuAiActRequirement(role);
+      await ensureRequirementCatalogueItem(tx, catalogue);
+      const applicabilityReason = String(
+        typeof item.title === 'string'
+          ? item.title
+          : 'Materialized from the latest EU AI Act classification.',
+      );
       const obligation = await tx.obligation.upsert({
-        where: { packVersionId_key: { packVersionId, key } },
+        where: {
+          packVersionId_key: { packVersionId, key: catalogue.key },
+        },
         create: {
           packVersionId,
-          key,
-          title: String(item.title ?? key),
-          legalReference: Array.isArray(result.legal_references)
-            ? String(result.legal_references[index] ?? '')
-            : null,
+          key: catalogue.key,
+          catalogueId: catalogue.id,
+          title: catalogue.text,
+          description: catalogue.text,
+          legalReference: catalogue.article,
+          aiActArticle: catalogue.article,
+          trustworthinessPrinciple: catalogue.principle,
+          architectureElements: [...catalogue.architectureElements],
+          verificationMethod: catalogue.verificationMethod,
         },
-        update: {},
+        update: {
+          catalogueId: catalogue.id,
+          title: catalogue.text,
+          description: catalogue.text,
+          legalReference: catalogue.article,
+          aiActArticle: catalogue.article,
+          trustworthinessPrinciple: catalogue.principle,
+          architectureElements: [...catalogue.architectureElements],
+          verificationMethod: catalogue.verificationMethod,
+        },
+      });
+      await tx.aiSystemObligation.updateMany({
+        where: {
+          projectId,
+          obligationId: obligation.id,
+          classificationResultId: { not: null },
+          approvalState: 'APPROVED',
+        },
+        data: { status: 'UNDER_REVIEW', approvalState: 'READY_FOR_REVIEW' },
       });
       await tx.aiSystemObligation.upsert({
         where: {
@@ -1111,16 +2098,283 @@ export class AssessmentsService {
           projectId,
           obligationId: obligation.id,
           classificationResultId,
-          applicabilityReason:
-            'Materialized from the latest EU AI Act classification.',
+          applicabilityReason,
           status: ObligationStatus.NOT_STARTED,
         },
         update: {
           classificationResultId,
-          applicabilityReason:
-            'Materialized from the latest EU AI Act classification.',
+          applicabilityReason,
         },
       });
     }
   }
+}
+
+function canonicalRequirement<
+  T extends {
+    catalogueId: string;
+    catalogue: {
+      id: string;
+      text: string;
+      aiActArticle: string;
+      trustworthinessPrinciple: string;
+      architectureElements: Prisma.JsonValue;
+      verificationMethod: string;
+    };
+  },
+>(obligation: T) {
+  return {
+    ...obligation,
+    catalogueId: obligation.catalogue.id,
+    title: obligation.catalogue.text,
+    description: obligation.catalogue.text,
+    legalReference: obligation.catalogue.aiActArticle,
+    aiActArticle: obligation.catalogue.aiActArticle,
+    trustworthinessPrinciple: obligation.catalogue.trustworthinessPrinciple,
+    architectureElements: obligation.catalogue.architectureElements,
+    verificationMethod: obligation.catalogue.verificationMethod,
+  };
+}
+
+function calculateCoverageScore(
+  rows: Array<{ score: number | null; weight: number; state: string }>,
+) {
+  const scored = rows.filter(
+    (row) => row.score !== null && row.state !== 'NOT_APPLICABLE',
+  );
+  const totalWeight = scored.reduce((sum, row) => sum + row.weight, 0);
+  if (!scored.length || totalWeight <= 0) return null;
+  return Number(
+    (
+      scored.reduce((sum, row) => sum + Number(row.score) * row.weight, 0) /
+      totalWeight
+    ).toFixed(2),
+  );
+}
+
+type TraceabilityGap = {
+  id: string;
+  severity: 'BLOCKER' | 'WARNING' | 'INFO';
+  category: 'ASSESSMENT' | 'ASSET' | 'STAKEHOLDER' | 'LIFECYCLE' | 'EVIDENCE';
+  title: string;
+  recommendation: string;
+  obligationId?: string;
+  assetId?: string;
+};
+
+function buildTraceabilityGaps(input: {
+  assessment: null | {
+    assessorType: string;
+    coverageScore: number | null;
+    requirementRows: Array<{
+      obligationId: string;
+      score: number | null;
+      state: string;
+      rationale: string | null;
+      evidenceLinks: Prisma.JsonValue | null;
+    }>;
+  };
+  assets: Array<{ id: string; name: string; lifecycleStage: string | null }>;
+  obligations: Array<{
+    id: string;
+    status: string;
+    obligation: { catalogueId: string; title: string };
+    assetLinks: unknown[];
+    technicalMeasures: Array<{ status: string }>;
+    documentationItems: unknown[];
+    evidence: unknown[];
+  }>;
+  lifecycleEvents: unknown[];
+  stakeholders: Array<{ role: string }>;
+  documentationItems: Array<{
+    id: string;
+    title: string;
+    referenceUrl: string | null;
+  }>;
+}) {
+  const gaps: TraceabilityGap[] = [];
+  const add = (gap: TraceabilityGap) => gaps.push(gap);
+  if (!input.assessment) {
+    add({
+      id: 'assessment-missing',
+      severity: 'BLOCKER',
+      category: 'ASSESSMENT',
+      title: 'Create an assessment',
+      recommendation:
+        'Start an assessment and classify the system before finalization.',
+    });
+  } else if (input.assessment.coverageScore === null) {
+    add({
+      id: 'assessment-unscored',
+      severity: 'BLOCKER',
+      category: 'ASSESSMENT',
+      title: 'Complete requirement scoring',
+      recommendation:
+        'Enter a score, state, weight, rationale, and evidence links for every applicable requirement.',
+    });
+  }
+  if (!input.assets.length) {
+    add({
+      id: 'assets-missing',
+      severity: 'BLOCKER',
+      category: 'ASSET',
+      title: 'Record at least one system asset',
+      recommendation:
+        'Add the model, dataset, software, infrastructure, interface, or human process being assessed.',
+    });
+  }
+  for (const asset of input.assets) {
+    if (!asset.lifecycleStage) {
+      add({
+        id: `asset-lifecycle-${asset.id}`,
+        severity: 'WARNING',
+        category: 'ASSET',
+        title: `Set the lifecycle stage for ${asset.name}`,
+        recommendation:
+          'Record where this asset currently sits in its lifecycle.',
+        assetId: asset.id,
+      });
+    }
+  }
+  if (!input.lifecycleEvents.length) {
+    add({
+      id: 'lifecycle-history-missing',
+      severity: 'BLOCKER',
+      category: 'LIFECYCLE',
+      title: 'Record the AI system lifecycle',
+      recommendation:
+        'Add the current lifecycle stage and effective date so changes can be traced over time.',
+    });
+  }
+  if (
+    !input.stakeholders.some((stakeholder) =>
+      ['PROVIDER', 'DEPLOYER'].includes(stakeholder.role),
+    )
+  ) {
+    add({
+      id: 'accountable-stakeholder-missing',
+      severity: 'BLOCKER',
+      category: 'STAKEHOLDER',
+      title: 'Add a provider or deployer',
+      recommendation:
+        'Record the organization accountable for this AI system and its EU AI Act role.',
+    });
+  }
+  if (
+    input.assessment?.assessorType === 'NOTIFIED_BODY' &&
+    !input.stakeholders.some((item) => item.role === 'NOTIFIED_BODY')
+  ) {
+    add({
+      id: 'notified-body-missing',
+      severity: 'BLOCKER',
+      category: 'STAKEHOLDER',
+      title: 'Identify the notified body',
+      recommendation:
+        'Add the notified body selected as the external assessor.',
+    });
+  }
+  if (
+    input.assessment?.assessorType === 'COMPETENT_AUTHORITY' &&
+    !input.stakeholders.some((item) => item.role === 'COMPETENT_AUTHORITY')
+  ) {
+    add({
+      id: 'competent-authority-missing',
+      severity: 'BLOCKER',
+      category: 'STAKEHOLDER',
+      title: 'Identify the competent authority',
+      recommendation:
+        'Add the competent authority selected as the external assessor.',
+    });
+  }
+  if (!input.obligations.length) {
+    add({
+      id: 'requirements-missing',
+      severity: 'BLOCKER',
+      category: 'ASSESSMENT',
+      title: 'Generate applicable requirements',
+      recommendation:
+        'Complete classification to create the requirement catalogue rows for this system.',
+    });
+  }
+  for (const obligation of input.obligations) {
+    const row = input.assessment?.requirementRows.find(
+      (candidate) => candidate.obligationId === obligation.id,
+    );
+    if (
+      obligation.status === 'NOT_APPLICABLE' ||
+      row?.state === 'NOT_APPLICABLE'
+    ) {
+      continue;
+    }
+    const label =
+      obligation.obligation.catalogueId || obligation.obligation.title;
+    if (!obligation.assetLinks.length) {
+      add({
+        id: `requirement-asset-${obligation.id}`,
+        severity: 'BLOCKER',
+        category: 'ASSET',
+        title: `Link an asset to ${label}`,
+        recommendation:
+          'Select the system asset or process that implements this requirement.',
+        obligationId: obligation.id,
+      });
+    }
+    if (
+      !obligation.technicalMeasures.some(
+        (measure) => measure.status === 'COMPLETE',
+      )
+    ) {
+      add({
+        id: `requirement-measure-${obligation.id}`,
+        severity: 'BLOCKER',
+        category: 'ASSESSMENT',
+        title: `Complete a technical measure for ${label}`,
+        recommendation:
+          'Add an implementation measure and mark it complete after verification.',
+        obligationId: obligation.id,
+      });
+    }
+    const rowEvidence = Array.isArray(row?.evidenceLinks)
+      ? row.evidenceLinks.length
+      : 0;
+    if (
+      !obligation.documentationItems.length &&
+      !obligation.evidence.length &&
+      !rowEvidence
+    ) {
+      add({
+        id: `requirement-evidence-${obligation.id}`,
+        severity: 'BLOCKER',
+        category: 'EVIDENCE',
+        title: `Provide evidence for ${label}`,
+        recommendation:
+          'Link an approved evidence item, documentation record, or assessment evidence URL.',
+        obligationId: obligation.id,
+      });
+    }
+    if (!row || row.score === null || !row.rationale?.trim()) {
+      add({
+        id: `requirement-score-${obligation.id}`,
+        severity: 'BLOCKER',
+        category: 'ASSESSMENT',
+        title: `Complete scoring rationale for ${label}`,
+        recommendation:
+          'Save a score and written rationale for this applicable requirement.',
+        obligationId: obligation.id,
+      });
+    }
+  }
+  for (const item of input.documentationItems) {
+    if (!item.referenceUrl) {
+      add({
+        id: `documentation-reference-${item.id}`,
+        severity: 'WARNING',
+        category: 'EVIDENCE',
+        title: `Add a reference for ${item.title}`,
+        recommendation:
+          'Add an HTTP(S) link to the controlled document or evidence record.',
+      });
+    }
+  }
+  return gaps;
 }

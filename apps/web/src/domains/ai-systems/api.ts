@@ -12,6 +12,7 @@ import type {
   GenerationReadiness,
   ProjectDetail,
   ProjectListItem,
+  ProjectWorkflowSummary,
   ReminderItem,
   ReviewerItem,
   SectionArtifactItem,
@@ -30,6 +31,13 @@ export async function listProjectAuditEvents(projectId: string) {
 
 export async function listProjects() {
   const { data } = await api.get<ProjectListItem[]>('/projects');
+  return data;
+}
+
+export async function getProjectWorkflowSummary(projectId: string) {
+  const { data } = await api.get<ProjectWorkflowSummary>(
+    `/projects/${projectId}/workflow-summary`,
+  );
   return data;
 }
 
@@ -83,6 +91,80 @@ export async function createProjectAssessment(projectId: string) {
   return data;
 }
 
+export type AssessmentWorkspace = {
+  id: string;
+  status: 'DRAFT' | 'CLASSIFIED' | 'FINALIZED' | 'ARCHIVED';
+  weightingChoice: string;
+  targetBand: string;
+  versionNumber: number;
+  assessmentDate: string;
+  assessorType: string;
+  assessorName?: string | null;
+  coverageScore?: number | null;
+  updatedAt: string;
+  packVersion: { id: string; key: string; version: string };
+  requirementRows: Array<{
+    id: string;
+    obligationId: string;
+    requirementId: string;
+    score: number | null;
+    state: string;
+    weight: number;
+    rationale: string | null;
+    evidenceLinks: unknown;
+    obligation: {
+      id: string;
+      status: string;
+      obligation: {
+        catalogueId: string;
+        title: string;
+        aiActArticle: string | null;
+        legalReference?: string | null;
+        trustworthinessPrinciple: string;
+        architectureElements: unknown;
+        verificationMethod: string;
+      };
+    };
+  }>;
+  changeLog: Array<{
+    id: string;
+    versionNumber: number;
+    action: string;
+    snapshot: unknown;
+    createdAt: string;
+  }>;
+};
+
+export async function getAssessmentWorkspace(projectId: string) {
+  const { data } = await api.get<AssessmentWorkspace | null>(
+    `/ai-systems/${projectId}/assessments/workspace`,
+  );
+  return data;
+}
+
+export async function updateAssessmentScoring(
+  projectId: string,
+  assessmentId: string,
+  payload: {
+    weightingChoice?: string;
+    targetBand?: string;
+    rows?: Array<{
+      obligationId: string;
+      score?: number | null;
+      state?: string;
+      weight?: number;
+      rationale?: string | null;
+      evidenceLinks?: string[];
+    }>;
+  },
+) {
+  const { data } = await api.put(
+    `/ai-systems/${projectId}/assessments/${assessmentId}/scoring`,
+    payload,
+  );
+  return data;
+}
+
 export async function classifyAssessment(
   projectId: string,
   assessmentId: string,
@@ -98,6 +180,7 @@ export type PreliminaryClassification = {
   assessmentId: string;
   category: string;
   reviewStatus: string;
+  assessment?: { status: 'DRAFT' | 'CLASSIFIED' | 'FINALIZED' | 'ARCHIVED' };
   regulatoryContentVersion?: string;
   ruleSetVersion?: string;
   resultSnapshot?: {
@@ -170,14 +253,22 @@ export async function listProjectObligations(projectId: string) {
       status: string;
       priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
       approvalState:
-        'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED';
+        | 'DRAFT'
+        | 'READY_FOR_REVIEW'
+        | 'APPROVED'
+        | 'CHANGES_REQUESTED';
       applicabilityReason?: string | null;
       owner?: { id: string; email: string } | null;
       dueAt?: string | null;
       obligation: {
         key?: string;
+        catalogueId?: string;
         title: string;
         legalReference?: string | null;
+        aiActArticle?: string | null;
+        trustworthinessPrinciple?: string | null;
+        architectureElements?: unknown;
+        verificationMethod?: string | null;
       };
       actions: Array<{
         id: string;
@@ -280,6 +371,310 @@ export type ObligationTraceability = {
     included: boolean;
   }>;
 };
+
+export type TraceabilityModel = {
+  project: {
+    id: string;
+    name: string;
+    description?: string | null;
+    lifecycleStage?: string | null;
+    providerOrDeveloper?: string | null;
+    company?: {
+      name: string;
+      registrationNumber?: string | null;
+      country?: string | null;
+      aiActRole?: string | null;
+    } | null;
+  };
+  assessment?: {
+    id: string;
+    status: 'DRAFT' | 'CLASSIFIED' | 'FINALIZED' | 'ARCHIVED';
+    date: string;
+    assessorType: string;
+    assessorName: string;
+    coverageScore?: number | null;
+    versionNumber: number;
+    catalogueVersion: string;
+  } | null;
+  assets: Array<{
+    id: string;
+    name: string;
+    description?: string | null;
+    assetType: string;
+    lifecycleStage?: string | null;
+    version?: string | null;
+  }>;
+  obligations: Array<{
+    id: string;
+    obligation: {
+      catalogueId: string;
+      title: string;
+      aiActArticle: string;
+      trustworthinessPrinciple: string;
+      architectureElements: unknown;
+      verificationMethod: string;
+    };
+    assetLinks: Array<{ systemAsset: { id: string; name: string } }>;
+    technicalMeasures: Array<{
+      id: string;
+      title: string;
+      description?: string | null;
+      status: 'PLANNED' | 'PARTIAL' | 'COMPLETE';
+      verificationNotes?: string | null;
+    }>;
+    documentationItems: Array<{ id: string; title: string }>;
+    evidence: Array<{ id: string }>;
+  }>;
+  documentationItems: Array<{
+    id: string;
+    title: string;
+    documentType: string;
+    description?: string | null;
+    referenceUrl?: string | null;
+    systemAsset?: { id: string; name: string } | null;
+    obligation?: {
+      id: string;
+      obligation: { catalogueId: string; title: string };
+    } | null;
+  }>;
+  lifecycleEvents: Array<{
+    id: string;
+    stage: string;
+    happenedAt: string;
+    notes?: string | null;
+    createdBy: { id: string; email: string };
+    createdAt: string;
+  }>;
+  stakeholders: Array<{
+    id: string;
+    role: string;
+    name: string;
+    registrationNumber?: string | null;
+    country?: string | null;
+    contactEmail?: string | null;
+    notes?: string | null;
+    createdBy: { id: string; email: string };
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  history: Array<{
+    id: string;
+    source: 'AUDIT' | 'ASSESSMENT';
+    action: string;
+    entityType: string;
+    entityId: string;
+    versionNumber?: number | null;
+    actor: string;
+    snapshot?: unknown;
+    createdAt: string;
+  }>;
+  gaps: Array<{
+    id: string;
+    severity: 'BLOCKER' | 'WARNING' | 'INFO';
+    category: 'ASSESSMENT' | 'ASSET' | 'STAKEHOLDER' | 'LIFECYCLE' | 'EVIDENCE';
+    title: string;
+    recommendation: string;
+    obligationId?: string;
+    assetId?: string;
+  }>;
+  finalization: { ready: boolean; blockers: string[] };
+  reassessment: { required: boolean; reason: string | null };
+  scope: { included: string; excluded: string };
+};
+
+export async function getTraceabilityModel(projectId: string) {
+  const { data } = await api.get<TraceabilityModel>(
+    `/ai-systems/${projectId}/traceability-model`,
+  );
+  return {
+    ...data,
+    assessment: data.assessment
+      ? {
+          ...data.assessment,
+          status: data.assessment.status ?? 'CLASSIFIED',
+        }
+      : data.assessment,
+    assets: data.assets ?? [],
+    obligations: data.obligations ?? [],
+    documentationItems: data.documentationItems ?? [],
+    lifecycleEvents: data.lifecycleEvents ?? [],
+    stakeholders: data.stakeholders ?? [],
+    history: data.history ?? [],
+    gaps: data.gaps ?? [],
+    finalization: data.finalization ?? {
+      ready: false,
+      blockers: ['Reload after the API update completes'],
+    },
+    reassessment: data.reassessment ?? { required: false, reason: null },
+  } satisfies TraceabilityModel;
+}
+
+export async function createSystemAsset(
+  projectId: string,
+  payload: {
+    name: string;
+    description?: string;
+    assetType: string;
+    lifecycleStage?: string;
+    version?: string;
+  },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/system-assets`,
+    payload,
+  );
+  return data;
+}
+
+export async function updateSystemAsset(
+  projectId: string,
+  assetId: string,
+  payload: { lifecycleStage: string },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/system-assets/${assetId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function createLifecycleEvent(
+  projectId: string,
+  payload: { stage: string; happenedAt: string; notes?: string },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/lifecycle-events`,
+    payload,
+  );
+  return data;
+}
+
+export async function createComplianceStakeholder(
+  projectId: string,
+  payload: {
+    role: string;
+    name: string;
+    registrationNumber?: string;
+    country?: string;
+    contactEmail?: string;
+    notes?: string;
+  },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/stakeholders`,
+    payload,
+  );
+  return data;
+}
+
+export async function updateComplianceStakeholder(
+  projectId: string,
+  stakeholderId: string,
+  payload: Partial<{
+    role: string;
+    name: string;
+    registrationNumber: string;
+    country: string;
+    contactEmail: string;
+    notes: string;
+  }>,
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/stakeholders/${stakeholderId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function updateRequirementAssetLinks(
+  projectId: string,
+  obligationId: string,
+  assetIds: string[],
+) {
+  const { data } = await api.put(
+    `/ai-systems/${projectId}/obligations/${obligationId}/assets`,
+    { assetIds },
+  );
+  return data;
+}
+
+export async function createTechnicalMeasure(
+  projectId: string,
+  obligationId: string,
+  payload: {
+    title: string;
+    description?: string;
+    status: 'PLANNED' | 'PARTIAL' | 'COMPLETE';
+    verificationNotes?: string;
+  },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/obligations/${obligationId}/technical-measures`,
+    payload,
+  );
+  return data;
+}
+
+export async function updateTechnicalMeasure(
+  projectId: string,
+  measureId: string,
+  payload: {
+    title?: string;
+    description?: string;
+    status?: 'PLANNED' | 'PARTIAL' | 'COMPLETE';
+    verificationNotes?: string;
+  },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/technical-measures/${measureId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function createDocumentationItem(
+  projectId: string,
+  payload: {
+    documentType: string;
+    title: string;
+    description?: string;
+    referenceUrl?: string;
+    systemAssetId?: string;
+    aiSystemObligationId?: string;
+  },
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/documentation-items`,
+    payload,
+  );
+  return data;
+}
+
+export async function updateAssessmentContext(
+  projectId: string,
+  assessmentId: string,
+  payload: {
+    assessorType: string;
+    assessorName?: string;
+    assessmentDate: string;
+  },
+) {
+  const { data } = await api.patch(
+    `/ai-systems/${projectId}/assessments/${assessmentId}/context`,
+    payload,
+  );
+  return data;
+}
+
+export async function finalizeAssessment(
+  projectId: string,
+  assessmentId: string,
+) {
+  const { data } = await api.post(
+    `/ai-systems/${projectId}/assessments/${assessmentId}/finalize`,
+  );
+  return data;
+}
 
 export async function createProjectFinding(
   projectId: string,
@@ -515,9 +910,20 @@ export async function listCompliancePackages(projectId: string) {
   return data;
 }
 
-export async function verifyCompliancePackage(projectId: string, packageId: string) {
-  const { data } = await api.get(`/ai-systems/${projectId}/reports/packages/${packageId}/verify`);
-  return data as { valid: boolean; manifestValid: boolean; archiveValid: boolean; checkedAt: string; errors: string[] };
+export async function verifyCompliancePackage(
+  projectId: string,
+  packageId: string,
+) {
+  const { data } = await api.get(
+    `/ai-systems/${projectId}/reports/packages/${packageId}/verify`,
+  );
+  return data as {
+    valid: boolean;
+    manifestValid: boolean;
+    archiveValid: boolean;
+    checkedAt: string;
+    errors: string[];
+  };
 }
 
 export async function listTemplates(sectionName: string) {

@@ -55,7 +55,12 @@ export class EuAiActClassificationService {
       (Array.isArray(map.eu_nexus) && map.eu_nexus.length > 0);
     const inScope = aiSystem && usedInEu;
     const prohibited = prohibitedUseCases.length > 0;
-    const highRisk = !prohibited && highRiskContexts.length > 0;
+    const annexIRoute = map.annex_i_safety_component === true;
+    const article63Exception = map.art_6_3_exception === true;
+    const highRisk =
+      !prohibited &&
+      (annexIRoute || (highRiskContexts.length > 0 && !article63Exception));
+    const gpai = map.gpai_involvement === true;
     const outOfScope = !inScope;
     const humanOversightReady = map.human_oversight_ready !== false;
     const riskControlsReady = map.risk_controls_ready !== false;
@@ -116,6 +121,13 @@ export class EuAiActClassificationService {
         title: 'Users should receive the relevant AI transparency notice.',
       });
     }
+    if (!outOfScope && gpai) {
+      obligations.push({
+        role: 'gpai',
+        title:
+          'GPAI model involvement should be documented, including applicable provider or downstream-integrator responsibilities.',
+      });
+    }
 
     const missingEvidence: string[] = [];
     if (!outOfScope && !humanOversightReady)
@@ -148,11 +160,14 @@ export class EuAiActClassificationService {
     const legalReferences = [
       ...(inScope ? ['art-2-scope', 'art-3-ai-system'] : []),
       ...(prohibited ? ['art-5'] : []),
-      ...(highRisk ? ['art-6', 'annex-iii', 'art-49'] : []),
+      ...(highRisk ? ['art-6', 'art-49'] : []),
+      ...(annexIRoute ? ['annex-i'] : highRisk ? ['annex-iii'] : []),
+      ...(article63Exception ? ['art-6'] : []),
       ...(roles.includes('provider') ? ['art-16'] : []),
       ...(roles.includes('deployer') ? ['art-26'] : []),
       ...(roles.includes('importer') ? ['art-16'] : []),
       ...(transparencyTriggers.length > 0 ? ['art-50'] : []),
+      ...(gpai ? ['art-51', 'art-53'] : []),
     ];
     const reasoningTrace = [
       {
@@ -196,12 +211,14 @@ export class EuAiActClassificationService {
       excluded: false,
       prohibited,
       high_risk: highRisk,
+      annex_i_route: annexIRoute,
+      article_6_3_exception: article63Exception,
       transparency_obligations: transparencyTriggers,
-      gpai: false,
+      gpai,
       gpai_systemic_risk: false,
       operator_roles: roles,
       other_frameworks: otherFrameworks,
-      considered_provider: false,
+      considered_provider: roles.includes('provider'),
       obligations,
       missing_evidence: Array.from(new Set(missingEvidence)),
       missing_information: missingInformation,

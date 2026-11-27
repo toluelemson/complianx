@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import LandingPage from '@/domains/marketing/pages/LandingPage';
 import { ProtectedRoute } from '@/app/routing/ProtectedRoute';
+import { ProjectRouteRedirect } from '@/app/routing/ProjectRouteRedirect';
 
 const LoginPage = lazy(() => import('@/domains/auth/pages/LoginPage'));
 const SignupPage = lazy(() => import('@/domains/auth/pages/SignupPage'));
@@ -69,6 +70,15 @@ const ProjectFindingsPage = lazy(
 );
 const ProjectQuestionnairePage = lazy(
   () => import('@/domains/ai-systems/pages/ProjectQuestionnairePage'),
+);
+const ProjectAssessmentPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectAssessmentPage'),
+);
+const ProjectAdvancedPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectAdvancedPage'),
+);
+const ProjectTraceabilityPage = lazy(
+  () => import('@/domains/ai-systems/pages/ProjectTraceabilityPage'),
 );
 const ProjectTrustPage = lazy(
   () => import('@/domains/assessments/pages/ProjectTrustPage'),
@@ -232,10 +242,42 @@ function App() {
           }
         />
         <Route
+          path="/projects/:projectId/assessment"
+          element={
+            <ProtectedRoute>
+              <ProjectAssessmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/advanced"
+          element={
+            <ProtectedRoute>
+              <ProjectAdvancedPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/traceability"
+          element={
+            <ProtectedRoute>
+              <ProjectTraceabilityPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/projects/:projectId/compliance-workspace"
           element={
             <ProtectedRoute>
               <ProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/documents"
+          element={
+            <ProtectedRoute>
+              <ProjectRouteRedirect destination="compliance-package" />
             </ProtectedRoute>
           }
         />
@@ -251,7 +293,7 @@ function App() {
           path="/ai-systems/:projectId"
           element={
             <ProtectedRoute>
-              <ProjectPage />
+              <ProjectRouteRedirect />
             </ProtectedRoute>
           }
         />

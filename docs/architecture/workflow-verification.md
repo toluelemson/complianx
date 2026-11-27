@@ -14,40 +14,42 @@ tests and exercised against a dedicated local/test database:
 | Report | Refuse generation when not ready; generate and verify an immutable package when ready. |
 | Navigation | Direct stage links resolve to the correct view, and legacy deep links preserve context while adapters remain. |
 
-## Baseline commands
+## Verification commands
 
 Run from the repository root with a non-production database configuration:
 
 ```bash
-pnpm --filter web test -- project-attention.test.ts
-pnpm --filter api test -- --runInBand
-pnpm build
-pnpm test
-pnpm lint
+pnpm verify
+pnpm --filter api exec tsc -p tsconfig.json --noEmit --pretty false
+pnpm --filter web exec tsc -b --pretty false
 pnpm db:validate
+pnpm --filter api test:compliance
+pnpm --filter api exec jest --config test/jest-e2e.json --runInBand
+pnpm test:e2e:ui
 ```
 
-## Current audit status (2026-11-27)
+See [Browser E2E setup](../operations/browser-e2e-tests.md) and
+[Compliance workflow verification](../operations/compliance-workflow-verification.md)
+for the dedicated database setup.
 
-- Web suite: passed — 32 files and 78 tests, including next-action,
-  assessment, requirements, review, package, and traceability coverage.
-- API suite: passed — 35 suites and 165 tests, including assessment,
-  traceability, requirements, project workflow, readiness, and package
-  manifest coverage.
-- Repository build: passed — all six Turbo build tasks completed.
-- Prisma schema: passed with a non-connecting placeholder `DATABASE_URL`;
-  this validates schema structure without contacting a database.
-- Lint: passed with 423 pre-existing/project-wide warnings and no errors. The
-  warning set includes React effect patterns and unsafe legacy API typings;
-  this pass adds no lint error.
-- Database-backed E2E: not run in this documentation/refactor pass.
-- Local authenticated smoke: previously observed login and an authenticated
-  AI-system list request through the local Vite proxy. This does not replace
-  the automated checks above.
+## Results on 2026-11-27
 
-The local runtime used Node 24.22.3, while the repository declares Node
-`>=22.16 <23`; pnpm emitted an engine warning. The checks above passed despite
-that mismatch, but release verification should use the declared Node 22 range.
+The original browser suite passed 10 tests before implementation. The baseline
+web type check flagged an untyped version-comparison tuple. The existing
+package gate also applied incompatible assessment status checks. Both defects
+were corrected in the workflow pass.
 
-Record command output, environment assumptions, and any known unrelated
-failures in the change handoff before declaring a migration complete.
+| Check | Result |
+| --- | --- |
+| Production build | All six workspace build tasks passed. |
+| API and web type checks | Passed on Node 22.23.5. |
+| Unit and component tests | 165 API tests and 75 web tests passed. Client guidance tests were replaced with checks against the API contract and database behavior. |
+| PostgreSQL integration | 15 tests passed on the populated migration database. |
+| API end to end | 11 tests passed. The fictional recruitment scenario uses real HTTP routes for classification, traceability finalization, evidence replacement, finding resolution, review decisions, package creation and verification. |
+| Chromium end to end | 11 tests passed, including login setup, guided Review, compatibility redirects, session restoration on reload and tenant isolation. |
+| Prisma | Schema validation passed. All 51 migrations applied to a fresh local database and to the legacy fixture. The populated schema matched the Prisma datamodel. |
+| Lint | Zero errors. The API reported 423 warnings and the web reported 56 warnings. The main categories were unsafe legacy typing and React hook warnings. |
+
+The package acceptance test uses a deterministic stored PDF to exercise
+approval, packaging and integrity checks. Live AI document generation is
+outside that test. PostgreSQL checks used dedicated local test databases.

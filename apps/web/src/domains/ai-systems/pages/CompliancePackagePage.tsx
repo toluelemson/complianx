@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { AppShell } from '@/app/layout/AppShell';
 import { useAuth } from '@/app/providers/AuthContext';
+import { HelpTooltip } from '@/shared/components/ui/help-tooltip';
 import type {
   DocumentItem,
   ProjectDetail,
@@ -12,7 +13,7 @@ import {
   approveDocument,
   getProject,
   getProjectDocuments,
-  listProjectObligations,
+  getProjectWorkflowSummary,
   createCompliancePackage,
   downloadCompliancePackage,
   listCompliancePackages,
@@ -39,12 +40,21 @@ export default function CompliancePackagePage() {
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => listCompliancePackages(projectId),
   });
+  const summary = useQuery({
+    queryKey: ['project-workflow-summary', projectId, activeCompanyId],
+    enabled: Boolean(token && projectId && activeCompanyId),
+    queryFn: () => getProjectWorkflowSummary(projectId),
+    staleTime: 0,
+  });
   const createPackageMutation = useMutation({
     mutationFn: () => createCompliancePackage(projectId),
     onMutate: () => setPackageGaps([]),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ['compliance-packages', projectId, activeCompanyId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['project-workflow-summary', projectId, activeCompanyId],
       });
       toast.success('Package created and saved in the history below');
     },
@@ -63,11 +73,6 @@ export default function CompliancePackagePage() {
     queryKey: ['documents', projectId, activeCompanyId],
     enabled: Boolean(token && projectId && activeCompanyId),
     queryFn: () => getProjectDocuments(projectId),
-  });
-  const obligationsQuery = useQuery({
-    queryKey: ['obligations', projectId, activeCompanyId],
-    enabled: Boolean(token && projectId && activeCompanyId),
-    queryFn: () => listProjectObligations(projectId),
   });
   const approveDocumentMutation = useMutation({
     mutationFn: (documentId: string) => approveDocument(documentId),
@@ -149,9 +154,9 @@ export default function CompliancePackagePage() {
             <h1 className="mt-3 text-2xl font-semibold text-slate-900">
               {projectQuery.data?.name ?? 'Audit export'}
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Download the approved files and decisions for this AI system.
-            </p>
+            <HelpTooltip className="mt-2" label="About audit export">
+              Download approved files and recorded decisions for this AI system.
+            </HelpTooltip>
           </div>
           <button
             type="button"
@@ -169,8 +174,8 @@ export default function CompliancePackagePage() {
           <p className="mt-1 text-sky-800">
             AI suggestions and draft documents are not enough on their own.
             Someone must record the required decisions for the classification,
-            evidence, requirements, documents, and this project before an
-            export can be created.
+            evidence, requirements, documents, and this project before an export
+            can be created.
           </p>
         </section>
         {packageGaps.length ? (
@@ -211,6 +216,14 @@ export default function CompliancePackagePage() {
         >
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">Documents</h2>
+            {projectQuery.data?.viewerRole === 'OWNER' && (
+              <Link
+                to={`/projects/${projectId}/compliance-workspace?section=review_generate#documents`}
+                className="hz-button hz-button--outline"
+              >
+                Prepare technical documents
+              </Link>
+            )}
             <span className="text-sm text-slate-500">
               {documentsQuery.data?.length ?? 0} files
             </span>
@@ -272,6 +285,12 @@ export default function CompliancePackagePage() {
               Could not load saved exports. Try again
             </button>
           ) : null}
+          {summary.data?.packageStatus === 'HISTORICAL' && (
+            <p className="mt-3 text-sm text-amber-800">
+              Saved exports are historical snapshots. Review the current
+              workflow before creating an updated export.
+            </p>
+          )}
           <div className="mt-4 divide-y divide-slate-100">
             {(packagesQuery.data ?? []).map((pkg) => (
               <div
@@ -307,9 +326,7 @@ export default function CompliancePackagePage() {
                   }
                   className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50"
                 >
-                  {pkg.archiveHash
-                    ? 'Download'
-                    : 'Download unavailable'}
+                  {pkg.archiveHash ? 'Download' : 'Download unavailable'}
                 </button>
                 <button
                   type="button"
@@ -324,8 +341,7 @@ export default function CompliancePackagePage() {
                   >
                     {verification[pkg.id].valid
                       ? 'File check passed'
-                      : (verification[pkg.id].errors[0] ??
-                        'File check failed')}
+                      : (verification[pkg.id].errors[0] ?? 'File check failed')}
                   </span>
                 ) : null}
               </div>
@@ -340,27 +356,21 @@ export default function CompliancePackagePage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">
-              Export readiness
+              Current requirement status
             </h2>
-            <span className="text-sm text-slate-500">
-              {obligationsQuery.data?.filter(
-                (item) => item.approvalState !== 'APPROVED',
-              ).length ?? 0}{' '}
-              gaps
-            </span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <Summary
-              label="Requirements"
-              value={String(obligationsQuery.data?.length ?? 0)}
+              label="Applicable requirements"
+              value={
+                summary.data ? String(summary.data.applicableRequirements) : '—'
+              }
             />
             <Summary
-              label="Still needs a decision"
-              value={String(
-                obligationsQuery.data?.filter(
-                  (item) => item.approvalState !== 'APPROVED',
-                ).length ?? 0,
-              )}
+              label="Approved with verified evidence"
+              value={
+                summary.data ? String(summary.data.verifiedRequirements) : '—'
+              }
             />
             <Summary
               label="Audit events"
@@ -370,9 +380,7 @@ export default function CompliancePackagePage() {
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Files
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-900">Files</h2>
             <span className="text-sm text-slate-500">
               {(projectQuery.data?.sections ?? []).reduce(
                 (count, section) => count + (section.artifacts?.length ?? 0),
@@ -392,9 +400,7 @@ export default function CompliancePackagePage() {
                     <p className="font-medium text-slate-900">
                       {artifact.originalName}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      {section.name}
-                    </p>
+                    <p className="text-xs text-slate-500">{section.name}</p>
                   </div>
                   <span
                     className={`text-xs ${artifact.expiresAt && new Date(artifact.expiresAt).getTime() < now ? 'font-semibold text-rose-600' : 'text-slate-500'}`}

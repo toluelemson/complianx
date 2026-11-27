@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -17,6 +18,18 @@ import { UpdateComplianceActionDto } from '../dto/update-compliance-action.dto';
 import { UpdateObligationDto } from '../dto/update-obligation.dto';
 import { CreateFindingDto } from '../dto/create-finding.dto';
 import { UpdateFindingDto } from '../dto/update-finding.dto';
+import {
+  CreateComplianceStakeholderDto,
+  CreateDocumentationItemDto,
+  CreateLifecycleEventDto,
+  CreateSystemAssetDto,
+  CreateTechnicalMeasureDto,
+  UpdateAssessmentContextDto,
+  UpdateComplianceStakeholderDto,
+  UpdateRequirementAssetLinksDto,
+  UpdateSystemAssetDto,
+  UpdateTechnicalMeasureDto,
+} from '../dto/traceability-model.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('ai-systems/:aiSystemId')
@@ -42,6 +55,106 @@ export class ObligationsController {
       aiSystemId,
       req.user.userId,
       this.companyId(req),
+    );
+  }
+
+  @Get('traceability-model')
+  traceabilityModel(
+    @Param('aiSystemId') aiSystemId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.getTraceabilityModel(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+    );
+  }
+
+  @Post('system-assets')
+  createSystemAsset(
+    @Param('aiSystemId') aiSystemId: string,
+    @Body() dto: CreateSystemAssetDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.createSystemAsset(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Patch('system-assets/:assetId')
+  updateSystemAsset(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('assetId') assetId: string,
+    @Body() dto: UpdateSystemAssetDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.updateSystemAsset(
+      aiSystemId,
+      assetId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Post('lifecycle-events')
+  createLifecycleEvent(
+    @Param('aiSystemId') aiSystemId: string,
+    @Body() dto: CreateLifecycleEventDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.createLifecycleEvent(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Post('stakeholders')
+  createStakeholder(
+    @Param('aiSystemId') aiSystemId: string,
+    @Body() dto: CreateComplianceStakeholderDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.createComplianceStakeholder(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Patch('stakeholders/:stakeholderId')
+  updateStakeholder(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('stakeholderId') stakeholderId: string,
+    @Body() dto: UpdateComplianceStakeholderDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.updateComplianceStakeholder(
+      aiSystemId,
+      stakeholderId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Post('documentation-items')
+  createDocumentationItem(
+    @Param('aiSystemId') aiSystemId: string,
+    @Body() dto: CreateDocumentationItemDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.createDocumentationItem(
+      aiSystemId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
     );
   }
 
@@ -114,6 +227,84 @@ export class ObligationsController {
       req.user.userId,
       this.companyId(req),
       dto,
+    );
+  }
+
+  @Put('obligations/:obligationId/assets')
+  updateRequirementAssets(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('obligationId') obligationId: string,
+    @Body() dto: UpdateRequirementAssetLinksDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.updateRequirementAssetLinks(
+      aiSystemId,
+      obligationId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Post('obligations/:obligationId/technical-measures')
+  createTechnicalMeasure(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('obligationId') obligationId: string,
+    @Body() dto: CreateTechnicalMeasureDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.createTechnicalMeasure(
+      aiSystemId,
+      obligationId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Patch('technical-measures/:measureId')
+  updateTechnicalMeasure(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('measureId') measureId: string,
+    @Body() dto: UpdateTechnicalMeasureDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.updateTechnicalMeasure(
+      aiSystemId,
+      measureId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Patch('assessments/:assessmentId/context')
+  updateAssessmentContext(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('assessmentId') assessmentId: string,
+    @Body() dto: UpdateAssessmentContextDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.updateAssessmentContext(
+      aiSystemId,
+      assessmentId,
+      req.user.userId,
+      this.companyId(req),
+      dto,
+    );
+  }
+
+  @Post('assessments/:assessmentId/finalize')
+  finalizeAssessment(
+    @Param('aiSystemId') aiSystemId: string,
+    @Param('assessmentId') assessmentId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.assessments.finalizeAssessment(
+      aiSystemId,
+      assessmentId,
+      req.user.userId,
+      this.companyId(req),
     );
   }
 

@@ -124,6 +124,56 @@ describe('API security (e2e)', () => {
     ).resolves.toBeNull();
   });
 
+  it('registers a new organization owner and opens their AI system workflow', async () => {
+    const http = request(app.getHttpServer());
+    const email = `recruitment-owner-${Date.now()}@example.invalid`;
+    const password = 'local-e2e-password';
+    const signup = await http
+      .post('/api/auth/signup')
+      .send({
+        email,
+        password,
+        accountType: 'organization',
+        companyName: 'Fictional Recruitment Ltd',
+      })
+      .expect(201);
+    const companyId = signup.body.user.companyId;
+    expect(companyId).toEqual(expect.any(String));
+    const user = await app.get(PrismaService).user.findUniqueOrThrow({
+      where: { email },
+      select: { emailVerificationToken: true },
+    });
+    await http
+      .post('/api/auth/verify-email')
+      .send({ token: user.emailVerificationToken })
+      .expect(201);
+    const login = await http
+      .post('/api/auth/login')
+      .send({ email, password })
+      .expect(201);
+    const headers = {
+      Authorization: `Bearer ${login.body.token}`,
+      'X-Company-Id': companyId,
+    };
+    await http.get('/api/company').set(headers).expect(200);
+    const project = await http
+      .post('/api/projects')
+      .set(headers)
+      .send({
+        name: 'Candidate ranking',
+        intendedUse: 'Rank applications for human review',
+      })
+      .expect(201);
+    await http
+      .get(`/api/projects/${project.body.id}/workflow-summary`)
+      .set(headers)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.completedStages).toEqual(['register']);
+        expect(body.nextAction.stage).toBe('assess');
+      });
+  });
+
   it('runs preliminary EU AI Act classification for the system', async () => {
     const login = await request(app.getHttpServer())
       .post('/api/auth/login')
@@ -289,11 +339,11 @@ describe('API security (e2e)', () => {
       .post('/api/ai-systems')
       .set(authenticated(adminToken))
       .send({
-        name: `Golden path ${Date.now()}`,
+        name: `Fictional recruitment AI ${Date.now()}`,
         industry: 'software',
         description: 'Deterministic E2E AI system',
         businessPurpose: 'Compliance workflow verification',
-        intendedUse: 'Assist compliance reviewers',
+        intendedUse: 'Help recruiters rank applications for human review',
         intendedUsers: 'Compliance staff',
         affectedPersons: 'Employees',
         deploymentGeography: 'EU',
@@ -306,8 +356,68 @@ describe('API security (e2e)', () => {
       })
       .expect(201);
 
+    const base = `/api/ai-systems/${project.body.id}`;
+    const summaryUrl = `/api/projects/${project.body.id}/workflow-summary`;
+    const ownerHeaders = authenticated(adminToken);
+    await request(app.getHttpServer()).get(summaryUrl).expect(401);
+    await request(app.getHttpServer())
+      .get(summaryUrl)
+      .set(authenticated(outsiderToken, otherCompanyId))
+      .expect(403);
+    const registered = await request(app.getHttpServer())
+      .get(summaryUrl)
+      .set(ownerHeaders)
+      .expect(200);
+    expect(registered.body).toMatchObject({
+      completedStages: ['register'],
+      nextAction: { stage: 'assess' },
+    });
+    const asset = await request(app.getHttpServer())
+      .post(`${base}/system-assets`)
+      .set(ownerHeaders)
+      .send({
+        name: 'Candidate ranking model',
+        assetType: 'MODEL',
+        lifecycleStage: 'PRODUCTION',
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`${base}/lifecycle-events`)
+      .set(ownerHeaders)
+      .send({ stage: 'PRODUCTION', happenedAt: new Date().toISOString() })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`${base}/stakeholders`)
+      .set(ownerHeaders)
+      .send({ role: 'PROVIDER', name: 'Fictional Recruitment Ltd' })
+      .expect(201);
+    const assessment = await request(app.getHttpServer())
+      .post(`${base}/assessments`)
+      .set(ownerHeaders)
+      .send({})
+      .expect(201);
+    await request(app.getHttpServer())
+      .put(`${base}/assessments/${assessment.body.id}/answers`)
+      .set(ownerHeaders)
+      .send({
+        answers: {
+          is_ai_system: true,
+          used_in_eu: true,
+          company_role: 'provider',
+          intended_use: 'Rank job applications for recruiter review',
+          affected_persons: 'Candidates for open roles',
+          high_risk_contexts: ['employment'],
+          prohibited_use_cases: [],
+          annex_i_safety_component: false,
+          art_6_3_exception: false,
+          profiling: false,
+          gpai_involvement: false,
+          transparency_triggers: [],
+        },
+      })
+      .expect(200);
     const classification = await request(app.getHttpServer())
-      .post(`/api/ai-systems/${project.body.id}/assessments/preliminary`)
+      .post(`${base}/assessments/${assessment.body.id}/classify`)
       .set(authenticated(adminToken))
       .expect(201);
     await request(app.getHttpServer())
@@ -369,7 +479,7 @@ describe('API security (e2e)', () => {
         .expect(200);
     }
 
-    const evidence = await request(app.getHttpServer())
+    const initialEvidence = await request(app.getHttpServer())
       .post(
         `/api/projects/${project.body.id}/sections/${sections[0].id}/artifacts`,
       )
@@ -384,6 +494,29 @@ describe('API security (e2e)', () => {
       data: { reviewerId },
     });
     await request(app.getHttpServer())
+      .patch(`/api/artifacts/${initialEvidence.body.id}/review`)
+      .set(authenticated(reviewerToken))
+      .send({
+        status: 'REJECTED',
+        comment: 'Provide the redacted recruitment test results',
+      })
+      .expect(200);
+    const evidence = await request(app.getHttpServer())
+      .post(
+        `/api/projects/${project.body.id}/sections/${sections[0].id}/artifacts`,
+      )
+      .set(ownerHeaders)
+      .attach('file', Buffer.from('Redacted recruitment validation results'), {
+        filename: 'replacement.txt',
+        contentType: 'text/plain',
+      })
+      .expect(201);
+    expect(evidence.body).toMatchObject({
+      previousArtifactId: initialEvidence.body.id,
+      version: 2,
+      status: 'PENDING',
+    });
+    await request(app.getHttpServer())
       .patch(`/api/artifacts/${evidence.body.id}/review`)
       .set(authenticated(reviewerToken))
       .send({ status: 'APPROVED', comment: 'Human evidence review' })
@@ -394,7 +527,28 @@ describe('API security (e2e)', () => {
       .set(authenticated(adminToken))
       .expect(200);
     const evidenceLinks: Array<{ id: string }> = [];
+    const scoringRows: Array<{
+      obligationId: string;
+      score: number;
+      state: string;
+      rationale: string;
+    }> = [];
+    expect(obligations.body.length).toBeGreaterThan(0);
     for (const obligation of obligations.body) {
+      await request(app.getHttpServer())
+        .put(`${base}/obligations/${obligation.id}/assets`)
+        .set(ownerHeaders)
+        .send({ assetIds: [asset.body.id] })
+        .expect(200);
+      await request(app.getHttpServer())
+        .post(`${base}/obligations/${obligation.id}/technical-measures`)
+        .set(ownerHeaders)
+        .send({
+          title: 'Human oversight and validation',
+          status: 'COMPLETE',
+          verificationNotes: 'Verified against test evidence',
+        })
+        .expect(201);
       const link = await request(app.getHttpServer())
         .post(
           `/api/ai-systems/${project.body.id}/obligations/${obligation.id}/evidence`,
@@ -408,9 +562,88 @@ describe('API security (e2e)', () => {
           `/api/ai-systems/${project.body.id}/obligations/${obligation.id}`,
         )
         .set(authenticated(adminToken))
-        .send({ status: 'COMPLETE', approvalState: 'APPROVED' })
+        .send({
+          ownerId: adminId,
+          status: 'COMPLETE',
+          approvalState: 'APPROVED',
+        })
+        .expect(200);
+      scoringRows.push({
+        obligationId: obligation.id,
+        score: 100,
+        state: 'SATISFIED',
+        rationale: 'Reviewed test evidence and implementation',
+      });
+    }
+    await request(app.getHttpServer())
+      .put(`${base}/assessments/${assessment.body.id}/scoring`)
+      .set(ownerHeaders)
+      .send({ rows: scoringRows })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`${base}/assessments/${assessment.body.id}/finalize`)
+      .set(ownerHeaders)
+      .expect(201);
+
+    const obligationId = obligations.body[0].id;
+    const reviewerHeaders = authenticated(reviewerToken);
+    const finding = await request(app.getHttpServer())
+      .post(`${base}/findings`)
+      .set(ownerHeaders)
+      .send({
+        obligationId,
+        source: 'MANUAL_REVIEW',
+        severity: 'MEDIUM',
+        description: 'Verify the candidate-ranking validation results',
+      })
+      .expect(201);
+    const findingUrl = `${base}/findings/${finding.body.id}`;
+    for (const status of ['ACKNOWLEDGED', 'IN_REMEDIATION']) {
+      await request(app.getHttpServer())
+        .patch(findingUrl)
+        .set(ownerHeaders)
+        .send({ status })
         .expect(200);
     }
+    const action = await request(app.getHttpServer())
+      .post(`${base}/obligations/${obligationId}/actions`)
+      .set(ownerHeaders)
+      .send({
+        title: 'Collect reviewed candidate-ranking results',
+        findingId: finding.body.id,
+      })
+      .expect(201);
+    const actionUrl = `${base}/actions/${action.body.id}`;
+    await request(app.getHttpServer())
+      .patch(actionUrl)
+      .set(ownerHeaders)
+      .send({
+        status: 'READY_FOR_REVIEW',
+        closureNotes: 'Linked redacted validation results',
+        closureEvidenceId: evidenceLinks[0].id,
+      })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(actionUrl)
+      .set(reviewerHeaders)
+      .send({ status: 'COMPLETED' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(findingUrl)
+      .set(ownerHeaders)
+      .send({
+        status: 'READY_FOR_REVIEW',
+        resolutionSummary: 'Reviewer confirmed the redacted test results',
+      })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(findingUrl)
+      .set(reviewerHeaders)
+      .send({
+        status: 'RESOLVED',
+        reviewerDecision: 'Verified closure evidence',
+      })
+      .expect(200);
 
     const documentName = `${project.body.id}-approved-e2e.pdf`;
     await storage.write(
@@ -441,6 +674,12 @@ describe('API security (e2e)', () => {
         note: 'Ready for review',
       })
       .expect(201);
+    const duplicate = await request(app.getHttpServer())
+      .post(`/api/projects/${project.body.id}/workflow/submit`)
+      .set(ownerHeaders)
+      .send({ reviewerId, approverId: adminId });
+    expect(duplicate.status).toBeGreaterThanOrEqual(400);
+    expect(duplicate.status).toBeLessThan(500);
     await request(app.getHttpServer())
       .post(`/api/projects/${project.body.id}/workflow/start-review`)
       .set(authenticated(reviewerToken))
@@ -522,6 +761,47 @@ describe('API security (e2e)', () => {
       .expect(200)
       .expect('Content-Type', /application\/zip/);
     expect(download.body.length).toBeGreaterThan(0);
+    const current = await request(app.getHttpServer())
+      .get(summaryUrl)
+      .set(ownerHeaders)
+      .expect(200);
+    expect(current.body).toMatchObject({
+      packageStatus: 'CURRENT',
+      completedStages: ['register', 'assess', 'comply', 'review', 'report'],
+    });
+    const list = await request(app.getHttpServer())
+      .get('/api/projects')
+      .set(ownerHeaders)
+      .expect(200);
+    expect(
+      list.body.find(({ id }: { id: string }) => id === project.body.id)
+        ?.workflowSummary,
+    ).toEqual(current.body);
+    await request(app.getHttpServer())
+      .patch(`/api/projects/${project.body.id}`)
+      .set(ownerHeaders)
+      .send({
+        name: project.body.name,
+        intendedUse: 'Select candidates without prior screening',
+      })
+      .expect(200);
+    const changed = await request(app.getHttpServer())
+      .get(summaryUrl)
+      .set(ownerHeaders)
+      .expect(200);
+    expect(changed.body).toMatchObject({
+      packageStatus: 'HISTORICAL',
+      nextAction: { stage: 'assess', title: 'Reassessment required' },
+    });
+    await request(app.getHttpServer())
+      .post(`${base}/reports/package`)
+      .set(ownerHeaders)
+      .expect(400);
+    await request(app.getHttpServer())
+      .get(`${base}/reports/packages/${compliancePackage.body.id}/verify`)
+      .set(ownerHeaders)
+      .expect(200)
+      .expect(({ body }) => expect(body.valid).toBe(true));
 
     await request(app.getHttpServer())
       .get(

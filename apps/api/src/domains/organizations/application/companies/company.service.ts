@@ -51,24 +51,37 @@ export class CompanyService {
     companyId: string,
     profile: {
       legalName?: string;
+      organizationName?: string;
       website?: string;
       industry?: string;
       address?: string;
       contactEmail?: string;
+      registrationNumber?: string;
+      country?: string;
+      role?: 'provider' | 'deployer';
     },
   ) {
     const membership = await this.ensureMembership(userId, companyId);
     if (membership.role !== 'ADMIN') {
       throw new ForbiddenException('Only company admins can edit the profile');
     }
+    const { organizationName, role, ...details } = profile;
     return this.prisma.company.update({
       where: { id: companyId },
-      data: Object.fromEntries(
-        Object.entries(profile).map(([key, value]) => [
-          key,
-          value?.trim() || null,
-        ]),
-      ),
+      data: {
+        ...(organizationName !== undefined
+          ? { name: organizationName.trim() }
+          : {}),
+        ...(role !== undefined
+          ? { aiActRole: role.toUpperCase() as 'PROVIDER' | 'DEPLOYER' }
+          : {}),
+        ...Object.fromEntries(
+          Object.entries(details).map(([key, value]) => [
+            key,
+            value?.trim() || null,
+          ]),
+        ),
+      },
     });
   }
 
