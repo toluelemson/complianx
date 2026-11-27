@@ -82,11 +82,11 @@ export function validateEnvironment(input: Environment): Environment {
   secureSecret(environment, 'SMTP_PASS');
   requiredOneOf(environment, ['SMTP_FROM', 'EMAIL_FROM']);
 
-  validUrl('AIKI_WORKER_URL', required(environment, 'AIKI_WORKER_URL'), [
-    'http:',
-    'https:',
-  ]);
-  secureSecret(environment, 'AIKI_SERVICE_TOKEN');
+  const aikiWorkerUrl = stringValue(environment, 'AIKI_WORKER_URL');
+  if (aikiWorkerUrl && stringValue(environment, 'AIKI_SERVICE_TOKEN')) {
+    validUrl('AIKI_WORKER_URL', aikiWorkerUrl, ['http:', 'https:']);
+    secureSecret(environment, 'AIKI_SERVICE_TOKEN');
+  }
 
   if (stringValue(environment, 'MONETIZATION_ENABLED') !== 'false') {
     secureSecret(environment, 'STRIPE_SECRET_KEY');

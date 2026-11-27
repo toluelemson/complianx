@@ -28,9 +28,13 @@ export class AikiReportGenerationController {
     @Headers('authorization') authorization: string | undefined,
     @Body() job: ReportGenerationJob,
   ) {
-    const configuredToken = this.config.get<string>('AIKI_SERVICE_TOKEN') ?? '';
+    const workerUrl = this.config.get<string>('AIKI_WORKER_URL')?.trim();
+    const configuredToken =
+      this.config.get<string>('AIKI_SERVICE_TOKEN')?.trim() ?? '';
     const token = authorization?.replace(/^Bearer\s+/i, '') ?? '';
-    if (!tokensMatch(token, configuredToken)) throw new ForbiddenException();
+    if (!workerUrl || !tokensMatch(token, configuredToken)) {
+      throw new ForbiddenException();
+    }
     if (!job.projectId || !job.userId || !job.operationId) {
       throw new ForbiddenException();
     }
@@ -44,8 +48,11 @@ export class AikiReportGenerationController {
 }
 
 function tokensMatch(received: string, configured: string) {
-  if (!received || !configured || received.length !== configured.length) {
-    return false;
-  }
-  return timingSafeEqual(Buffer.from(received), Buffer.from(configured));
+  const receivedBytes = Buffer.from(received);
+  const configuredBytes = Buffer.from(configured);
+  return (
+    receivedBytes.length > 0 &&
+    receivedBytes.length === configuredBytes.length &&
+    timingSafeEqual(receivedBytes, configuredBytes)
+  );
 }

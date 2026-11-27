@@ -17,8 +17,6 @@ const productionEnvironment = () => ({
   SMTP_USER: 'mailer',
   SMTP_PASS: 'smtp-password-value',
   EMAIL_FROM: 'Neuraldocx <mail@example.com>',
-  AIKI_WORKER_URL: 'http://aiki-worker:9850',
-  AIKI_SERVICE_TOKEN: 'aiki-service-token-value',
   MONETIZATION_ENABLED: 'true',
   STRIPE_SECRET_KEY: 'sk_live_value',
   STRIPE_WEBHOOK_SECRET: 'whsec_value',
@@ -48,12 +46,44 @@ describe('production environment validation', () => {
     ['FILE_SCANNER_PROVIDER', 'noop', 'requires FILE_SCANNER_PROVIDER=clamav'],
     ['LLM_API_KEY', '', 'required'],
     ['SMTP_PASS', '', 'required'],
-    ['AIKI_WORKER_URL', '', 'required'],
-    ['AIKI_SERVICE_TOKEN', '', 'required'],
     ['STRIPE_WEBHOOK_SECRET', '', 'required'],
   ])('rejects unsafe production %s configuration', (key, value, message) => {
     expect(() =>
       validateEnvironment({ ...productionEnvironment(), [key]: value }),
+    ).toThrow(message);
+  });
+
+  const aikiSettings = {
+    AIKI_WORKER_URL: 'http://aiki-worker:9850',
+    AIKI_SERVICE_TOKEN: 'test-service-token',
+  };
+
+  it.each([
+    ['no settings', {}],
+    ['blank settings', { AIKI_WORKER_URL: ' ', AIKI_SERVICE_TOKEN: ' ' }],
+    ['only a worker URL', { AIKI_WORKER_URL: aikiSettings.AIKI_WORKER_URL }],
+    [
+      'only a service token',
+      { AIKI_SERVICE_TOKEN: aikiSettings.AIKI_SERVICE_TOKEN },
+    ],
+    ['both settings', aikiSettings],
+  ])('allows production startup with %s for Aiki', (_, settings) => {
+    expect(() =>
+      validateEnvironment({ ...productionEnvironment(), ...settings }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    ['AIKI_WORKER_URL', 'invalid-url', 'must be a valid URL'],
+    ['AIKI_WORKER_URL', 'ftp://aiki-worker', 'must use http: or https:'],
+    ['AIKI_SERVICE_TOKEN', 'change-me', 'must not use a placeholder'],
+  ])('validates %s when the worker is configured', (key, value, message) => {
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment(),
+        ...aikiSettings,
+        [key]: value,
+      }),
     ).toThrow(message);
   });
 

@@ -6,13 +6,15 @@ Configure the API and web services from the same repository and set production s
 
 ## Aiki report-generation worker
 
-Deploy `apps/worker/Dockerfile` as a third Coolify service on the same private network as the API. Do not publish its port. Give it a dedicated PostgreSQL database for Aiki workflow state, then run its migration before starting the service:
+The API can run without Aiki. Leave `AIKI_WORKER_URL` and `AIKI_SERVICE_TOKEN` unset to disable background document generation. If either is missing, requests to queue a document generation job return HTTP 503 and the worker callback rejects requests.
+
+To enable generation, deploy `apps/worker/Dockerfile` as a third Coolify service on the same private network as the API. Keep port 9850 private. Give the worker a dedicated PostgreSQL database for Aiki workflow state, then run its migration before starting the service:
 
 ```bash
 DATABASE_PROVIDER=pg DATABASE_URL="$AIKI_DATABASE_URL" pnpm --filter worker aiki:migrate
 ```
 
-Set the same cryptographically random `AIKI_SERVICE_TOKEN` in both services. The API also needs `AIKI_WORKER_URL=http://<private-worker-host>:9850`; the worker needs `API_INTERNAL_URL=http://<private-api-host>:3000` and `AIKI_DATABASE_URL`. The worker calls only the API's private `/api/internal/aiki/report-generation` endpoint, which rejects requests without that token.
+Generate a secret from 32 cryptographically random bytes and set the same `AIKI_SERVICE_TOKEN` in both services' runtime secret settings. Set `AIKI_WORKER_URL=http://<private-worker-host>:9850` on the API. Set `API_INTERNAL_URL=http://<private-api-host>:3000` and `AIKI_DATABASE_URL` on the worker. The worker uses the token to authenticate to the API callback at `/api/internal/aiki/report-generation`.
 
 ## Production environment
 
