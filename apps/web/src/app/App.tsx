@@ -1,8 +1,9 @@
-import { Suspense, lazy } from 'react';
+import { lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import LandingPage from '@/domains/marketing/pages/LandingPage';
 import { ProtectedRoute } from '@/app/routing/ProtectedRoute';
 import { ProjectRouteRedirect } from '@/app/routing/ProjectRouteRedirect';
+import { RouteBoundary } from '@/app/routing/RouteBoundary';
 
 const LoginPage = lazy(() => import('@/domains/auth/pages/LoginPage'));
 const SignupPage = lazy(() => import('@/domains/auth/pages/SignupPage'));
@@ -99,7 +100,7 @@ const ProfilePage = lazy(() => import('@/domains/auth/pages/ProfilePage'));
 
 function App() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0c10]" />}>
+    <RouteBoundary>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -354,7 +355,7 @@ function App() {
           }
         />
       </Routes>
-    </Suspense>
+    </RouteBoundary>
   );
 }
 
