@@ -1,14 +1,40 @@
 # Deployment
 
-The active deployment target is Hetzner managed through Coolify. Both applications use the repository root as their Docker build context so pnpm can resolve workspace packages. Their Dockerfiles remain at `apps/api/Dockerfile` and `apps/web/Dockerfile`.
+The active deployment target is Hetzner managed through Coolify. The API and web applications use Coolify's Docker Image build pack with an exact release tag. GitHub runs CI for pull requests and updates to `main`. A production release uses a prebuilt image staged on the deployment host.
 
-Configure the API and web services from the same repository and set production secrets in Coolify. Keep the API database private to the deployment network and configure the web service with the public API URL. Preserve existing environment variables, API paths, webhook paths, and storage configuration.
+## Prebuilt production images
+
+Build from the reviewed release commit on a workstation or CI runner. Set the image names from the two Coolify resources and use the existing SSH destination for `NEURALDOCX_DEPLOY_HOST`. The frontend build gets its public API origin through `VITE_API_URL`. Keep application secrets in Coolify's runtime environment settings.
+
+The example builds both applications for the current Linux amd64 host. Build and stage the services included in the release.
+
+```bash
+release="$(git rev-parse HEAD)"
+api_image="${NEURALDOCX_API_IMAGE_NAME}:$release"
+web_image="${NEURALDOCX_WEB_IMAGE_NAME}:$release"
+
+git archive "$release" |
+  docker buildx build --platform linux/amd64 --load \
+    -f apps/api/Dockerfile -t "$api_image" -
+
+git archive "$release" |
+  docker buildx build --platform linux/amd64 --load \
+    --build-arg "VITE_API_URL=$NEURALDOCX_API_ORIGIN" \
+    -f apps/web/Dockerfile -t "$web_image" -
+
+docker image save "$api_image" "$web_image" |
+  ssh "$NEURALDOCX_DEPLOY_HOST" docker image load
+```
+
+Apply any required database migrations using the release image and the production database environment. Select the staged tag in Coolify and deploy one application at a time. The API readiness check uses `/api/health` on port 3000. The frontend checks `/` on port 8080. Verify the public endpoints and confirm that the worker and API can reach each other. Keep the previous image available until the release is verified so Coolify can roll back to its tag.
+
+The host uses a persistent 4 GiB swap file to absorb short runtime memory spikes. Check it with `swapon --show` after a host restart. Build release images off-host so build memory and service memory have separate capacity.
 
 ## Aiki report-generation worker
 
 The API can run without Aiki. Leave `AIKI_WORKER_URL` and `AIKI_SERVICE_TOKEN` unset to disable background document generation. If either is missing, requests to queue a document generation job return HTTP 503 and the worker callback rejects requests.
 
-To enable generation, deploy `apps/worker/Dockerfile` as a third Coolify service on the same private network as the API. Keep port 9850 private. Give the worker a dedicated PostgreSQL database for Aiki workflow state, then run its migration before starting the service:
+To enable generation, build the image from `apps/worker/Dockerfile` off-host and deploy it as a private service on the same network as the API. Keep port 9850 private. Give the worker a dedicated PostgreSQL database for Aiki workflow state, then run its migration before starting the service:
 
 ```bash
 DATABASE_PROVIDER=pg DATABASE_URL="$AIKI_DATABASE_URL" pnpm --filter worker aiki:migrate
