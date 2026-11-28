@@ -70,20 +70,36 @@ export function ProjectReviewControls({
   const sectionByName = new Map(
     sections.map((section) => [section.name, section]),
   );
-  const trackableSteps = STEP_CONFIG.filter((step) => step.fields.length).map(
-    (step) => {
-      const section = sectionByName.get(step.id);
-      return {
-        stepId: step.id,
-        title: step.title,
-        missing: step.fields.filter(
-          (field) => !hasFieldValue(section?.content?.[field.name]),
-        ).length,
-        status: section?.workflowStatus ?? 'DRAFT',
-      };
-    },
+  const documentationSteps = STEP_CONFIG.filter(
+    (step) => step.fields.length,
+  ).map((step) => {
+    const section = sectionByName.get(step.id);
+    return {
+      stepId: section?.id ?? step.id,
+      title: step.title,
+      missing: step.fields.filter(
+        (field) => !hasFieldValue(section?.content?.[field.name]),
+      ).length,
+      status: section?.workflowStatus ?? 'DRAFT',
+    };
+  });
+  const documentationIds = new Set(
+    documentationSteps.map((step) => step.stepId),
   );
-  const allFieldsComplete = trackableSteps.every((step) => step.missing === 0);
+  const trackableSteps = [
+    ...documentationSteps,
+    ...sections
+      .filter((section) => !documentationIds.has(section.id))
+      .map((section) => ({
+        stepId: section.id,
+        title: section.name,
+        missing: 0,
+        status: section.workflowStatus,
+      })),
+  ];
+  const allFieldsComplete = documentationSteps.every(
+    (step) => step.missing === 0,
+  );
   const invalidate = () => {
     void Promise.all([
       client.invalidateQueries({
@@ -192,11 +208,9 @@ export function ProjectReviewControls({
         canCompleteSections={owner || admin}
         canReviewSections={role === 'REVIEWER' || admin}
         sectionActionPending={sectionAction.isPending}
-        onSectionWorkflowAction={(stepId, action, signature) => {
-          const section = sectionByName.get(stepId);
-          if (section)
-            sectionAction.mutate({ id: section.id, action, signature });
-        }}
+        onSectionWorkflowAction={(sectionId, action, signature) =>
+          sectionAction.mutate({ id: sectionId, action, signature })
+        }
       />
       {showSignature && (
         <form
